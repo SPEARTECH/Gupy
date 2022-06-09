@@ -1,5 +1,7 @@
+from logging import exception
 import click
 import sys
+import os
 sys.path.insert(0,r'C:\Users\stephen.retzlaff\OneDrive - caci_caci\Desktop\Projects\Raptor-CLI\raptor-cli')
 from target_platforms import *
 
@@ -10,14 +12,17 @@ API=False
 
 @click.group()
 def cli():
-    pass
-
+    ##Running checks on python version
+    version = '.'.join(sys.version.split(' ')[0].split('.')[:2])
+    if float(version) < 3.0:
+        raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
+    
 @click.command()
 @click.option(
     '--name',
     '-n',
     required=True,
-    help='Name of your project'
+    help='Name of project'
     )
 @click.option(
     '--target-platform',
@@ -79,6 +84,36 @@ Confirm?
     if API == True: #install and create modifications to django project for api usage if applicable
         api.Api().create()
 
+@click.command()
+@click.option(
+    '--name',
+    '-n',
+    required=True,
+    help='Name of project'
+    )
+@click.option(
+    '--service',
+    '-s',
+    required=True,
+    type=click.Choice(
+        ['desktop', 'mobile', 'pwa', 'website'], 
+        case_sensitive=False
+        ),
+    multiple=False, 
+    help="Select which server to run"
+)
+def serve(service):
+    if service.lower() == 'desktop':
+        desktop.Desktop(NAME).serve(NAME)
+    elif service.lower() == 'mobile':
+        mobile.Mobile(NAME).serve(NAME)
+    elif service.lower() == 'pwa':
+        pwa.Pwa(NAME).serve(NAME)
+    elif service.lower() == 'website':
+        website.Website(NAME).serve(NAME)
+
 if __name__ == '__main__':
     cli.add_command(create) #Add command for cli
+    cli.add_command(serve)
     cli() #Run cli
+
