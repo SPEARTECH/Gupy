@@ -25,17 +25,18 @@ class Pwa(base.Base):
 
     def __init__(self, name):
         self.name = name
-        self.folders = ['pwa']
+        self.folders = [f'{self.name}/pwa/dev']
         self.files = {
-            '/pwa/index.html': self.index_content,
+            '/pwa/dev/index.html': self.index_content,
             }
 
     def create(self):
         for folder in self.folders:
             os.mkdir(folder)
-            print('created "{folder}" folder.')
+            print(f'created "{folder}" folder.')
         
         for file in self.files:
             f = open(file, 'x')
-            f.write()
+            f.write(self.files.get(file))
             print(f'created "{file}" file.')
+            f.close()

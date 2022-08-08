@@ -25,9 +25,9 @@ class Mobile(base.Base):
 
     def __init__(self, name):
         self.name = name
-        self.folders = ['mobile']
+        self.folders = [f'{self.name}/mobile/dev']
         self.files = {
-            '/mobile/index.html': self.index_content,
+            '/mobile/dev/index.html': self.index_content,
             }
 
     def create(self):
@@ -37,5 +37,6 @@ class Mobile(base.Base):
         
         for file in self.files:
             f = open(file, 'x')
-            f.write()
+            f.write(self.files.get(file))
             print(f'created "{file}" file.')
+            f.close()

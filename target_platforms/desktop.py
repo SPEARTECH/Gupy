@@ -21,6 +21,7 @@ class Desktop(base.Base):
   </script>
 </body>
 </html>    '''
+
     server_content = '''from flask import Flask, render_template
 app = Flask(__name__)
 
@@ -33,12 +34,16 @@ if __name__ == '__main__':
     app.run()
     '''
 
+    read_me = '''
+
+    '''
+    
     def __init__(self, name):
         self.name = name
-        self.folders = [f'{self.name}/desktop', f'{self.name}/desktop/server']
+        self.folders = [f'{self.name}/desktop', f'{self.name}/desktop/dev', f'{self.name}/desktop/dev/server']
         self.files = {
-            f'{self.name}/desktop/index.html': self.index_content,
-            f'{self.name}/desktop/server/server.py': self.server_content
+            f'{self.name}/desktop/dev/index.html': self.index_content,
+            f'{self.name}/desktop/dev/server/server.py': self.server_content
             }
 
     def create(self):
@@ -50,6 +55,7 @@ if __name__ == '__main__':
             f = open(file, 'x')
             f.write(self.files.get(file))
             print(f'created "{file}" file.')
+            f.close()
 
-    def serve(self, app):
-        os.system(f'python {app}/desktop/server/server.py')
+    # def serve(self, app):
+    #     os.system(f'python {app}/desktop/dev/server/server.py')

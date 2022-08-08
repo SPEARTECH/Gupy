@@ -28,7 +28,7 @@ def cli():
     '--target-platform',
     '-t',
     type=click.Choice(
-        ['desktop', 'mobile', 'pwa', 'website'], 
+        ['desktop', 'mobile', 'pwa', 'website', 'api'], 
         case_sensitive=False
         ),
     multiple=True, 
@@ -48,9 +48,14 @@ def create(name,target_platform):
         DJANGO=True
         API=False
 
-    if ('mobile' or 'pwa') in TARGETS: #Value assignment for creating API Django Project is applicable
+    if ('mobile' or 'pwa') in TARGETS: 
         DJANGO=True
         API=True
+
+    if 'api' in TARGETS: #Value assignment for creating API Django Project is applicable
+        DJANGO=True
+        API=True
+
     confirmation = click.confirm(f'''
 Creating project with the following settings:
 Project Name={NAME}
@@ -84,36 +89,40 @@ Confirm?
     if API == True: #install and create modifications to django project for api usage if applicable
         api.Api().create()
 
-@click.command()
-@click.option(
-    '--name',
-    '-n',
-    required=True,
-    help='Name of project'
-    )
-@click.option(
-    '--service',
-    '-s',
-    required=True,
-    type=click.Choice(
-        ['desktop', 'mobile', 'pwa', 'website'], 
-        case_sensitive=False
-        ),
-    multiple=False, 
-    help="Select which server to run"
-)
-def serve(service):
-    if service.lower() == 'desktop':
-        desktop.Desktop(NAME).serve(NAME)
-    elif service.lower() == 'mobile':
-        mobile.Mobile(NAME).serve(NAME)
-    elif service.lower() == 'pwa':
-        pwa.Pwa(NAME).serve(NAME)
-    elif service.lower() == 'website':
-        website.Website(NAME).serve(NAME)
+
+
+# @click.command()
+# @click.option(
+#     '--name',
+#     '-n',
+#     required=True,
+#     help='Name of project'
+#     )
+# @click.option(
+#     '--service',
+#     '-s',
+#     required=True,
+#     type=click.Choice(
+#         ['desktop', 'mobile', 'pwa', 'website'], 
+#         case_sensitive=False
+#         ),
+#     multiple=False, 
+#     help="Select which server to run"
+# )
+# def serve(name, service):
+#     NAME=name #Assigning project name
+#     if service.lower() == 'desktop':
+#         desktop.Desktop(NAME).serve(NAME)
+#     elif service.lower() == 'mobile':
+#         mobile.Mobile(NAME).serve(NAME)
+#     elif service.lower() == 'pwa':
+#         pwa.Pwa(NAME).serve(NAME)
+#     elif service.lower() == 'website':
+#         website.Website(NAME).serve(NAME)
 
 if __name__ == '__main__':
     cli.add_command(create) #Add command for cli
-    cli.add_command(serve)
+    # cli.add_command(add) #Add command for cli
+    # cli.add_command(serve)
     cli() #Run cli
 
