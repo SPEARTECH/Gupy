@@ -64,7 +64,7 @@ def index(request):
         print('creating django app...')
         os.chdir(self.name)
         os.system(f'python manage.py startapp {self.name}_app')
-        os.system(f'mkdir {self.name}_app/templates')
+        os.mkdir(f'{self.name}_app/templates')
         for file in self.files:
             with open(os.getcwd()+file, 'w') as f:
               f.write(self.files.get(file))
