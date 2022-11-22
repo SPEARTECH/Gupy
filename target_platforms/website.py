@@ -45,9 +45,9 @@ def index(request):
             os.mkdir(folder)
             print(f'created "{folder}" folder.')
         print('starting django project...')
-        os.system('echo "changing dir"')
+        os.system('echo changing directory')
         os.chdir(f'{self.name}/website/dev/') #go into newly created dev folder
-        os.system('pwd')
+        # os.system('pwd')
         os.system(f'django-admin startproject {self.name}')
         print('creating django app...')
         os.chdir(self.name)
