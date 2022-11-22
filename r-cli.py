@@ -45,7 +45,7 @@ def cli():
 def create(name,target_platform,lang):
     NAME=name #Assigning project name
     LANG=lang
-    if LANG.lower() != 'py' or LANG.lower() != 'go':
+    if LANG.lower() != 'py' and LANG.lower() != 'go':
         print(f'Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang)')
         return
 
@@ -53,11 +53,11 @@ def create(name,target_platform,lang):
         TARGETS.append(target)
 
     if 'desktop' in TARGETS:
-        DJANGO=False
+        WEB=False
         API=False
 
     if 'website' in TARGETS: #Value assignment for creating Django Project is applicable
-        DJANGO=True
+        WEB=True
         API=False
 
     if ('mobile' or 'pwa') in TARGETS: 
