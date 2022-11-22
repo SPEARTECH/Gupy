@@ -34,16 +34,24 @@ if __name__ == '__main__':
     app.run()
     '''
 
+
     read_me = '''
 
     '''
     
-    def __init__(self, name):
+    def __init__(self, name, lang):
         self.name = name
+        self.lang = lang
+        if self.lang == 'go':
+          self.server_content = '''
+          
+          '''
         self.folders = [f'{self.name}/desktop', f'{self.name}/desktop/dev', f'{self.name}/desktop/dev/server']
         self.files = {
             f'{self.name}/desktop/dev/index.html': self.index_content,
-            f'{self.name}/desktop/dev/server/server.py': self.server_content
+            f'{self.name}/desktop/dev/server/server.py'\
+               if self.lang == 'py' else \
+            f'{self.name}/desktop/dev/server/server.go': self.server_content\
             }
 
     def create(self):
