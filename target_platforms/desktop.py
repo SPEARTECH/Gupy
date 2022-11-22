@@ -28,7 +28,7 @@ app = Flask(__name__)
 # Routes
 @app.route('/')
 def index():
-    render_template('../index.html')
+    return render_template('index.html')
 
 if __name__ == '__main__':
     app.run()
@@ -46,9 +46,15 @@ if __name__ == '__main__':
           self.server_content = '''
           
           '''
-        self.folders = [f'{self.name}/desktop', f'{self.name}/desktop/dev', f'{self.name}/desktop/dev/server']
+
+        self.folders = [
+          f'{self.name}/desktop', 
+          f'{self.name}/desktop/dev', 
+          f'{self.name}/desktop/dev/server',
+          f'{self.name}/desktop/dev/server/templates',]
+
         self.files = {
-            f'{self.name}/desktop/dev/index.html': self.index_content,
+            f'{self.name}/desktop/dev/server/templates/index.html': self.index_content,
             f'{self.name}/desktop/dev/server/server.py'\
                if self.lang == 'py' else \
             f'{self.name}/desktop/dev/server/server.go': self.server_content\
@@ -65,5 +71,5 @@ if __name__ == '__main__':
             print(f'created "{file}" file.')
             f.close()
 
-    # def serve(self, app):
-    #     os.system(f'python {app}/desktop/dev/server/server.py')
+    def run(name):
+        os.system(f'python {name}/desktop/dev/server/server.py')

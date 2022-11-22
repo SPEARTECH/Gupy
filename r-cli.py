@@ -101,7 +101,27 @@ Confirm?
     if API == True: #install and create modifications to django project for api usage if applicable
         api.Api(NAME,LANG).create()
 
+@click.command()
+@click.option(
+    '--name',
+    '-n',
+    required=True,
+    help='Name of app'
+    )
+def run(name):
+    print(name)
+    if os.path.exists(name):
+        desktop.Desktop.run(name)
+    else:
+        print(f'{name} folder does not exist. Try listing all apps with "python ./r-cli.py list"')
 
+@click.command()
+def list():
+    print('Printing apps in current directory...\n')
+    print('[Available Apps]\n')
+    for item in next(os.walk(os.getcwd()))[1]:
+        print(item)
+    print('\n')
 
 # @click.command()
 # @click.option(
@@ -134,7 +154,7 @@ Confirm?
 
 if __name__ == '__main__':
     cli.add_command(create) #Add command for cli
-    # cli.add_command(add) #Add command for cli
-    # cli.add_command(serve)
+    cli.add_command(run) #Add command for cli
+    cli.add_command(list)
     cli() #Run cli
 
