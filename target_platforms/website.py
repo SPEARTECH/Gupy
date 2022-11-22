@@ -24,13 +24,15 @@ class Website(base.Base):
 
     server_content = ''
 
-    def __init__(self, name):
+    def __init__(self, name, lang):
         self.name = name
+        self.lang = lang
         self.folders = [f'{self.name}/website', f'{self.name}/website/dev']
         self.files = {
-            f'/website/dev/{self.name}/{self.name}_app/templates/index.html': self.index_content,
+            f'/{self.name}_app/templates/index.html': self.index_content,
             }
-        self.server_content = f'''
+        if self.lang.lower() == 'py':
+          self.server_content = f'''
 from django.shortcuts import render
 from {self.name}.models import *
 '''+r'''
@@ -39,6 +41,16 @@ def index(request):
     return render(request, 'index.html, context')
 
     '''
+#         elif self.lang.lower() == 'go':
+#           self.server_content = f'''
+# from django.shortcuts import render
+# from {self.name}.models import *
+# '''+r'''
+# def index(request):
+#     context = {}
+#     return render(request, 'index.html, context')
+
+#     '''
 
     def create(self):
         for folder in self.folders:
@@ -54,12 +66,10 @@ def index(request):
         os.system(f'python manage.py startapp {self.name}_app')
         os.system(f'mkdir {self.name}_app/templates')
         for file in self.files:
-            f = open(file, 'x')
-            f.write(self.files.get(file))
-            print(f'created "{file}" file.')
-            f.close()
-        f = open(f'{self.name}/{self.name}_app/views.py','a+')
-        f.write(self.server_content)
-        f.close()
+            with open(os.getcwd()+file, 'w') as f:
+              f.write(self.files.get(file))
+              print(f'created "{file}" file.')
+        with open(f'{self.name}_app/views.py','a+') as f:
+          f.write(self.server_content)
 
 

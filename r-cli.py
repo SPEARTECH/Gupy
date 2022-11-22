@@ -6,8 +6,9 @@ sys.path.insert(0,r'C:\Users\stephen.retzlaff\OneDrive - caci_caci\Desktop\Proje
 from target_platforms import *
 
 NAME=''
+LANG=''
 TARGETS=[]
-DJANGO=False
+WEB=False
 API=False
 
 @click.group()
@@ -35,33 +36,44 @@ def cli():
     default=['desktop'], 
     help="Use this command for each platform you intend to target (ie. -t desktop -t mobile)"
     )
-def create(name,target_platform):
+@click.option(
+    '--lang',
+    '-l',
+    required=True,
+    help='Language: "Py" or "Go"'
+    )
+def create(name,target_platform,lang):
     NAME=name #Assigning project name
+    LANG=lang
+    if LANG.lower() != 'py' and LANG.lower() != 'go':
+        print(f'Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang)')
+        return
+
     for target in target_platform: #Assigning target platforms
         TARGETS.append(target)
 
     if 'desktop' in TARGETS:
-        DJANGO=False
+        WEB=False
         API=False
 
     if 'website' in TARGETS: #Value assignment for creating Django Project is applicable
-        DJANGO=True
+        WEB=True
         API=False
 
     if ('mobile' or 'pwa') in TARGETS: 
-        DJANGO=True
+        WEB=True
         API=True
 
     if 'api' in TARGETS: #Value assignment for creating API Django Project is applicable
-        DJANGO=True
+        WEB=True
         API=True
 
     confirmation = click.confirm(f'''
 Creating project with the following settings:
 Project Name={NAME}
 Targets={TARGETS}
-Django Project={DJANGO}
-Django API={API}
+Website Project={WEB}
+Web API={API}
 
 Confirm? 
 ''', default=True, show_default=True
@@ -75,7 +87,7 @@ Confirm?
     obj.create_project_folder() #Create Project folder
 
     if 'desktop' in TARGETS: #create files/folder structure for desktop app if applicable
-        desktop.Desktop(NAME).create()
+        desktop.Desktop(NAME,LANG).create()
 
     if 'mobile' in TARGETS: #create files/folder structure for mobile app if applicable
         mobile.Mobile(NAME).create()
@@ -83,11 +95,11 @@ Confirm?
     if 'pwa' in TARGETS: #create files/folder structure for pwa app if applicable
         pwa.Pwa(NAME).create()
 
-    if DJANGO == True: #create files/folder for django project if applicable
-        website.Website(NAME).create()
+    if WEB == True: #create files/folder for django project if applicable
+        website.Website(NAME,LANG).create()
 
     if API == True: #install and create modifications to django project for api usage if applicable
-        api.Api().create()
+        api.Api(NAME,LANG).create()
 
 
 
