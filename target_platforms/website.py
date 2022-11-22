@@ -54,11 +54,11 @@ def index(request):
 
     def create(self):
         for folder in self.folders:
-            os.mkdir(folder)
+            os.mkdir('apps/'+folder)
             print(f'created "{folder}" folder.')
         print('starting django project...')
         os.system('echo changing directory')
-        os.chdir(f'{self.name}/website/dev/') #go into newly created dev folder
+        os.chdir(f'apps/{self.name}/website/dev/') #go into newly created dev folder
         # os.system('pwd')
         os.system(f'django-admin startproject {self.name}')
         print('creating django app...')

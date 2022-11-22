@@ -25,9 +25,9 @@ class Pwa(base.Base):
 
     def __init__(self, name):
         self.name = name
-        self.folders = [f'{self.name}/pwa/dev']
+        self.folders = [f'apps/{self.name}/pwa/dev']
         self.files = {
-            'pwa/dev/index.html': self.index_content,
+            f'apps/{self.name}/pwa/dev/index.html': self.index_content,
             }
 
     def create(self):

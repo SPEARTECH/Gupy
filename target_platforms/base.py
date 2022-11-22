@@ -8,6 +8,6 @@ class Base:
         self.platform = os.name #not needed at the moment (not using platform specific terminal commands)
 
     def create_project_folder(self): #Create project folder
-        os.mkdir(self.project_folder)
+        os.mkdir('apps/'+self.project_folder)
         print(f'created "{self.project_folder}" project folder.')
         

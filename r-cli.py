@@ -2,8 +2,8 @@ from logging import exception
 import click
 import sys
 import os
-sys.path.insert(0,r'C:\Users\stephen.retzlaff\OneDrive - caci_caci\Desktop\Projects\Raptor-CLI\raptor-cli')
 from target_platforms import *
+import apps
 
 NAME=''
 LANG=''
@@ -109,7 +109,6 @@ Confirm?
     help='Name of app'
     )
 def run(name):
-    print(name)
     if os.path.exists(name):
         desktop.Desktop.run(name)
     else:
@@ -117,12 +116,8 @@ def run(name):
 
 @click.command()
 def list():
-    print('Printing apps in current directory...\n')
-    print('[Available Apps]\n')
-    for item in next(os.walk(os.getcwd()))[1]:
-        print(item)
-    print('\n')
-
+    apps.Apps.getapps()
+    
 # @click.command()
 # @click.option(
 #     '--name',

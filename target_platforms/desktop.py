@@ -48,16 +48,16 @@ if __name__ == '__main__':
           '''
 
         self.folders = [
-          f'{self.name}/desktop', 
-          f'{self.name}/desktop/dev', 
-          f'{self.name}/desktop/dev/server',
-          f'{self.name}/desktop/dev/server/templates',]
+          f'apps/{self.name}/desktop', 
+          f'apps/{self.name}/desktop/dev', 
+          f'apps/{self.name}/desktop/dev/server',
+          f'apps/{self.name}/desktop/dev/server/templates',]
 
         self.files = {
-            f'{self.name}/desktop/dev/server/templates/index.html': self.index_content,
-            f'{self.name}/desktop/dev/server/server.py'\
+            f'apps/{self.name}/desktop/dev/server/templates/index.html': self.index_content,
+            f'apps/{self.name}/desktop/dev/server/server.py'\
                if self.lang == 'py' else \
-            f'{self.name}/desktop/dev/server/server.go': self.server_content\
+            f'apps/{self.name}/desktop/dev/server/server.go': self.server_content\
             }
 
     def create(self):
@@ -72,4 +72,5 @@ if __name__ == '__main__':
             f.close()
 
     def run(name):
+        # add check here for platform type and language 
         os.system(f'python {name}/desktop/dev/server/server.py')
