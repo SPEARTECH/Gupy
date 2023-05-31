@@ -25,9 +25,9 @@ class Mobile(base.Base):
 
     def __init__(self, name):
         self.name = name
-        self.folders = [f'{self.name}/mobile/dev']
+        self.folders = [f'apps/{self.name}/mobile/dev']
         self.files = {
-            'mobile/dev/index.html': self.index_content,
+            f'apps/{self.name}/mobile/dev/index.html': self.index_content,
             }
 
     def create(self):

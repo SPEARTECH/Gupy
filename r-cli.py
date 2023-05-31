@@ -2,8 +2,8 @@ from logging import exception
 import click
 import sys
 import os
-sys.path.insert(0,r'C:\Users\stephen.retzlaff\OneDrive - caci_caci\Desktop\Projects\Raptor-CLI\raptor-cli')
 from target_platforms import *
+import apps
 
 NAME=''
 LANG=''
@@ -101,8 +101,23 @@ Confirm?
     if API == True: #install and create modifications to django project for api usage if applicable
         api.Api(NAME,LANG).create()
 
+@click.command()
+@click.option(
+    '--name',
+    '-n',
+    required=True,
+    help='Name of app'
+    )
+def run(name):
+    if os.path.exists(name):
+        desktop.Desktop.run(name)
+    else:
+        print(f'{name} folder does not exist. Try listing all apps with "python ./r-cli.py list"')
 
-
+@click.command()
+def list():
+    apps.Apps.getapps()
+    
 # @click.command()
 # @click.option(
 #     '--name',
@@ -134,7 +149,7 @@ Confirm?
 
 if __name__ == '__main__':
     cli.add_command(create) #Add command for cli
-    # cli.add_command(add) #Add command for cli
-    # cli.add_command(serve)
+    cli.add_command(run) #Add command for cli
+    cli.add_command(list)
     cli() #Run cli
 

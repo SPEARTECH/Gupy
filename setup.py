@@ -9,6 +9,6 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        r-cli=r-cli:say_hello
+        r-cli=r-cli:cli
     ''',
 )
