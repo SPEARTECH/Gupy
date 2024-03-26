@@ -45,6 +45,8 @@ def cli():
 def create(name,target_platform,lang):
     NAME=name #Assigning project name
     LANG=lang
+    WEB=False
+    API=False
     if LANG.lower() != 'py' and LANG.lower() != 'go':
         print(f'Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang)')
         return
@@ -52,28 +54,16 @@ def create(name,target_platform,lang):
     for target in target_platform: #Assigning target platforms
         TARGETS.append(target)
 
-    if 'desktop' in TARGETS:
-        WEB=False
-        API=False
-
     if 'website' in TARGETS: #Value assignment for creating Django Project is applicable
         WEB=True
-        API=False
-
-    if ('mobile' or 'pwa') in TARGETS: 
-        WEB=True
-        API=True
 
     if 'api' in TARGETS: #Value assignment for creating API Django Project is applicable
-        WEB=True
         API=True
 
     confirmation = click.confirm(f'''
 Creating project with the following settings:
 Project Name={NAME}
 Targets={TARGETS}
-Website Project={WEB}
-Web API={API}
 
 Confirm? 
 ''', default=True, show_default=True
@@ -116,7 +106,10 @@ def run(name):
 
 @click.command()
 def list():
-    apps.Apps.getapps()
+    # apps.Apps.getapps()
+    for item in os.listdir('apps/'):
+        print(item)
+
     
 # @click.command()
 # @click.option(
