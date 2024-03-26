@@ -3,7 +3,7 @@ import click
 import sys
 import os
 from target_platforms import *
-import apps
+# import apps
 
 NAME=''
 LANG=''
@@ -135,8 +135,20 @@ def run(name,target_platform,lang):
 @click.command()
 def list():
     # apps.Apps.getapps()
+    # for item in os.listdir('apps/'):
+    #     print(item)
+    print('Printing apps in apps/ directory...\n')
+    count = 0
     for item in os.listdir('apps/'):
-        print(item)
+        if item != '__pycache__':
+            print(item)
+            count += 1
+
+    if count == 0:
+        print('No apps created...\nTry "python ./r-cli.py create <commands>" to get started.')
+
+    print('\n')
+
 
     
 # @click.command()
