@@ -98,11 +98,39 @@ Confirm?
     required=True,
     help='Name of app'
     )
-def run(name):
-    if os.path.exists(name):
-        desktop.Desktop.run(name)
+@click.option(
+    '--target-platform',
+    '-t',
+    type=click.Choice(
+        ['desktop', 'mobile', 'pwa', 'website', 'api'], 
+        case_sensitive=False
+        ),
+    required=True,
+    multiple=False, 
+    default=['desktop'], 
+    help="Select the app platform you intend to run (ie. -t desktop)"
+    )
+@click.option(
+    '--lang',
+    '-l',
+    required=True,
+    help='Language: "Py" or "Go"'
+    )
+def run(name,target_platform,lang):
+    NAME=name
+    TARGET=target_platform
+    LANG=lang
+    if os.path.exists(f"apps/{NAME}"):
+        if os.path.exists(f"apps/{NAME}/{TARGET}"):
+            if TARGET == 'desktop':
+                app_obj = desktop.Desktop(NAME,LANG)
+                app_obj.run(NAME)
+            else:
+                print('other platforms not enabled for this feature yet...')
+        else:
+            print(f'{NAME} app does not have a target platform of {TARGET}.')
     else:
-        print(f'{name} folder does not exist. Try listing all apps with "python ./r-cli.py list"')
+        print(f'{NAME} folder does not exist. Try listing all apps with "python ./r-cli.py list"')
 
 @click.command()
 def list():

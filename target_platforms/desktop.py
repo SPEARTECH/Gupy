@@ -70,9 +70,9 @@ app = Flask(__name__)
 # Routes
 @app.route('/')
 def index():
-    html = '''
+    html = """
    
-    '''
+    """
     return render_template('./index.html')
     # return render_template_string(html)
 
@@ -135,6 +135,7 @@ if __name__ == '__main__':
           f'apps/{self.name}/desktop/dev/server/templates',]
 
         self.files = {
+            f'apps/{self.name}/desktop/dev/main.py': self.main_content,
             f'apps/{self.name}/desktop/dev/server/templates/index.html': self.index_content,
             f'apps/{self.name}/desktop/dev/server/server.py'\
                if self.lang == 'py' else \
@@ -152,7 +153,7 @@ if __name__ == '__main__':
             print(f'created "{file}" file.')
             f.close()
 
-    def run(name):
+    def run(self,name):
         # add check here for platform type and language 
         if self.lang == 'py':
           system = platform.system()
@@ -164,4 +165,5 @@ if __name__ == '__main__':
           else:
               cmd = 'python'
 
-        os.system(f'{cmd} {name}/desktop/dev/server/server.py')
+        # os.system(f'{cmd} {name}/desktop/dev/server/server.py')
+        os.system(f'{cmd} apps/{name}/desktop/dev/main.py')
