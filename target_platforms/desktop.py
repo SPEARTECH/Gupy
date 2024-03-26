@@ -79,7 +79,7 @@ def index():
 if __name__ == '__main__':
     app.run(debug=True)  
     '''
-main_content = '''
+    main_content = '''
 import subprocess
 import os
 
