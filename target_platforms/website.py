@@ -3,6 +3,8 @@ import os
 
 class Website(base.Base):
     index_content = '''
+{% load static %}
+
 <!DOCTYPE html>
 <html>
 <head>
