@@ -63,9 +63,28 @@ document.addEventListener('contextmenu', function(event) {
 '''
 
     server_content = '''
-from flask import Flask, render_template,render_template_string, send_file, jsonify
+
+from flask import Flask, render_template,render_template_string, send_file, request, jsonify
+import os
+import signal
+import subprocess
+import time
 
 app = Flask(__name__)
+
+
+def stop_flask_server():
+    # Find the process ID (PID) of the Flask server running on port 5000
+    command = "netstat -ano | findstr :5000"
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    lines = result.stdout.splitlines()
+    if int(lines[0].split()[-1]):
+        pid = int(lines[0].split()[-1])
+        # Terminate the Flask server process
+        os.kill(pid, signal.SIGTERM)
+        print("Flask server stopped.")
+    else:
+        print("No Flask server found running on port 5000.")
 
 # Routes
 @app.route('/')
@@ -73,12 +92,26 @@ def index():
     html = """
    
     """
-    return render_template('./index.html')
+    return render_template('index.html')
     # return render_template_string(html)
 
+@app.route('/api/example_api_endpoint', methods=['POST'])
+def example_api_endpoint():
+    # Get the data from the request
+    data = request.json.get('data')
+
+    # Perform data processing
+
+
+    # Return the modified data as JSON
+    return jsonify({'result': data})
+
 if __name__ == '__main__':
+    stop_flask_server()
     app.run(debug=True)  
+    
     '''
+    
     main_content = '''
 import subprocess
 import os
@@ -111,7 +144,7 @@ def run_with_switches():
 
 
 if __name__ == '__main__':
-    subprocess.Popen(['python', './server/server.py'])
+    subprocess.Popen(['python', f'{os.path.dirname(os.path.realpath(__file__))}/server/server.py'])
     run_with_switches()
 
 '''
