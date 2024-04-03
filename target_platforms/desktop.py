@@ -194,13 +194,8 @@ if __name__ == '__main__':
 
     '''
     
-    def __init__(self, name, lang):
+    def __init__(self, name):
         self.name = name
-        self.lang = lang
-        if self.lang == 'go':
-          self.server_content = '''
-          
-          '''
 
         self.folders = [
           f'apps/{self.name}/desktop', 
@@ -229,15 +224,14 @@ if __name__ == '__main__':
 
     def run(self,name):
         # add check here for platform type and language 
-        if self.lang == 'py':
-          system = platform.system()
+        system = platform.system()
 
-          if system == 'Darwin':
-              cmd = 'python3'
-          elif system == 'Linux':
-              cmd = 'python'
-          else:
-              cmd = 'python'
+        if system == 'Darwin':
+            cmd = 'python3'
+        elif system == 'Linux':
+            cmd = 'python'
+        else:
+            cmd = 'python'
 
         # os.system(f'{cmd} {name}/desktop/dev/server/server.py')
         os.system(f'{cmd} apps/{name}/desktop/dev/main.py')

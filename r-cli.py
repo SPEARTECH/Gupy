@@ -3,10 +3,8 @@ import click
 import sys
 import os
 from target_platforms import *
-# import apps
 
 NAME=''
-LANG=''
 TARGETS=[]
 WEB=False
 API=False
@@ -29,27 +27,17 @@ def cli():
     '--target-platform',
     '-t',
     type=click.Choice(
-        ['desktop', 'mobile', 'pwa', 'website', 'api'], 
+        ['desktop', 'pwa', 'website', 'api', 'cli'], 
         case_sensitive=False
         ),
     multiple=True, 
     default=['desktop'], 
-    help="Use this command for each platform you intend to target (ie. -t desktop -t mobile)"
+    help="Use this command for each platform you intend to target (ie. -t desktop -t website)"
     )
-@click.option(
-    '--lang',
-    '-l',
-    required=True,
-    help='Language: "Py" or "Go"'
-    )
-def create(name,target_platform,lang):
+def create(name,target_platform):
     NAME=name #Assigning project name
-    LANG=lang
     WEB=False
     API=False
-    if LANG.lower() != 'py' and LANG.lower() != 'go':
-        print(f'Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang)')
-        return
 
     for target in target_platform: #Assigning target platforms
         TARGETS.append(target)
@@ -77,19 +65,19 @@ Confirm?
     obj.create_project_folder() #Create Project folder
 
     if 'desktop' in TARGETS: #create files/folder structure for desktop app if applicable
-        desktop.Desktop(NAME,LANG).create()
-
-    if 'mobile' in TARGETS: #create files/folder structure for mobile app if applicable
-        mobile.Mobile(NAME).create()
+        desktop.Desktop(NAME).create()
 
     if 'pwa' in TARGETS: #create files/folder structure for pwa app if applicable
         pwa.Pwa(NAME).create()
 
     if WEB == True: #create files/folder for django project if applicable
-        website.Website(NAME,LANG).create()
+        website.Website(NAME).create()
 
     if API == True: #install and create modifications to django project for api usage if applicable
-        api.Api(NAME,LANG).create()
+        api.Api(NAME).create()
+
+    if 'cli' in TARGETS: #create files/folder structure for cli app if applicable
+        cmdline.CLI(NAME).create()
 
 @click.command()
 @click.option(
@@ -102,7 +90,7 @@ Confirm?
     '--target-platform',
     '-t',
     type=click.Choice(
-        ['desktop', 'mobile', 'pwa', 'website', 'api'], 
+        ['desktop', 'pwa', 'website', 'api', 'cli'], 
         case_sensitive=False
         ),
     required=True,
@@ -110,20 +98,16 @@ Confirm?
     default=['desktop'], 
     help="Select the app platform you intend to run (ie. -t desktop)"
     )
-@click.option(
-    '--lang',
-    '-l',
-    required=True,
-    help='Language: "Py" or "Go"'
-    )
-def run(name,target_platform,lang):
+def run(name,target_platform):
     NAME=name
     TARGET=target_platform
-    LANG=lang
     if os.path.exists(f"apps/{NAME}"):
         if os.path.exists(f"apps/{NAME}/{TARGET}"):
             if TARGET == 'desktop':
-                app_obj = desktop.Desktop(NAME,LANG)
+                app_obj = desktop.Desktop(NAME)
+                app_obj.run(NAME)
+            elif TARGET == 'cli':
+                app_obj = cmdline.CLI(NAME)
                 app_obj.run(NAME)
             else:
                 print('other platforms not enabled for this feature yet...')
@@ -148,37 +132,6 @@ def list():
         print('No apps created...\nTry "python ./r-cli.py create <commands>" to get started.')
 
     print('\n')
-
-
-    
-# @click.command()
-# @click.option(
-#     '--name',
-#     '-n',
-#     required=True,
-#     help='Name of project'
-#     )
-# @click.option(
-#     '--service',
-#     '-s',
-#     required=True,
-#     type=click.Choice(
-#         ['desktop', 'mobile', 'pwa', 'website'], 
-#         case_sensitive=False
-#         ),
-#     multiple=False, 
-#     help="Select which server to run"
-# )
-# def serve(name, service):
-#     NAME=name #Assigning project name
-#     if service.lower() == 'desktop':
-#         desktop.Desktop(NAME).serve(NAME)
-#     elif service.lower() == 'mobile':
-#         mobile.Mobile(NAME).serve(NAME)
-#     elif service.lower() == 'pwa':
-#         pwa.Pwa(NAME).serve(NAME)
-#     elif service.lower() == 'website':
-#         website.Website(NAME).serve(NAME)
 
 if __name__ == '__main__':
     cli.add_command(create) #Add command for cli

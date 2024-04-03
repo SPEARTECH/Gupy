@@ -2,7 +2,7 @@ __all__ = [
     'base',
     'api',
     'desktop',
-    'mobile',
+    'cmdline',
     'pwa',
     'website'
 ]
