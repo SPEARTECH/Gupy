@@ -1,5 +1,6 @@
 from . import base
 import os
+import platform
 
 class Website(base.Base):
     index_content = '''
@@ -80,9 +81,8 @@ urlpatterns = [
     
     server_content = ''
     
-    def __init__(self, name, lang):
+    def __init__(self, name):
         self.name = name
-        self.lang = lang
         self.admin_urls_content = f'''
 """selfcert URL Configuration
 
@@ -110,11 +110,10 @@ urlpatterns = [
         self.folders = [f'{self.name}/website', f'{self.name}/website/dev']
         self.files = {
             f'/{self.name}_app/templates/index.html': self.index_content,
-            f'{self.name}_app/urls.py': self.urls_content,
-            f'{self.name}/urls.py': self.admin_urls_content,
+            f'/{self.name}_app/urls.py': self.urls_content,
+            f'/{self.name}/urls.py': self.admin_urls_content,
             }
-        if self.lang.lower() == 'py':
-          self.server_content = f'''
+        self.server_content = f'''
 from django.shortcuts import render
 from {self.name}_app.models import *
 
@@ -136,36 +135,35 @@ def index(request):
 #     '''
 
     def create(self):
-        if self.lang == 'py':
-          system = platform.system()
+      system = platform.system()
 
-          if system == 'Darwin':
-              cmd = 'python3'
-          elif system == 'Linux':
-              cmd = 'python'
-          else:
-              cmd = 'python'
+      if system == 'Darwin':
+          cmd = 'python3'
+      elif system == 'Linux':
+          cmd = 'python'
+      else:
+          cmd = 'python'
 
-        for folder in self.folders:
-            os.mkdir('apps/'+folder)
-            print(f'created "{folder}" folder.')
-        print('starting django project...')
-        os.system('echo changing directory')
-        os.chdir(f'apps/{self.name}/website/dev/') #go into newly created dev folder
-        # os.system('pwd')
-        os.system(f'django-admin startproject {self.name}')
-        print('creating django app...')
-        os.chdir(self.name)
-        os.system(f'{cmd} manage.py startapp {self.name}_app')
-        os.mkdir(f'{self.name}_app/templates')
-        os.mkdir(f'{self.name}_app/static')
-        os.mkdir(f'{self.name}_app/static/css')
-        # add npm install, init, tailwindcss install, init, daisyui install, tailwind config generation (with daisy theme)
-        for file in self.files:
-            with open(os.getcwd()+file, 'w') as f:
-              f.write(self.files.get(file))
-              print(f'created "{file}" file.')
-        with open(f'{self.name}_app/views.py','w') as f:
-          f.write(self.server_content)
+      for folder in self.folders:
+          os.mkdir('apps/'+folder)
+          print(f'created "{folder}" folder.')
+      print('starting django project...')
+      os.system('echo changing directory...')
+      os.chdir(f'apps/{self.name}/website/dev/') #go into newly created dev folder
+      # os.system('pwd')
+      os.system(f'django-admin startproject {self.name}')
+      print('creating django app...')
+      os.chdir(self.name)
+      os.system(f'{cmd} manage.py startapp {self.name}_app')
+      os.mkdir(f'{self.name}_app/templates')
+      os.mkdir(f'{self.name}_app/static')
+      os.mkdir(f'{self.name}_app/static/css')
+      # add npm install, init, tailwindcss install, init, daisyui install, tailwind config generation (with daisy theme)
+      for file in self.files:
+          with open(os.getcwd()+file, 'w') as f:
+            f.write(self.files.get(file))
+            print(f'created "{file}" file.')
+      with open(f'{self.name}_app/views.py','w') as f:
+        f.write(self.server_content)
 
 

@@ -206,9 +206,7 @@ if __name__ == '__main__':
         self.files = {
             f'apps/{self.name}/desktop/dev/main.py': self.main_content,
             f'apps/{self.name}/desktop/dev/server/templates/index.html': self.index_content,
-            f'apps/{self.name}/desktop/dev/server/server.py'\
-               if self.lang == 'py' else \
-            f'apps/{self.name}/desktop/dev/server/server.go': self.server_content\
+            f'apps/{self.name}/desktop/dev/server/server.py': self.server_content,
             }
 
     def create(self):
