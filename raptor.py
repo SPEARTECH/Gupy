@@ -129,7 +129,7 @@ def list():
             count += 1
 
     if count == 0:
-        print('No apps created...\nTry "python ./r-cli.py create <commands>" to get started.')
+        print('No apps created...\nTry "python ./raptor.py create <commands>" to get started.')
 
     print('\n')
 
