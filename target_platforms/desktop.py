@@ -269,7 +269,7 @@ import (
 
 //export go_module
 func go_module() *C.char {
-    response := "Go Module Called..."
+    response := "Welcome to Raptor!"
 
     return C.CString(response)
 }

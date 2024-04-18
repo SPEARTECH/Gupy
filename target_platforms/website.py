@@ -126,7 +126,57 @@ urlpatterns = [
     '''
     
     server_content = ''
-    
+
+    python_modules_content = '''
+import os
+from ctypes import cdll, c_char_p
+
+def main():
+    path = os.path.dirname(os.path.realpath(__file__))
+
+    # Load the shared library
+    try:
+        go_modules = cdll.LoadLibrary(path+'/../go_modules/go_modules.so')
+    except Exception as e:
+        print(str(e)+'\\n Try running `python ./raptor.py gopherize -t <target_platform> -n <app_name>`')
+        return
+
+    # Define the return type of the function
+    go_modules.go_module.restype = c_char_p
+
+    # Call the Go function and decode the returned bytes to a string
+    result = go_modules.go_module().decode('utf-8')
+
+    return result
+
+if __name__ == "__main__":
+    main() 
+
+
+    '''
+
+
+    go_modules_content = '''
+package main
+
+import (
+    "C"
+)
+
+//export go_module
+func go_module() *C.char {
+    response := "Welcome to Raptor!"
+
+    return C.CString(response)
+}
+
+func main() {
+    // c_module()
+}    
+    '''
+
+
+
     def __init__(self, name):
         self.name = name
         self.admin_urls_content = f'''
@@ -195,30 +245,100 @@ def index(request):
           print(f'created "{folder}" folder.')
       print('starting django project...')
       os.system('echo changing directory...')
-      os.chdir(f'apps/{self.name}/website/dev/') #go into newly created dev folder
+      os.chdir(f'apps/{self.name}/website/') #go into newly created folder
       # os.system('pwd')
-      os.system(f'django-admin startproject {self.name}')
+      try:
+        os.system(f'django-admin startproject {self.name}')
+      except Exception as e:
+        print(str(e)+'\nFailure to run django-admin; try installing django with `python -m pip install django`')
+        return
       print('creating django app...')
+      # print(os.getcwd())
       os.chdir(self.name)
       os.system(f'{cmd} manage.py startapp {self.name}_app')
       os.mkdir(f'{self.name}_app/templates')
-      os.mkdir(f'{self.name}_app/python_modules]')
-      os.mkdir(f'{self.name}_app/cython_modules')
-      os.mkdir(f'{self.name}_app/static')
-      os.mkdir(f'{self.name}_app/static/css')
+      os.mkdir(f'{self.name}_app/python_modules')
+      f = open(f'{self.name}_app/python_modules/python_modules.py', 'x')
+      f.write(self.python_modules_content)
+      print(f'created "{self.name}_app/python_modules/python_modules.py" file.')
+      f.close()
+      os.mkdir(f'{self.name}_app/go_modules')
+      f = open(f'{self.name}_app/go_modules/go_modules.go', 'x')
+      f.write(self.go_modules_content)
+      print(f'created "{self.name}_app/go_modules/go_modules.go" file.')
+      f.close()    
+      os.chdir(f'{self.name}_app/go_modules/')
+      os.system(f'go mod init example/go_modules')
+      os.chdir('../')
+      os.mkdir(f'static')
+      os.mkdir(f'static/css')
+      os.chdir('../')
       # add npm install, init, tailwindcss install, init, daisyui install, tailwind config generation (with daisy theme)
       for file in self.files:
           with open(os.getcwd()+file, 'w') as f:
             f.write(self.files.get(file))
             print(f'created "{file}" file.')
-      with open(f'{self.name}_app/views.py','w') as f:
+      with open(f'views.py','w') as f:
         f.write(self.server_content)
 
-    def compile(self,name):
-      pass
+    # def compile(self,name):
+    #   pass
 
     def cythonize(self,name):
-      pass
-    
+        if os.path.exists(f"apps/{name}/website/{self.name}_app/python_modules"):
+            os.chdir(f'apps/{name}/website/{self.name}_app/python_modules')
+            # files = [f for f in os.listdir('.') if os.path.isfile(f)]
+            setup_content = '''
+from distutils.core import setup
+from Cython.Build import cythonize
+
+setup(
+    ext_modules = cythonize([
+            '''
+            # for f in files:
+            #     os.system(f'cp{f} {f}x')
+            files = [f for f in glob.glob('*.py')]
+            if 'setup.py' in files:
+                files.remove('setup.py')
+            for file in files:
+                with open(file, 'r') as f:
+                    py_content = ''
+                    for item in f.readlines():
+                        py_content = py_content + item
+                if os.path.exists(file+'x'):
+                    f = open(f'{file}x', 'r+')
+                    f.seek(0)
+                    f.truncate()
+                    f.close()
+                else:
+                    f = open(f'{file}x', 'x')
+                f = open(f'{file}x', 'r+')
+                f.write(py_content)
+                print(f'Updated {file}x file.')
+                f.close()
+
+                setup_content = setup_content + f'"{file}x",\n'
+            setup_content = setup_content + '''     ])
+    )
+            '''
+            if os.path.exists('setup.py'):
+                f = open('setup.py', 'r+')
+                f.seek(0)
+                f.truncate()
+                f.close()
+            else:
+                f = open('setup.py', 'x')
+            f = open('setup.py', 'r+')
+            f.write(setup_content)
+            print(f'Updated setup.py file.')
+            f.close()
+            os.system(f'python ./setup.py build_ext --inplace')
+
     def gopherize(self,name):
-      pass
+        if os.path.exists(f"apps/{name}/website/{self.name}_app/go_modules"):
+            os.chdir(f'apps/{name}/website/{self.name}_app/go_modules')
+            os.system(f'go mod tidy')
+            files = [f for f in glob.glob('*.go')]
+            for file in files:
+                print(f'Building {file} file...')
+                os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
