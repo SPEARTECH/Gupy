@@ -3,6 +3,9 @@ import os
 
 class CLI(base.Base):
     index_content = '''
+# Documentation: 
+# https://click.palletsprojects.com/en/8.1.x/
+
 from logging import exception
 import click
 import sys
@@ -52,11 +55,14 @@ if __name__ == '__main__':
 
 '''
 
-    def __init__(self, name):
+    def __init__(self, name, lang):
         self.name = name
+        self.lang = lang
         self.folders = [
           f'apps/{self.name}/cli',
           f'apps/{self.name}/cli/dev',
+        #   f'apps/{self.name}/cli/dev/python_modules',
+        #   f'apps/{self.name}/cli/dev/cython_modules',
           ]
         self.files = {
             f'apps/{self.name}/cli/dev/{self.name}.py': self.index_content,
@@ -86,3 +92,13 @@ if __name__ == '__main__':
 
         # os.system(f'{cmd} {name}/desktop/dev/server/server.py')
         os.system(f'{cmd} apps/{name}/desktop/dev/{name}.py')
+
+    def compile(self,name):
+        pass
+
+    def cythonize(self,name):
+        pass
+
+    def gopherize(self,name):
+        pass
+        
