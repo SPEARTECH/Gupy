@@ -21,7 +21,7 @@ class Website(base.Base):
 
 <html>
 <head>
-  <title>Raptor App</title>
+  <title>Gupy App</title>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
@@ -54,7 +54,7 @@ document.addEventListener('contextmenu', function(event) {
       delimiters : ['[[', ']]'],
         data(){
           return {
-            message: 'Welcome to Raptor!',
+            message: 'Welcome to Gupy!',
             data: {},
           }
         },
@@ -138,7 +138,7 @@ def main():
     try:
         go_modules = cdll.LoadLibrary(path+'/../go_modules/go_modules.so')
     except Exception as e:
-        print(str(e)+'\\n Try running `python ./raptor.py gopherize -t <target_platform> -n <app_name>`')
+        print(str(e)+'\\n Try running `python ./gupy.py gopherize -t <target_platform> -n <app_name>`')
         return
 
     # Define the return type of the function
@@ -165,7 +165,7 @@ import (
 
 //export go_module
 func go_module() *C.char {
-    response := "Welcome to Raptor!"
+    response := "Welcome to Gupy!"
 
     return C.CString(response)
 }

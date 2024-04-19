@@ -140,7 +140,7 @@ def list():
             count += 1
 
     if count == 0:
-        print('No apps created...\nTry "python ./raptor.py create <commands>" to get started.')
+        print('No apps created...\nTry "python ./gupy.py create <commands>" to get started.')
 
     print('\n')
 
@@ -179,7 +179,7 @@ def compile(name,target_platform):
         else:
             print(f'{NAME} app does not have a target platform of {TARGET}.')
     else:
-        print(f'{NAME} folder does not exist. Try listing all apps with "python ./raptor.py list"')
+        print(f'{NAME} folder does not exist. Try listing all apps with "python ./gupy.py list"')
 
 @click.command()
 @click.option(
@@ -219,7 +219,7 @@ def cythonize(name,target_platform):
         else:
             print(f'{NAME} app does not have a target platform of {TARGET}.')
     else:
-        print(f'{NAME} folder does not exist. Try listing all apps with "python ./raptor.py list"')
+        print(f'{NAME} folder does not exist. Try listing all apps with "python ./gupy.py list"')
 
 @click.command()
 @click.option(
@@ -259,7 +259,7 @@ def gopherize(name,target_platform):
         else:
             print(f'{NAME} app does not have a target platform of {TARGET}.')
     else:
-        print(f'{NAME} folder does not exist. Try listing all apps with "python ./raptor.py list"')
+        print(f'{NAME} folder does not exist. Try listing all apps with "python ./gupy.py list"')
 
 
 if __name__ == '__main__':
