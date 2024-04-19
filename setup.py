@@ -3,7 +3,7 @@ from setuptools import setup
 setup(
     name='r-cli',
     version='0.0.1',
-    py_modules=['r-cli'],
+    py_modules=['gupy'],
     install_requires=[
         'Click',
     ],
