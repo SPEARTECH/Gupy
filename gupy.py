@@ -120,6 +120,9 @@ def run(name,target_platform):
             elif TARGET == 'cli':
                 app_obj = cmdline.CLI(NAME)
                 app_obj.run(NAME)
+            elif TARGET == 'website':
+                app_obj = website.Website(NAME)
+                app_obj.run(NAME)
             else:
                 print('other platforms not enabled for this feature yet...')
         else:

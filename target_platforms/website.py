@@ -212,9 +212,9 @@ urlpatterns = [
 '''
         self.folders = [f'{self.name}/website']
         self.files = {
-            f'/{self.name}_app/templates/index.html': self.index_content,
-            f'/{self.name}_app/urls.py': self.urls_content,
-            f'/{self.name}/urls.py': self.admin_urls_content,
+            f'apps/{self.name}/website/{self.name}/{self.name}_app/templates/index.html': self.index_content,
+            f'apps/{self.name}/website/{self.name}/{self.name}_app/urls.py': self.urls_content,
+            f'apps/{self.name}/website/{self.name}/urls.py': self.admin_urls_content,
             }
         self.server_content = f'''
 from django.shortcuts import render
@@ -278,16 +278,36 @@ def index(request):
       os.system(f'go mod init example/go_modules')
       os.chdir('../')
       os.mkdir(f'static')
-      os.system(f'cp ')
+      import shutil
       os.mkdir(f'static/css')
-      os.chdir('../')
+      os.chdir('../../../../../')
+      print(os.getcwd())
+      shutil.copy('gupy_logo.png', f'apps/{self.name}/website/{self.name}/{self.name}_app/static/gupy_logo.png')
       # add npm install, init, tailwindcss install, init, daisyui install, tailwind config generation (with daisy theme)
       for file in self.files:
-          with open(os.getcwd()+file, 'w') as f:
+          with open(file, 'w') as f:
             f.write(self.files.get(file))
             print(f'created "{file}" file.')
       with open(f'views.py','w') as f:
         f.write(self.server_content)
+
+    def run(self,name):
+        if os.path.exists(f'apps/{name}/website/{name}/manage.py'):
+            # add check here for platform type and language 
+            system = platform.system()
+
+            if system == 'Darwin':
+                cmd = 'python3'
+            elif system == 'Linux':
+                cmd = 'python'
+            else:
+                cmd = 'python'
+            os.system(f'{cmd} apps/{name}/website/{name}/manage.py runserver')
+        # else:
+        #     os.chdir(f'apps/{name}/desktop/dev')
+        #     os.system(f'go mod tidy')
+        #     os.system(f'go run server.go')
+
 
     # def compile(self,name):
     #   pass
