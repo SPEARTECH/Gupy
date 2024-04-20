@@ -134,12 +134,12 @@ from werkzeug.utils import secure_filename
 import random
 import json
 
-WORKSAFE=False
-try:
-    from gevent.pywsgi import WSGIServer
-except Exception as e:
-    print(e)
-    WORKSAFE=True
+# WORKSAFE=False
+# try:
+#     from gevent.pywsgi import WSGIServer
+# except Exception as e:
+#     print(e)
+#     WORKSAFE=True
         
 def run_with_switches():
     # Check the default browser
@@ -237,11 +237,11 @@ if __name__ == '__main__':
     # Run Apped Chrome Window
     run_with_switches()
 
-    if WORKSAFE == False:
-        http_server = WSGIServer(("127.0.0.1", 8000), app)
-        http_server.serve_forever()
-    else:
-        app.run(debug=True, threaded=True, port=8000)  
+    # if WORKSAFE == False:
+    #     http_server = WSGIServer(("127.0.0.1", 8000), app)
+    #     http_server.serve_forever()
+    # else:
+    app.run(debug=True, threaded=True, port=8000)  
 
     '''
 
