@@ -62,6 +62,7 @@ document.addEventListener('contextmenu', function(event) {
         data(){
           return {
             message: 'Welcome to Gupy!',
+            pyodide_msg: 'This is from Pyodide!',
             data: {},
           }
         },

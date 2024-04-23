@@ -123,6 +123,9 @@ def run(name,target_platform):
             elif TARGET == 'website':
                 app_obj = website.Website(NAME)
                 app_obj.run(NAME)
+            elif TARGET == 'pwa':
+                app_obj = pwa.Pwa(NAME)
+                app_obj.run(NAME)
             else:
                 print('other platforms not enabled for this feature yet...')
         else:
@@ -256,6 +259,9 @@ def gopherize(name,target_platform):
                 app_obj.gopherize(NAME)
             elif TARGET == 'cli':
                 app_obj = cmdline.CLI(NAME)
+                app_obj.gopherize(NAME)
+            elif TARGET == 'pwa':
+                app_obj = pwa.Pwa(NAME)
                 app_obj.gopherize(NAME)
             else:
                 print('other platforms not enabled for this feature yet...')

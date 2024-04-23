@@ -58,6 +58,7 @@ document.addEventListener('contextmenu', function(event) {
         data(){
           return {
             message: 'Welcome to Gupy!',
+            pyodide_msg: 'This is from Pyodide!',
             data: {},
           }
         },
@@ -295,8 +296,6 @@ func main() {
     read_me = '''
 
     '''
-
-
     
     def __init__(self, name, lang=''):
         self.name = name

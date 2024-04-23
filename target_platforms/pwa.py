@@ -1,5 +1,9 @@
 from . import base
 import os
+import platform
+import subprocess
+import shutil
+import glob
 
 class Pwa(base.Base):
     index_content = '''
@@ -49,6 +53,12 @@ document.addEventListener('contextmenu', function(event) {
     event.preventDefault();
 });
 </script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js', { scope: '/' });
+  }
+</script>
+<script src="go_modules/wasm_exec.js"></script>
   <script>
     const { createApp } = Vue
     
@@ -57,6 +67,7 @@ document.addEventListener('contextmenu', function(event) {
         data(){
           return {
             message: 'Welcome to Gupy!',
+            pyodide_msg: 'This is from Pyodide!',
             data: {},
           }
         },
@@ -107,6 +118,16 @@ response = {'new_msg':pyodide_msg}
         })
       },
         mounted() {
+          const go = new Go();
+          WebAssembly.instantiateStreaming(fetch("go_modules/go_module.wasm"), go.importObject).then((result) => {
+            go.run(result.instance);
+          });
+
+          let worker = new Worker('worker.js');
+          worker.postMessage({ message: '' });
+          worker.onmessage = function (message) {
+            console.log(message.data)
+          }
 
         },
         computed:{
@@ -155,9 +176,30 @@ self.addEventListener('fetch', event => {
 });
 '''
     
+    worker_content = '''
+onmessage = function(message){
+    message.data['message'] = 'This is from the worker!'
+
+    // console.log(message.data)
+
+    postMessage(message.data)
+}  
+
+    '''
+
+    go_module_content = '''
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello, from Go WebAssembly!")
+}
+    '''
+
     def __init__(self, name):
         self.name = name
-        manifest_content = '''
+        self.manifest_content = '''
 {
     "lang": "en-us",
     "name": "'''+self.name+'''",
@@ -177,13 +219,19 @@ self.addEventListener('fetch', event => {
     ]
 }
 '''
+
         self.folders = [
             f'apps/{self.name}/pwa',
+            f'apps/{self.name}/pwa/go_modules',
+            # f'apps/{self.name}/pwa/python_modules',
+
             ]
         self.files = {
             f'apps/{self.name}/pwa/index.html': self.index_content,
-            f'apps/{self.name}/pwa/manifest.js': manifest_content,
+            f'apps/{self.name}/pwa/manifest.js': self.manifest_content,
             f'apps/{self.name}/pwa/sw.js': self.sw_content,
+            f'apps/{self.name}/pwa/worker.js': self.worker_content,
+            f'apps/{self.name}/pwa/go_modules/go_module.go': self.go_module_content,
             }
 
     def create(self):
@@ -196,10 +244,90 @@ self.addEventListener('fetch', event => {
             f.write(self.files.get(file))
             print(f'created "{file}" file.')
             f.close()
-        import shutil
+
         shutil.copy('gupy_logo.png', f'apps/{self.name}/pwa/gupy_logo.png')
 
+        os.chdir(f'apps/{self.name}/pwa/go_modules')
+        os.system(f'go mod init example/go_module')
+        os.system(f'go mod tidy')
+        def build_wasm():
+          # Set the environment variables
+          env = os.environ.copy()
+          env['GOOS'] = 'js'
+          env['GOARCH'] = 'wasm'
+          
+          # Command to execute
+          command = 'go build -o go_module.wasm'
+          
+          # Execute the command
+          result = subprocess.run(command, shell=True, env=env)
+          
+          # Check if the command was successful
+          if result.returncode == 0:
+              print("Build successful.")
+          else:
+              print("Build failed.")
+
+        build_wasm()
+        # os.system(f"$env:GOOS='js'; $env:GOARCH='wasm'; go build -o main.wasm")
+        # Function to get the GOROOT environment variable using the 'go env' command
+        def get_goroot():
+            # Run 'go env GOROOT' command and capture the output
+            result = subprocess.run(["go", "env", "GOROOT"], capture_output=True, text=True)
+            if result.returncode == 0:
+                return result.stdout.strip()  # Remove any surrounding whitespace/newlines
+            else:
+                raise Exception("Failed to get GOROOT: " + result.stderr)
+        goroot = get_goroot()
+        # Construct the path to wasm_exec.js
+        wasm_exec_path = goroot + "/misc/wasm/wasm_exec.js"
+        # Copy wasm_exec.js to the current directory
+        shutil.copy(wasm_exec_path, '.')
+        # shutil.copy("$(go env GOROOT)/misc/wasm/wasm_exec.js", '.')
+        os.chdir(f'../')
 
     # launch index file in browser
-    def run(self):
-      pass
+    def run(self, name):
+      os.chdir(f'apps/{name}/pwa')
+      # add check here for platform type and language 
+      system = platform.system()
+
+      if system == 'Darwin':
+          cmd = 'python3'
+      elif system == 'Linux':
+          cmd = 'python'
+      else:
+          cmd = 'python'
+
+      os.system(f'{cmd} -m http.server')
+
+    # def cythonize(self, name):
+    #   pass
+
+    def assemble(self, name):
+        os.chdir(f'apps/{name}/pwa/go_modules')
+        os.system(f'go mod tidy')
+        def build_wasm(filename):
+          # Set the environment variables
+          env = os.environ.copy()
+          env['GOOS'] = 'js'
+          env['GOARCH'] = 'wasm'
+          
+          # Command to execute
+          command = f'go build -o {os.path.splitext(filename)[0]}.wasm'
+          
+          # Execute the command
+          result = subprocess.run(command, shell=True, env=env)
+          
+          # Check if the command was successful
+          if result.returncode == 0:
+              print("Build successful.")
+          else:
+              print("Build failed.")
+        files = [f for f in glob.glob('*.go')]
+        for filename in files:
+          build_wasm(filename)
+
+        # add assembly of cython modules
+
+    
