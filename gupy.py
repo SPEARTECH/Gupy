@@ -270,6 +270,45 @@ def gopherize(name,target_platform):
     else:
         print(f'{NAME} folder does not exist. Try listing all apps with "python ./gupy.py list"')
 
+@click.command()
+@click.option(
+    '--name',
+    '-n',
+    required=True,
+    help='Name of app'
+    )
+@click.option(
+    '--target-platform',
+    '-t',
+    type=click.Choice(
+        ['desktop', 'pwa', 'website'], 
+        case_sensitive=False
+        ),
+    required=True,
+    multiple=False, 
+    default=['desktop'], 
+    help="Select the app platform you intend to run (ie. -t desktop)"
+    )
+def assemble(name,target_platform):
+    NAME=name
+    TARGET=target_platform
+    if os.path.exists(f"apps/{NAME}"):
+        if os.path.exists(f"apps/{NAME}/{TARGET}"):
+            if TARGET == 'desktop':
+                app_obj = desktop.Desktop(NAME)
+                app_obj.assemble(NAME)
+            elif TARGET == 'website':
+                app_obj = website.Website(NAME)
+                app_obj.assemble(NAME)
+            elif TARGET == 'pwa':
+                app_obj = pwa.Pwa(NAME)
+                app_obj.assemble(NAME)
+            else:
+                print('other platforms not enabled for this feature yet...')
+        else:
+            print(f'{NAME} app does not have a target platform of {TARGET}.')
+    else:
+        print(f'{NAME} folder does not exist. Try listing all apps with "python ./gupy.py list"')
 
 if __name__ == '__main__':
     cli.add_command(create) #Add command for cli
@@ -278,5 +317,6 @@ if __name__ == '__main__':
     cli.add_command(compile)
     cli.add_command(cythonize)
     cli.add_command(gopherize)
+    cli.add_command(assemble)
     cli() #Run cli
 

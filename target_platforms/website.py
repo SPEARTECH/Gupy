@@ -371,3 +371,5 @@ setup(
             for file in files:
                 print(f'Building {file} file...')
                 os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
+
+    # Add Assemble
