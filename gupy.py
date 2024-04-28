@@ -45,18 +45,20 @@ def cli():
     # required=True,
     help="Select the base language for the app ('py' or 'go')"
     )
-def create(name,target_platform,language):
+def create(name,target_platform, language):
     NAME=name #Assigning project name
     LANG=language
 
-    if not LANG and target_platform != ('pwa',):
+    if not LANG and target_platform != 'pwa' or target_platform != 'website' or target_platform != ('pwa', 'website'):
         print("Error: Option '-l/--language' is required for ['desktop', 'cli'] targets.")
         return
     elif LANG and LANG.lower() != 'py' and LANG.lower() != 'go':
         print(f'Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang)')
         return
-    elif not LANG:
+    elif not LANG and target_platform == 'pwa':
         LANG = 'javascript'
+    elif not LANG and target_platform == 'website':
+        LANG = 'python'
 
     for target in target_platform: #Assigning target platforms
         TARGETS.append(target)
