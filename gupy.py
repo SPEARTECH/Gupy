@@ -49,7 +49,7 @@ def create(name,target_platform, language):
     NAME=name #Assigning project name
     LANG=language
 
-    if not LANG and target_platform != 'pwa' or target_platform != 'website' or target_platform != ('pwa', 'website'):
+    if not LANG and target_platform != 'pwa' and target_platform != 'website' and target_platform != ('pwa', 'website'):
         print("Error: Option '-l/--language' is required for ['desktop', 'cli'] targets.")
         return
     elif LANG and LANG.lower() != 'py' and LANG.lower() != 'go':
