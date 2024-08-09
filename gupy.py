@@ -114,8 +114,8 @@ Confirm?
 def run(name,target_platform):
     NAME=name
     TARGET=target_platform
-    if os.path.exists(f"apps/{NAME}"):
-        if os.path.exists(f"apps/{NAME}/{TARGET}"):
+    if os.path.exists(f"gupy_apps/{NAME}"):
+        if os.path.exists(f"gupy_apps/{NAME}/{TARGET}"):
             if TARGET == 'desktop':
                 app_obj = desktop.Desktop(NAME)
                 app_obj.run(NAME)
@@ -133,16 +133,16 @@ def run(name,target_platform):
         else:
             print(f'{NAME} app does not have a target platform of {TARGET}.')
     else:
-        print(f'{NAME} folder does not exist. Try listing all apps with "python ./r-cli.py list"')
+        print(f'{NAME} folder does not exist. Try listing all apps with "python ./gupy.py list" or "python -m gupy list"')
 
 @click.command()
 def list():
     # apps.Apps.getapps()
-    # for item in os.listdir('apps/'):
+    # for item in os.listdir('gupy_apps/'):
     #     print(item)
     print(f'Printing apps in {os.path.abspath("./apps")} directory...\n')
     count = 0
-    for item in os.listdir('apps/'):
+    for item in os.listdir('gupy_apps/'):
         if item != '__pycache__':
             print(item)
             count += 1
@@ -174,8 +174,8 @@ def list():
 def compile(name,target_platform):
     NAME=name
     TARGET=target_platform
-    if os.path.exists(f"apps/{NAME}"):
-        if os.path.exists(f"apps/{NAME}/{TARGET}"):
+    if os.path.exists(f"gupy_apps/{NAME}"):
+        if os.path.exists(f"gupy_apps/{NAME}/{TARGET}"):
             if TARGET == 'desktop':
                 app_obj = desktop.Desktop(NAME)
                 app_obj.compile(NAME)
@@ -211,8 +211,8 @@ def compile(name,target_platform):
 def cythonize(name,target_platform):
     NAME=name
     TARGET=target_platform
-    if os.path.exists(f"apps/{NAME}"):
-        if os.path.exists(f"apps/{NAME}/{TARGET}"):
+    if os.path.exists(f"gupy_apps/{NAME}"):
+        if os.path.exists(f"gupy_apps/{NAME}/{TARGET}"):
             if TARGET == 'desktop':
                 app_obj = desktop.Desktop(NAME)
                 app_obj.cythonize(NAME)
@@ -251,8 +251,8 @@ def cythonize(name,target_platform):
 def gopherize(name,target_platform):
     NAME=name
     TARGET=target_platform
-    if os.path.exists(f"apps/{NAME}"):
-        if os.path.exists(f"apps/{NAME}/{TARGET}"):
+    if os.path.exists(f"gupy_apps/{NAME}"):
+        if os.path.exists(f"gupy_apps/{NAME}/{TARGET}"):
             if TARGET == 'desktop':
                 app_obj = desktop.Desktop(NAME)
                 app_obj.gopherize(NAME)
@@ -294,8 +294,8 @@ def gopherize(name,target_platform):
 def assemble(name,target_platform):
     NAME=name
     TARGET=target_platform
-    if os.path.exists(f"apps/{NAME}"):
-        if os.path.exists(f"apps/{NAME}/{TARGET}"):
+    if os.path.exists(f"gupy_apps/{NAME}"):
+        if os.path.exists(f"gupy_apps/{NAME}/{TARGET}"):
             if TARGET == 'desktop':
                 app_obj = desktop.Desktop(NAME)
                 app_obj.assemble(NAME)

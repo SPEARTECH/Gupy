@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name='r-cli',
+    name='gupy',
     version='0.0.1',
     py_modules=['gupy'],
     install_requires=[
@@ -9,6 +9,6 @@ setup(
     ],
     entry_points='''
         [console_scripts]
-        r-cli=r-cli:cli
+        gupy=gupy:cli
     ''',
 )

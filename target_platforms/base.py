@@ -9,8 +9,8 @@ class Base:
 
     def create_project_folder(self): 
         #Create project folder
-        if not os.path.exists('apps/'+self.project_folder):
-            os.mkdir('apps/'+self.project_folder)
+        if not os.path.exists('gupy_apps/'+self.project_folder):
+            os.mkdir('gupy_apps/'+self.project_folder)
             print(f'created "{self.project_folder}" project folder.')
         else:
             print(f'"{self.project_folder}" already exists.')

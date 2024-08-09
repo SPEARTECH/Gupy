@@ -59,13 +59,13 @@ if __name__ == '__main__':
         self.name = name
         self.lang = lang
         self.folders = [
-          f'apps/{self.name}/cli',
-          f'apps/{self.name}/cli/dev',
-        #   f'apps/{self.name}/cli/dev/python_modules',
-        #   f'apps/{self.name}/cli/dev/cython_modules',
+          f'gupy_apps/{self.name}/cli',
+          f'gupy_apps/{self.name}/cli/dev',
+        #   f'gupy_apps/{self.name}/cli/dev/python_modules',
+        #   f'gupy_apps/{self.name}/cli/dev/cython_modules',
           ]
         self.files = {
-            f'apps/{self.name}/cli/dev/{self.name}.py': self.index_content,
+            f'gupy_apps/{self.name}/cli/dev/{self.name}.py': self.index_content,
             }
 
     def create(self):
@@ -91,7 +91,7 @@ if __name__ == '__main__':
             cmd = 'python'
 
         # os.system(f'{cmd} {name}/desktop/dev/server/server.py')
-        os.system(f'{cmd} apps/{name}/desktop/dev/{name}.py')
+        os.system(f'{cmd} gupy_apps/{name}/desktop/dev/{name}.py')
 
     def compile(self,name):
         pass

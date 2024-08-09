@@ -1,2 +1,3 @@
 venv/
-apps/
+gupy_apps/
+__pycache__
