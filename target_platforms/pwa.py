@@ -827,21 +827,45 @@ return event.result;
 '''
 
         self.folders = [
-            f'gupy_apps/{self.name}/pwa',
-            f'gupy_apps/{self.name}/pwa/go_wasm',
+            f'pwa',
+            f'pwa/go_wasm',
             # f'gupy_apps/{self.name}/pwa/python_wasm',
 
             ]
         self.files = {
-            f'gupy_apps/{self.name}/pwa/index.html': self.index_content,
-            f'gupy_apps/{self.name}/pwa/manifest.js': self.manifest_content,
-            f'gupy_apps/{self.name}/pwa/sw.js': self.sw_content,
-            f'gupy_apps/{self.name}/pwa/worker.js': self.worker_content,
-            f'gupy_apps/{self.name}/pwa/go_wasm/go_wasm.go': self.go_wasm_content,
-            f'gupy_apps/{self.name}/pwa/go_wasm/wasm_exec.js': self.wasm_exec_content,
+            f'pwa/index.html': self.index_content,
+            f'pwa/manifest.js': self.manifest_content,
+            f'pwa/sw.js': self.sw_content,
+            f'pwa/worker.js': self.worker_content,
+            f'pwa/go_wasm/go_wasm.go': self.go_wasm_content,
+            f'pwa/go_wasm/wasm_exec.js': self.wasm_exec_content,
             }
 
     def create(self):
+      # check if platform project already exists, if so, prompt the user
+      if self.folders[0] in os.listdir('.'):
+          while True:
+              userselection = input(self.folders[0]' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
+              if userselection.lower() == 'y':
+                  userselection = input('Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +'? (y/n)')
+                  if userselection.lower() == 'y':
+                      print("Removing old version of project...")
+                      os.system(f'rm -r "{self.folders[0]}"')
+                      print("Continuing app platform creation.")
+                      break
+                  elif userselection.lower() != 'n':
+                      print('Invalid input, please type y or n then press enter...')
+                      continue
+                  else:
+                      print('Aborting app platform creation.')
+                      return
+              elif userselection.lower() != 'n':
+                  print('Invalid input, please type y or n then press enter...')
+                  continue
+              else:
+                  print('Aborting app platform creation.')
+                  return
+                  
         for folder in self.folders:
             os.mkdir(folder)
             print(f'created "{folder}" folder.')
@@ -852,9 +876,9 @@ return event.result;
             print(f'created "{file}" file.')
             f.close()
 
-        shutil.copy('gupy_logo.png', f'gupy_apps/{self.name}/pwa/gupy_logo.png')
+        shutil.copy('gupy_logo.png', f'pwa/gupy_logo.png')
 
-        os.chdir(f'gupy_apps/{self.name}/pwa/go_wasm')
+        os.chdir(f'pwa/go_wasm')
         os.system(f'go mod init example/go_wasm')
         os.system(f'go mod tidy')
         def build_wasm():
@@ -895,8 +919,8 @@ return event.result;
         self.assemble(self.name)
 
     # launch index file in browser
-    def run(self, name):
-      os.chdir(f'gupy_apps/{name}/pwa')
+    def run(self):
+      os.chdir(f'pwa')
       # add check here for platform type and language 
       system = platform.system()
 
@@ -912,31 +936,32 @@ return event.result;
     # def cythonize(self, name):
     #   pass
 
-    def assemble(self, name):
-        os.chdir(f'gupy_apps/{name}/pwa/go_wasm')
-        os.system(f'go mod tidy')
-        def build_wasm(filename):
-          # Set the environment variables
-          env = os.environ.copy()
-          env['GOOS'] = 'js'
-          env['GOARCH'] = 'wasm'
-          
-          # Command to execute
-          command = f'go build -o {os.path.splitext(filename)[0]}.wasm'
-          
-          # Execute the command
-          result = subprocess.run(command, shell=True, env=env)
-          
-          # Check if the command was successful
-          if result.returncode == 0:
-              print("Build successful.")
-          else:
-              print("Build failed.")
-        files = [f for f in glob.glob('*.go')]
-        for filename in files:
-          build_wasm(filename)
-        os.chdir('../../../../')
+    def assemble(self):
+      # detect if currently in go_wasm, otherwise, cd to go_wasm to run cmds
+      os.chdir(f'pwa/go_wasm')
+      os.system(f'go mod tidy')
+      def build_wasm(filename):
+        # Set the environment variables
+        env = os.environ.copy()
+        env['GOOS'] = 'js'
+        env['GOARCH'] = 'wasm'
+        
+        # Command to execute
+        command = f'go build -o {os.path.splitext(filename)[0]}.wasm'
+        
+        # Execute the command
+        result = subprocess.run(command, shell=True, env=env)
+        
+        # Check if the command was successful
+        if result.returncode == 0:
+            print("Build successful.")
+        else:
+            print("Build failed.")
+      files = [f for f in glob.glob('*.go')]
+      for filename in files:
+        build_wasm(filename)
+      os.chdir('../../')
 
-        # add assembly of cython modules
+      # add assembly of cython modules
 
     

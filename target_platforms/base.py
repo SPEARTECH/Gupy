@@ -9,9 +9,22 @@ class Base:
 
     def create_project_folder(self): 
         #Create project folder
-        if not os.path.exists('gupy_apps/'+self.project_folder):
-            os.mkdir('gupy_apps/'+self.project_folder)
-            print(f'created "{self.project_folder}" project folder.')
+        dir_list = os.getcwd().split('\\\\')
+        def change_dir(dir_list,name):
+            if name in dir_list: 
+                index = dir_list.index(name)
+                chdir_num = len(dir_list) - index
+                os.chdir('../'*chdir_num)
+            elif name in os.listdir('.'):
+                os.chdir(name)
+
+        if self.project_folder in dir_list or self.project_folder in os.listdir('.'):
+            print(f'"{self.project_folder}" already exists, changing directory to its root folder.')
+            change_dir(dir_list,self.project_folder)
+            print(f'Changed directory to {self.project_folder}')
         else:
-            print(f'"{self.project_folder}" already exists.')
+            os.mkdir(self.project_folder)
+            os.chdir(self.project_folder)
+            print(f'Created "{self.project_folder}" project folder.')
+            print(f'Changed directory to {self.project_folder}')
         

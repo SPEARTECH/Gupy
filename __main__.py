@@ -1,0 +1,3 @@
+import gupy
+
+gupy.main()

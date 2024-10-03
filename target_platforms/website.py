@@ -1040,18 +1040,18 @@ function getCSRFTokenFromDOM() {
 
 '''
         self.folders = [
-          f'{self.name}/website',
+          f'website',
           ]
         self.files = {
-            f'gupy_apps/{self.name}/website/{self.name}/{self.name}_app/templates/index.html': self.index_content,
-            f'gupy_apps/{self.name}/website/{self.name}/{self.name}_app/urls.py': self.urls_content,
-            f'gupy_apps/{self.name}/website/{self.name}/{self.name}_app/views.py': self.views_content,
-            f'gupy_apps/{self.name}/website/{self.name}/{self.name}/urls.py': self.admin_urls_content,
-            f'gupy_apps/{self.name}/website/{self.name}/{self.name}_app/static/manifest.json': self.manifest_content,
-            f'gupy_apps/{self.name}/website/{self.name}/sw.js': self.sw_content,
-            f'gupy_apps/{self.name}/website/{self.name}/{self.name}_app/static/worker.js': self.worker_content,
-            f'gupy_apps/{self.name}/website/{self.name}/{self.name}_app/static/go_wasm/go_wasm.go': self.go_wasm_content,
-            f'gupy_apps/{self.name}/website/{self.name}/{self.name}_app/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
+            f'website/{self.name}/{self.name}_app/templates/index.html': self.index_content,
+            f'website/{self.name}/{self.name}_app/urls.py': self.urls_content,
+            f'website/{self.name}/{self.name}_app/views.py': self.views_content,
+            f'website/{self.name}/{self.name}/urls.py': self.admin_urls_content,
+            f'website/{self.name}/{self.name}_app/static/manifest.json': self.manifest_content,
+            f'website/{self.name}/sw.js': self.sw_content,
+            f'website/{self.name}/{self.name}_app/static/worker.js': self.worker_content,
+            f'website/{self.name}/{self.name}_app/static/go_wasm/go_wasm.go': self.go_wasm_content,
+            f'website/{self.name}/{self.name}_app/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
             }
 
     def create(self):
@@ -1064,12 +1064,37 @@ function getCSRFTokenFromDOM() {
       else:
           cmd = 'python'
 
+      # check if platform project already exists, if so, prompt the user
+      if self.folders[0] in os.listdir('.'):
+          while True:
+              userselection = input(self.folders[0]' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
+              if userselection.lower() == 'y':
+                  userselection = input('Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +'? (y/n)')
+                  if userselection.lower() == 'y':
+                      print("Removing old version of project...")
+                      os.system(f'rm -r "{self.folders[0]}"')
+                      print("Continuing app platform creation.")
+                      break
+                  elif userselection.lower() != 'n':
+                      print('Invalid input, please type y or n then press enter...')
+                      continue
+                  else:
+                      print('Aborting app platform creation.')
+                      return
+              elif userselection.lower() != 'n':
+                  print('Invalid input, please type y or n then press enter...')
+                  continue
+              else:
+                  print('Aborting app platform creation.')
+                  return
+
+
       for folder in self.folders:
-          os.mkdir('gupy_apps/'+folder)
+          os.mkdir(folder)
           print(f'created "{folder}" folder.')
       print('starting django project...')
       os.system('echo changing directory...')
-      os.chdir(f'gupy_apps/{self.name}/website/') #go into newly created folder
+      os.chdir(f'{self.name}/website/') #go into newly created folder
       # os.system('pwd')
       try:
         os.system(f'django-admin startproject {self.name}')
@@ -1097,18 +1122,18 @@ function getCSRFTokenFromDOM() {
       os.mkdir(f'static')
       import shutil
       os.mkdir(f'static/css')
-      os.chdir('../../../../../')
+      os.chdir('../../../../')
       print(os.getcwd())
-      shutil.copy('gupy_logo.png', f'gupy_apps/{self.name}/website/{self.name}/{self.name}_app/static/gupy_logo.png')
+      shutil.copy('gupy_logo.png', f'website/{self.name}/{self.name}_app/static/gupy_logo.png')
       # add npm install, init, tailwindcss install, init, daisyui install, tailwind config generation (with daisy theme)
-      os.mkdir(f'gupy_apps/{self.name}/website/{self.name}/{self.name}_app/static/go_wasm')
+      os.mkdir(f'website/{self.name}/{self.name}_app/static/go_wasm')
       for file in self.files:
           with open(file, 'w') as f:
             f.write(self.files.get(file))
             print(f'created "{file}" file.')
     #   with open(f'views.py','w') as f:
     #     f.write(self.server_content)
-      os.chdir(f'gupy_apps/{self.name}/website/{self.name}/{self.name}_app/static/go_wasm/')
+      os.chdir(f'website/{self.name}/{self.name}_app/static/go_wasm/')
       os.system(f'go mod init example/go_wasm')
       os.chdir('../../../')
       os.chdir(f'{self.name}/')
@@ -1151,14 +1176,14 @@ function getCSRFTokenFromDOM() {
 
       self.create_secret_key_file(secret_key_file_path, secret_key_value)
       os.chdir(f'../../../../')
-      print(os.getcwd())
-      self.cythonize(self.name)
-      self.gopherize(self.name)
-      self.assemble(self.name)
+      # print(os.getcwd())
+      self.cythonize()
+      self.gopherize()
+      self.assemble()
 
 
-    def run(self,name):
-        if os.path.exists(f'gupy_apps/{name}/website/{name}/manage.py'):
+    def run(self):
+        if os.path.exists(f'website/{name}/manage.py'):
             # add check here for platform type and language 
             system = platform.system()
 
@@ -1168,7 +1193,7 @@ function getCSRFTokenFromDOM() {
                 cmd = 'python'
             else:
                 cmd = 'python'
-            os.system(f'{cmd} gupy_apps/{name}/website/{name}/manage.py runserver')
+            os.system(f'{cmd} website/{name}/manage.py runserver')
         # else:
         #     os.chdir(f'gupy_apps/{name}/desktop/dev')
         #     os.system(f'go mod tidy')
@@ -1178,11 +1203,11 @@ function getCSRFTokenFromDOM() {
     # def compile(self,name):
     #   pass
 
-    def cythonize(self,name):
-        print(os.getcwd())
+    def cythonize(self):
+        # print(os.getcwd())
 
-        if os.path.exists(f"gupy_apps/{name}/website/{self.name}/{self.name}_app/python_modules"):
-            os.chdir(f'gupy_apps/{name}/website/{self.name}/{self.name}_app/python_modules')
+        if os.path.exists(f"website/{self.name}/{self.name}_app/python_modules"):
+            os.chdir(f'website/{self.name}/{self.name}_app/python_modules')
             # files = [f for f in os.listdir('.') if os.path.isfile(f)]
             setup_content = '''
 from distutils.core import setup
@@ -1229,24 +1254,25 @@ setup(
             print(f'Updated setup.py file.')
             f.close()
             os.system(f'python ./setup.py build_ext --inplace')
-            os.chdir('../../../../../../')
+            os.chdir('../../../../../')
             print(os.getcwd())
-    def gopherize(self,name):
-        print(os.getcwd())
-        if os.path.exists(f"gupy_apps/{name}/website/{self.name}/{self.name}_app/go_modules"):
-            os.chdir(f'gupy_apps/{name}/website/{self.name}/{self.name}_app/go_modules')
+
+    def gopherize(self):
+        # print(os.getcwd())
+        if os.path.exists(f"website/{self.name}/{self.name}_app/go_modules"):
+            os.chdir(f'website/{self.name}/{self.name}_app/go_modules')
             print('Running go.mod tidy...')
             os.system(f'go mod tidy')
             files = [f for f in glob.glob('*.go')]
             for file in files:
                 print(f'Building {file} file...')
                 os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
-        os.chdir('../../../../../../')
+        os.chdir('../../../../../')
         print(os.getcwd())
 
-    def assemble(self, name):
-        print(os.getcwd())
-        os.chdir(f'gupy_apps/{self.name}/website/{self.name}/{self.name}_app/static/go_wasm')
+    def assemble(self):
+        # print(os.getcwd())
+        os.chdir(f'website/{self.name}/{self.name}_app/static/go_wasm')
         os.system(f'go mod tidy')
         def build_wasm(filename):
           # Set the environment variables
@@ -1268,6 +1294,6 @@ setup(
         files = [f for f in glob.glob('*.go')]
         for filename in files:
           build_wasm(filename)
-        os.chdir('../../../../../../../')
+        os.chdir('../../../../../../')
 
         # add assembly of cython modules

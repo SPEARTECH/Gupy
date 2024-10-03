@@ -958,12 +958,11 @@ return event.result;
         self.name = name
         self.lang = lang
         self.folders = [
-          f'gupy_apps/{self.name}/desktop', 
-          f'gupy_apps/{self.name}/desktop/dev', 
-          f'gupy_apps/{self.name}/desktop/dev/templates',
-          f'gupy_apps/{self.name}/desktop/dev/static',
-          f'gupy_apps/{self.name}/desktop/dev/static/go_wasm',
-          # f'gupy_apps/{self.name}/desktop/dev/templates/python_wasm',
+          f'desktop', 
+          f'desktop/templates',
+          f'desktop/static',
+          f'desktop/static/go_wasm',
+          # f'{self.name}/desktop/dev/templates/python_wasm',
         ]
 
         if self.lang == 'go':
@@ -1014,22 +1013,46 @@ func openChrome(url string) {
             '''
 
         self.files = {
-            f'gupy_apps/{self.name}/desktop/dev/templates/index.html': self.index_content,
-            f'gupy_apps/{self.name}/desktop/dev/static/go_wasm/go_wasm.go': self.go_wasm_content,
-            f'gupy_apps/{self.name}/desktop/dev/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
-            f'gupy_apps/{self.name}/desktop/dev/static/worker.js': self.worker_content,
+            f'desktop/templates/index.html': self.index_content,
+            f'desktop/static/go_wasm/go_wasm.go': self.go_wasm_content,
+            f'desktop/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
+            f'desktop/static/worker.js': self.worker_content,
             }
 
         if self.lang == 'py':
-            self.files[f'gupy_apps/{self.name}/desktop/dev/server.py'] = self.server_content
-            self.folders.append(f'gupy_apps/{self.name}/desktop/dev/python_modules')
-            self.files[f'gupy_apps/{self.name}/desktop/dev/python_modules/python_modules.py'] = self.python_modules_content
-            self.folders.append(f'gupy_apps/{self.name}/desktop/dev/go_modules')
-            self.files[f'gupy_apps/{self.name}/desktop/dev/go_modules/go_modules.go'] = self.go_modules_content
+            self.files[f'desktop/server.py'] = self.server_content
+            self.folders.append(f'desktop/python_modules')
+            self.files[f'desktop/python_modules/python_modules.py'] = self.python_modules_content
+            self.folders.append(f'desktop/go_modules')
+            self.files[f'desktop/go_modules/go_modules.go'] = self.go_modules_content
         else:
-            self.files[f'gupy_apps/{self.name}/desktop/dev/server.go'] = self.server_content
+            self.files[f'desktop/server.go'] = self.server_content
 
     def create(self):
+        # check if platform project already exists, if so, prompt the user
+        if self.folders[0] in os.listdir('.'):
+            while True:
+                userselection = input(self.folders[0]' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
+                if userselection.lower() == 'y':
+                    userselection = input('Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +'? (y/n)')
+                    if userselection.lower() == 'y':
+                        print("Removing old version of project...")
+                        os.system(f'rm -r "{self.folders[0]}"')
+                        print("Continuing app platform creation.")
+                        break
+                    elif userselection.lower() != 'n':
+                        print('Invalid input, please type y or n then press enter...')
+                        continue
+                    else:
+                        print('Aborting app platform creation.')
+                        return
+                elif userselection.lower() != 'n':
+                    print('Invalid input, please type y or n then press enter...')
+                    continue
+                else:
+                    print('Aborting app platform creation.')
+                    return
+                    
         for folder in self.folders:
             if not os.path.exists(folder):
                 os.mkdir(folder)
@@ -1044,9 +1067,9 @@ func openChrome(url string) {
             print(f'created "{file}" file.')
             f.close()
 
-        os.chdir(f'gupy_apps/{self.name}/desktop/dev/static/go_wasm/')
+        os.chdir(f'desktop/static/go_wasm/')
         os.system(f'go mod init example/go_modules')
-        os.chdir(f'../../')
+        os.chdir(f'../')
         if self.lang == 'py':
             os.chdir(f'go_modules/')
             os.system(f'go mod init example/go_modules')
@@ -1062,14 +1085,14 @@ func openChrome(url string) {
         # else:
         #     cmd = 'copy'
         import shutil
-        os.chdir(f'cd ../../../../../../../')
-        shutil.copy('gupy_logo.png', f'gupy_apps/{self.name}/desktop/dev/static/gupy_logo.png')
-        self.cythonize(self.name)
-        self.gopherize(self.name)
-        self.assemble(self.name)
+        os.chdir(f'cd ../../../')
+        shutil.copy('gupy_logo.png', f'desktop/static/gupy_logo.png')
+        self.cythonize()
+        self.gopherize()
+        self.assemble()
 
-    def run(self,name):
-        if os.path.exists(f'gupy_apps/{name}/desktop/dev/server.py'):
+    def run(self):
+        if os.path.exists(f'desktop/server.py'):
             # add check here for platform type and language 
             system = platform.system()
 
@@ -1080,29 +1103,16 @@ func openChrome(url string) {
             else:
                 cmd = 'python'
 
-            os.system(f'{cmd} gupy_apps/{name}/desktop/dev/server.py')
+            os.system(f'{cmd} desktop/server.py')
         else:
-            os.chdir(f'gupy_apps/{name}/desktop/dev')
+            os.chdir(f'desktop')
             os.system(f'go mod tidy')
             os.system(f'go run server.go')
 
-    def compile(self,name):
-        if os.path.exists(f'gupy_apps/{name}/desktop/dev/server.py'):
-            if not os.path.exists(f'gupy_apps/{name}/desktop/dist'):
-                os.mkdir(f'../dist')
-            os.chdir(f'gupy_apps/{name}/desktop/dev/')
-            os.system(f'nuitka --output-dir=../dist --disable-console')
-        elif os.path.exists(f'gupy_apps/{name}/desktop/dev/server.go'):
-            if not os.path.exists(f'gupy_apps/{name}/desktop/dist'):
-                os.mkdir(f'gupy_apps/{name}/desktop/dist')
-            os.chdir(f'gupy_apps/{name}/desktop/dev/')
-            os.system(f'go mod tidy')
-            # os.chdir(f'../dist')
-            os.system(f'go build')
-
-    def cythonize(self,name):
-        if os.path.exists(f"gupy_apps/{name}/desktop/dev/python_modules") and os.path.exists(f"gupy_apps/{name}/desktop/dev/server.py"):
-            os.chdir(f'gupy_apps/{name}/desktop/dev/python_modules')
+    # convert all py files to pyd extensions other than the __main__.py and __init__.py files
+    def cythonize(self):
+        if os.path.exists(f"desktop/python_modules") and os.path.exists(f"desktop/server.py"):
+            os.chdir(f'desktop/python_modules')
             # files = [f for f in os.listdir('.') if os.path.isfile(f)]
             setup_content = '''
 from distutils.core import setup
@@ -1149,21 +1159,23 @@ setup(
             print(f'Updated setup.py file.')
             f.close()
             os.system(f'python ./setup.py build_ext --inplace')
-            os.chdir('../../../../../')
+            os.chdir('../../')
 
-    def gopherize(self,name):
-        if os.path.exists(f"gupy_apps/{name}/desktop/dev/go_modules") and os.path.exists(f"gupy_apps/{name}/desktop/dev/server.py"):
-            os.chdir(f'gupy_apps/{name}/desktop/dev/go_modules')
+
+    # convert all go files to .c extensions other than ones in the go_wasm folder
+    def gopherize(self):
+        if os.path.exists(f"desktop/go_modules") and os.path.exists(f"desktop/dev/server.py"):
+            os.chdir(f'desktop/go_modules')
             os.system(f'go mod tidy')
             files = [f for f in glob.glob('*.go')]
             for file in files:
                 print(f'Building {file} file...')
                 os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
-            os.chdir('../../../../../')
+            os.chdir('../../')
 
-
-    def assemble(self, name):
-        os.chdir(f'gupy_apps/{name}/desktop/dev/static/go_wasm')
+    # convert all go modules in the go_wasm folder to wasm
+    def assemble(self):
+        os.chdir(f'desktop/static/go_wasm')
         os.system(f'go mod tidy')
         def build_wasm(filename):
           # Set the environment variables
@@ -1185,6 +1197,10 @@ setup(
         files = [f for f in glob.glob('*.go')]
         for filename in files:
           build_wasm(filename)
-        os.chdir('../../../../../../')
+        os.chdir('../../../')
 
         # add assembly of cython modules
+
+    # add packaging app to whl for pip install
+    def package(self):
+        pass

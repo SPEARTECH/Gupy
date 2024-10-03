@@ -48,27 +48,63 @@ def run(string,choice_list):
     for choice in choice_list:
       print(choice)
 
-if __name__ == '__main__':
+def main():
     cli.add_command(run) #Add command for cli
     cli() #Run cli
 
+if __name__ == '__main__':
+    main()
+
+
 
 '''
+
+
 
     def __init__(self, name, lang):
         self.name = name
         self.lang = lang
         self.folders = [
-          f'gupy_apps/{self.name}/cli',
-          f'gupy_apps/{self.name}/cli/dev',
+          f'cli',
         #   f'gupy_apps/{self.name}/cli/dev/python_modules',
         #   f'gupy_apps/{self.name}/cli/dev/cython_modules',
           ]
         self.files = {
-            f'gupy_apps/{self.name}/cli/dev/{self.name}.py': self.index_content,
+            f'cli/__init__.py': '',
+            f'cli/__main__.py': self.main_content,
+            f'cli/{self.name}.py': self.index_content,
             }
+        main_content = f'''
+import {self.name}
+
+{self.name}.main()
+'''
 
     def create(self):
+        # check if platform project already exists, if so, prompt the user
+        if self.folders[0] in os.listdir('.'):
+            while True:
+                userselection = input(self.folders[0]' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
+                if userselection.lower() == 'y':
+                    userselection = input('Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +'? (y/n)')
+                    if userselection.lower() == 'y':
+                        print("Removing old version of project...")
+                        os.system(f'rm -r "{self.folders[0]}"')
+                        print("Continuing app platform creation.")
+                        break
+                    elif userselection.lower() != 'n':
+                        print('Invalid input, please type y or n then press enter...')
+                        continue
+                    else:
+                        print('Aborting app platform creation.')
+                        return
+                elif userselection.lower() != 'n':
+                    print('Invalid input, please type y or n then press enter...')
+                    continue
+                else:
+                    print('Aborting app platform creation.')
+                    return
+        
         for folder in self.folders:
             os.mkdir(folder)
             print(f'created "{folder}" folder.')
@@ -79,7 +115,7 @@ if __name__ == '__main__':
             print(f'created "{file}" file.')
             f.close()
 
-    def run(self,name):
+    def run(self):
         # add check here for platform type and language 
         system = platform.system()
 
@@ -91,14 +127,7 @@ if __name__ == '__main__':
             cmd = 'python'
 
         # os.system(f'{cmd} {name}/desktop/dev/server/server.py')
-        os.system(f'{cmd} gupy_apps/{name}/desktop/dev/{name}.py')
-
-    def compile(self,name):
-        pass
-
-    def cythonize(self,name):
-        pass
-
-    def gopherize(self,name):
-        pass
+        os.system(f'{cmd} cli/{name}.py')
         
+    def package(self):
+        pass
