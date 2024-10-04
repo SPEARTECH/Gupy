@@ -14,7 +14,7 @@ class Base:
             if name in dir_list: 
                 index = dir_list.index(name)
                 chdir_num = len(dir_list) - index
-                os.chdir('../'*chdir_num)
+                os.chdir('../'*chdir_num )
             elif name in os.listdir('.'):
                 os.chdir(name)
 

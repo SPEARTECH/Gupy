@@ -1,6 +1,7 @@
 from . import base
 import os
 import shutil
+import platform
 
 class CLI(base.Base):
     index_content = '''
@@ -62,7 +63,7 @@ if __name__ == '__main__':
 
 
 
-    def __init__(self, name, lang):
+    def __init__(self, name, lang=''):
         self.name = name
         self.lang = lang
         self.folders = [
@@ -129,7 +130,7 @@ import {self.name}
             cmd = 'python'
 
         # os.system(f'{cmd} {name}/desktop/dev/server/server.py')
-        os.system(f'{cmd} cli/{name}.py')
+        os.system(f'{cmd} cli/{self.name}.py')
         
 
 

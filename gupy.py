@@ -3,6 +3,8 @@ import click
 import sys
 import os
 from target_platforms import *
+import platform
+import chardet
 
 NAME=''
 TARGETS=[]
@@ -60,9 +62,9 @@ def create(name,target_platform, language):
     elif LANG and LANG.lower() != 'py' and LANG.lower() != 'go':
         print(f'Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang)')
         return
-    elif not LANG and target_platform == 'pwa':
+    elif not LANG and target_platform == ('pwa',):
         LANG = 'javascript'
-    elif not LANG and target_platform == 'website':
+    elif not LANG and target_platform == ('website',):
         LANG = 'python'
 
     dir_list = os.getcwd().split('\\')
@@ -111,69 +113,64 @@ Confirm?
         return
 
 @click.command()
-@click.option(
-    '--target-platform',
-    '-t',
-    type=click.Choice(
-        ['desktop', 'pwa', 'website', 'cli', 'api', 'mobile'], 
-        case_sensitive=False
-        ),
-    required=True,
-    multiple=False, 
-    default=['desktop'], 
-    help="Select the app platform you intend to run (ie. -t desktop)"
-    )
-def run(target_platform):
+# @click.option(
+#     '--target-platform',
+#     '-t',
+#     type=click.Choice(
+#         ['desktop', 'pwa', 'website', 'cli', 'api', 'mobile'], 
+#         case_sensitive=False
+#         ),
+#     required=True,
+#     multiple=False, 
+#     default=['desktop'], 
+#     help="Select the app platform you intend to run (ie. -t desktop)"
+#     )
+def run():
     # check if name is in path anywhere...
     # check if target-platform folder exists in path
     # overwrite prompt if yes
     # create name/target-platform folder then create files within it
-    TARGET=target_platform
+    dir_list = os.getcwd().split('\\')
+    print(dir_list)
+    print(os.getcwd())
+    def change_dir(dir_list,target):
+        if target in dir_list: 
+            index = dir_list.index(target)
+            print(index)
+            chdir_num = len(dir_list) - index
+            print(chdir_num)
+            os.chdir('../' * chdir_num )
+        elif target in os.listdir('.'):
+            os.chdir(target)
+    # TARGET=target_platform
     if 'desktop' in dir_list or 'desktop' in os.listdir('.'):
         TARGET='desktop'
         change_dir(dir_list,TARGET)
-        NAME=os.path.dirname(os.getcwd())
+        NAME=os.path.basename(os.getcwd())
         app_obj = desktop.Desktop(NAME)
-        app_obj.run(NAME)
+        app_obj.run()
     elif 'pwa' in dir_list or 'pwa' in os.listdir('.'):
         TARGET='pwa'
         change_dir(dir_list,TARGET)
-        NAME=os.path.dirname(os.getcwd())
+        NAME=os.path.basename(os.getcwd())
         app_obj = pwa.Pwa(NAME)
-        app_obj.run(NAME)
+        app_obj.run()
     elif 'website' in dir_list or 'website' in os.listdir('.'):
         TARGET='website'
         change_dir(dir_list,TARGET)
-        NAME=os.path.dirname(os.getcwd())
+        NAME=os.path.basename(os.getcwd())
         app_obj = website.Website(NAME)
-        app_obj.run(NAME)
+        app_obj.run()
     elif 'cli' in dir_list or 'cli' in os.listdir('.'):
         TARGET='cli'
         change_dir(dir_list,TARGET)
-        NAME=os.path.dirname(os.getcwd())
+        NAME=os.path.basename(os.getcwd())
         app_obj = cmdline.CLI(NAME)
-        app_obj.run(NAME)
+        app_obj.run()
     elif TARGET == 'desktop' or TARGET == 'pwa' or TARGET == 'website' or TARGET == 'cli':
         print(f'{NAME} app does not have a project platform of {TARGET}. Use the create command and try again.')
     else:
         print(f'{TARGET} is not yet enabled for this feature...')
-
-# @click.command()
-# def list():
-#     # apps.Apps.getapps()
-#     # for item in os.listdir('gupy_apps/'):
-#     #     print(item)
-#     print(f'Printing apps in {os.path.abspath("./apps")} directory...\n')
-#     count = 0
-#     for item in os.listdir('gupy_apps/'):
-#         if item != '__pycache__':
-#             print(item)
-#             count += 1
-
-#     if count == 0:
-#         print('No apps created...\nTry "python ./gupy.py create <commands>" to get started.')
-
-#     print('\n')
 
 @click.command()
 @click.option(
@@ -282,19 +279,8 @@ def assemble(file):
         print(TARGET+' platform not enabled for assembly. Change directory to your app root folder with desktop, pwa, or website platforms (ex. cd <path to app>/<platform>).')
 
 @click.command()
-@click.option(
-    '--target-platform',
-    '-t',
-    type=click.Choice(
-        ['desktop', 'cli'], 
-        case_sensitive=False
-        ),
-    required=True,
-    multiple=False, 
-    default=[], 
-    help="Select the app platform you intend to run (ie. -t desktop)"
-    )
-def package():
+def package(target_platform):
+    TARGET=target_platform
     dir_list = os.getcwd().split('\\')
     def change_dir(dir_list,target):
         if target in dir_list: 
@@ -307,14 +293,46 @@ def package():
     if 'desktop' in dir_list or 'desktop' in os.listdir('.'):
         TARGET='desktop'
         change_dir(dir_list,TARGET)
-        NAME=os.path.dirname(os.getcwd())
-    elif 'cli' in dir_list or 'cli' in os.listdir('.'):
-        TARGET='cli'
+        NAME=os.path.basename(os.getcwd())
+    elif 'pwa' in dir_list or 'pwa' in os.listdir('.'):
+        TARGET='pwa'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.basename(os.getcwd())
+    elif 'website' in dir_list or 'website' in os.listdir('.'):
+        TARGET='website'
         change_dir(dir_list,TARGET)
         NAME=os.path.dirname(os.getcwd())
+    if TARGET in dir_list or TARGET in os.listdir('.'):
+        change_dir(dir_list,TARGET)
+        NAME=os.path.basename(os.getcwd())
     else:
         print(f'Error: No target platform folder of {TARGET} found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
         return
+    print(os.getcwd())
+    # checking for requirements.txt to add to pyproject.toml
+    file_path = 'requirements.txt'
+
+    if 'requirements.txt' in os.listdir('.'):
+        # Detect the encoding of the file
+        def detect_file_encoding(file_path):
+            with open(file_path, 'rb') as f:
+                raw_data = f.read(10000)  # Read a portion of the file to detect encoding
+                result = chardet.detect(raw_data)
+                return result['encoding']
+        encoding = detect_file_encoding(file_path)
+
+        with open('requirements.txt', 'r', encoding=encoding) as f:
+            # Strip newline characters and empty spaces from each requirement
+            requirements = [line.strip() for line in f.readlines()]
+    else:
+        requirements = []
+
+    # Join requirements into a multiline string for the TOML file
+    requirements_string = ',\n'.join(f'"{req}"' for req in requirements)
+
+
+    # # Join requirements into a multiline string for the TOML file
+    # requirements_string = ',\n'.join(f'"{req}"' for req in requirements)
 
     toml_content = '''
 [build-system]
@@ -334,6 +352,11 @@ classifiers = [
 "Programming Language :: Python :: 3",
 "License :: OSI Approved :: MIT License",
 "Operating System :: OS Independent",
+]
+
+# Add your dependencies here
+dependencies = [
+'''+ str(requirements_string) +'''
 ]
 
 [project.urls]
@@ -384,25 +407,26 @@ SOFTWARE.
     else:
         cmd = 'python'
 
-    print('changing directory...')
-    os.chdir('cli/')
+    # print('changing directory...')
+    # os.chdir('cli')
+    print(os.getcwd())
     print('checking for README.md...')
     if 'README.md' not in os.listdir('.'):
-        f = open(file, 'x')
+        f = open('README.md', 'x')
         f.write(readme_content)
-        print(f'created "{file}" file.')
+        print(f'created "README.md" file.')
         f.close()
     print('checking for LICENSE...')
     if 'LICENSE' not in os.listdir('.'):
-        f = open(file, 'x')
+        f = open('LICENSE', 'x')
         f.write(license_content)
-        print(f'created "{file}" file.')
+        print(f'created "LICENSE" file.')
         f.close()
     print('checking for pyproject.toml...')
     if 'pyproject.toml' not in os.listdir('.'):
-        f = open(file, 'x')
+        f = open('pyproject.toml', 'x')
         f.write(toml_content)
-        print(f'created "{file}" file.')
+        print(f'created "pyproject.toml" file.')
         f.close()
         print('pyproject.toml created with default values. Modify it to your liking and rerun the package command.')
         return
@@ -413,11 +437,11 @@ SOFTWARE.
 def main():
     cli.add_command(create) #Add command for cli
     cli.add_command(run) #Add command for cli
-    # cli.add_command(list)
     cli.add_command(compile)
     cli.add_command(cythonize)
     cli.add_command(gopherize)
     cli.add_command(assemble)
+    cli.add_command(package)
     cli() #Run cli
 
 if __name__ == '__main__':

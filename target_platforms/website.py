@@ -1190,7 +1190,7 @@ function getCSRFTokenFromDOM() {
 
 
     def run(self):
-        if os.path.exists(f'website/{name}/manage.py'):
+        if os.path.exists(f'website/{self.name}/manage.py'):
             # add check here for platform type and language 
             system = platform.system()
 
@@ -1200,7 +1200,7 @@ function getCSRFTokenFromDOM() {
                 cmd = 'python'
             else:
                 cmd = 'python'
-            os.system(f'{cmd} website/{name}/manage.py runserver')
+            os.system(f'{cmd} website/{self.name}/manage.py runserver')
         # else:
         #     os.chdir(f'gupy_apps/{name}/desktop/dev')
         #     os.system(f'go mod tidy')
