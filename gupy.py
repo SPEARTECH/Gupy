@@ -126,51 +126,48 @@ Confirm?
 #     help="Select the app platform you intend to run (ie. -t desktop)"
 #     )
 def run():
-    # check if name is in path anywhere...
-    # check if target-platform folder exists in path
-    # overwrite prompt if yes
-    # create name/target-platform folder then create files within it
-    dir_list = os.getcwd().split('\\')
-    print(dir_list)
-    print(os.getcwd())
-    def change_dir(dir_list,target):
-        if target in dir_list: 
-            index = dir_list.index(target)
-            print(index)
-            chdir_num = len(dir_list) - index
-            print(chdir_num)
-            os.chdir('../' * chdir_num )
-        elif target in os.listdir('.'):
-            os.chdir(target)
-    # TARGET=target_platform
-    if 'desktop' in dir_list or 'desktop' in os.listdir('.'):
-        TARGET='desktop'
-        change_dir(dir_list,TARGET)
-        NAME=os.path.basename(os.getcwd())
-        app_obj = desktop.Desktop(NAME)
-        app_obj.run()
-    elif 'pwa' in dir_list or 'pwa' in os.listdir('.'):
-        TARGET='pwa'
-        change_dir(dir_list,TARGET)
-        NAME=os.path.basename(os.getcwd())
-        app_obj = pwa.Pwa(NAME)
-        app_obj.run()
-    elif 'website' in dir_list or 'website' in os.listdir('.'):
-        TARGET='website'
-        change_dir(dir_list,TARGET)
-        NAME=os.path.basename(os.getcwd())
-        app_obj = website.Website(NAME)
-        app_obj.run()
-    elif 'cli' in dir_list or 'cli' in os.listdir('.'):
-        TARGET='cli'
-        change_dir(dir_list,TARGET)
-        NAME=os.path.basename(os.getcwd())
-        app_obj = cmdline.CLI(NAME)
-        app_obj.run()
-    elif TARGET == 'desktop' or TARGET == 'pwa' or TARGET == 'website' or TARGET == 'cli':
-        print(f'{NAME} app does not have a project platform of {TARGET}. Use the create command and try again.')
-    else:
-        print(f'{TARGET} is not yet enabled for this feature...')
+    try:
+        # check if target-platform folder exists in path
+        dir_list = os.getcwd().split('\\')
+        def change_dir(dir_list,target):
+            if target in dir_list: 
+                index = dir_list.index(target)
+                chdir_num = len(dir_list) - index
+                os.chdir('../' * chdir_num )
+            elif target in os.listdir('.'):
+                os.chdir(target)
+        # TARGET=target_platform
+        if 'desktop' in dir_list:
+            TARGET='desktop'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.basename(os.getcwd())
+            app_obj = desktop.Desktop(NAME)
+            app_obj.run()
+        elif 'pwa' in dir_list:
+            TARGET='pwa'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.basename(os.getcwd())
+            app_obj = pwa.Pwa(NAME)
+            app_obj.run()
+        elif 'website' in dir_list:
+            TARGET='website'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.basename(os.getcwd())
+            app_obj = website.Website(NAME)
+            app_obj.run()
+        elif 'cli' in dir_list:
+            TARGET='cli'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.basename(os.getcwd())
+            app_obj = cmdline.CLI(NAME)
+            app_obj.run()
+        elif TARGET == 'desktop' or TARGET == 'pwa' or TARGET == 'website' or TARGET == 'cli':
+            print(f'{NAME} app does not have a project platform of {TARGET}. Use the create command and try again.')
+        else:
+            print(f'{TARGET} is not yet enabled for this feature...')
+    except Exception as e:
+        print('Error: '+str(e))
+        print('*NOTE: Be sure to change directory to the desired platform to run (ex. cd <path to target app platform>)*')
 
 @click.command()
 @click.option(
