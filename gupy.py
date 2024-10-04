@@ -139,19 +139,19 @@ def run():
         if 'desktop' in dir_list:
             TARGET='desktop'
             change_dir(dir_list,TARGET)
-            NAME=os.path.basename(os.getcwd()).split('\\')[-1]
+            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
             app_obj = desktop.Desktop(NAME)
             app_obj.run()
         elif 'pwa' in dir_list:
             TARGET='pwa'
             change_dir(dir_list,TARGET)
-            NAME=os.path.basename(os.getcwd()).split('\\')[-1]
+            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
             app_obj = pwa.Pwa(NAME)
             app_obj.run()
         elif 'website' in dir_list:
             TARGET='website'
             change_dir(dir_list,TARGET)
-            NAME=os.path.basename(os.getcwd()).split('\\')[-1]
+            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
             app_obj = website.Website(NAME)
             app_obj.run()
         elif 'cli' in dir_list:
@@ -227,85 +227,75 @@ def gopherize(file):
 
     for item in file:
         print(f'Building {item} file...')
-        os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {item} ')
+        os.system(f'go build -o {os.path.splitext(item)[0]}.so -buildmode=c-shared {item} ')
 
 @click.command()
-@click.option(
-    '--file',
-    '-f',
-    required=False,
-    help='Select a single file to assemble or select multiple (ie. -f module1.go -f module2.go).'
-    )
-def assemble(file):
+def assemble():
     dir_list = os.getcwd().split('\\')
     def change_dir(dir_list,target):
         if target in dir_list: 
             index = dir_list.index(target)
-            chdir_num = len(dir_list) - (index + 1)
+            chdir_num = len(dir_list) - (index)
             os.chdir('../'*chdir_num)
         elif target in os.listdir('.'):
             os.chdir(target)
     # detect the platform in the current directory or parent directories and then change directory to its root for operation
-    if 'desktop' in dir_list or 'desktop' in os.listdir('.'):
+    if 'desktop' in dir_list:
         TARGET='desktop'
         change_dir(dir_list,TARGET)
         NAME=os.path.basename(os.getcwd())
-    elif 'pwa' in dir_list or 'pwa' in os.listdir('.'):
+    elif 'pwa' in dir_list:
         TARGET='pwa'
         change_dir(dir_list,TARGET)
         NAME=os.path.basename(os.getcwd())
-    elif 'website' in dir_list or 'website' in os.listdir('.'):
+    elif 'website' in dir_list:
         TARGET='website'
         change_dir(dir_list,TARGET)
         NAME=os.path.basename(os.getcwd())
     else:
-        print(f'Error: No target platform folder of {TARGET} found. Change directory to your app and try again (ex. cd <path to app>).')
+        print(f'Error: No target platform folder found. Change directory to your app and try again (ex. cd <path to app>).')
         return
 
     if TARGET == 'desktop':
         app_obj = desktop.Desktop(NAME)
-        app_obj.assemble(NAME)
+        app_obj.assemble()
     elif TARGET == 'website':
         app_obj = website.Website(NAME)
-        app_obj.assemble(NAME)
+        app_obj.assemble()
     elif TARGET == 'pwa':
         app_obj = pwa.Pwa(NAME)
-        app_obj.assemble(NAME)
+        app_obj.assemble()
     else:
-        print(TARGET+' platform not enabled for assembly. Change directory to your app root folder with desktop, pwa, or website platforms (ex. cd <path to app>/<platform>).')
+        print('Platform not enabled for assembly. Change directory to your app root folder with desktop, pwa, or website platforms (ex. cd <path to app>/<platform>).')
 
 @click.command()
 def package():
     try:
-        print(os.getcwd())
-
         dir_list = os.getcwd().split('\\')
         def change_dir(dir_list,target):
-            if target in dir_list: 
-                index = dir_list.index(target)
-                chdir_num = len(dir_list) - (index + 1)
-                os.chdir('../'*chdir_num)
+            index = dir_list.index(target)
+            chdir_num = len(dir_list) - (index +1)
+            os.chdir('../'*chdir_num)
         # detect the platform in the current directory or parent directories and then change directory to its root for operation
         if 'desktop' in dir_list:
             TARGET='desktop'
             change_dir(dir_list,TARGET)
-            NAME=os.path.basename(os.getcwd())
+            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
         elif 'pwa' in dir_list:
             TARGET='pwa'
             change_dir(dir_list,TARGET)
-            NAME=os.path.basename(os.getcwd())
+            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
         elif 'website' in dir_list:
             TARGET='website'
             change_dir(dir_list,TARGET)
-            NAME=os.path.basename(os.getcwd())
+            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
         elif 'cli' in dir_list:
             TARGET='cli'
             change_dir(dir_list,TARGET)
-            NAME=os.path.basename(os.getcwd())
+            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
         else:
             print(f'Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
             return
-        print(os.getcwd())
         # checking for requirements.txt to add to pyproject.toml
         file_path = 'requirements.txt'
 
@@ -428,6 +418,8 @@ SOFTWARE.
             print(f'created "pyproject.toml" file.')
             f.close()
             print('pyproject.toml created with default values. Modify it to your liking and rerun the package command.')
+            if requirements_string == '':
+                print('*Note: No requirements.txt was found. Create this file and delete the pyproject.toml to populate the dependencies for the whl package (ex. python -m pip freeze > requirements.txt)*')
             return
 
         os.system(f'{cmd} -m build')
