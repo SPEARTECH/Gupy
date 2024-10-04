@@ -967,11 +967,6 @@ return event.result;
           f'desktop/static/go_wasm',
           # f'{self.name}/desktop/dev/templates/python_wasm',
         ]
-        self.main_content = f'''
-import server
-
-server.main()
-'''
         if self.lang == 'go':
             self.server_content = '''
 package main
@@ -1021,7 +1016,6 @@ func openChrome(url string) {
 
         self.files = {
             f'desktop/__init__.py': '',
-            f'desktop/__main__.py': self.main_content,
             f'desktop/templates/index.html': self.index_content,
             f'desktop/static/go_wasm/go_wasm.go': self.go_wasm_content,
             f'desktop/static/go_wasm/wasm_exec.js': self.wasm_exec_content,

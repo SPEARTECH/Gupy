@@ -71,14 +71,9 @@ if __name__ == '__main__':
         #   f'gupy_apps/{self.name}/cli/dev/python_modules',
         #   f'gupy_apps/{self.name}/cli/dev/cython_modules',
           ]
-        self.main_content = f'''
-import {self.name}
-
-{self.name}.main()
-'''
+          
         self.files = {
             f'cli/__init__.py': '',
-            f'cli/__main__.py': self.main_content,
             f'cli/{self.name}.py': self.index_content,
             }
 

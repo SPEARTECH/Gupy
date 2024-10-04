@@ -5,6 +5,7 @@ import os
 from target_platforms import *
 import platform
 import chardet
+import subprocess
 
 NAME=''
 TARGETS=[]
@@ -63,9 +64,9 @@ def create(name,target_platform, language):
         print(f'Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang)')
         return
     elif not LANG and target_platform == ('pwa',):
-        LANG = 'javascript'
+        LANG = 'js'
     elif not LANG and target_platform == ('website',):
-        LANG = 'python'
+        LANG = 'py'
 
     dir_list = os.getcwd().split('\\')
     if NAME in dir_list or NAME in os.listdir('.'):
@@ -134,7 +135,8 @@ def run():
             if target in dir_list: 
                 index = dir_list.index(target)
                 chdir_num = len(dir_list) - (index +1)
-                os.chdir('../' * chdir_num )
+                if not chdir_num == 0:
+                    os.chdir('../'*chdir_num)
         # TARGET=target_platform
         if 'desktop' in dir_list:
             TARGET='desktop'
@@ -236,9 +238,8 @@ def assemble():
         if target in dir_list: 
             index = dir_list.index(target)
             chdir_num = len(dir_list) - (index)
-            os.chdir('../'*chdir_num)
-        elif target in os.listdir('.'):
-            os.chdir(target)
+            if not chdir_num == 0:
+                os.chdir('../'*chdir_num)
     # detect the platform in the current directory or parent directories and then change directory to its root for operation
     if 'desktop' in dir_list:
         TARGET='desktop'
@@ -275,7 +276,8 @@ def package():
         def change_dir(dir_list,target):
             index = dir_list.index(target)
             chdir_num = len(dir_list) - (index +1)
-            os.chdir('../'*chdir_num)
+            if not chdir_num == 0:
+                os.chdir('../'*chdir_num)
         # detect the platform in the current directory or parent directories and then change directory to its root for operation
         if 'desktop' in dir_list:
             TARGET='desktop'
@@ -321,7 +323,7 @@ def package():
         # # Join requirements into a multiline string for the TOML file
         # requirements_string = ',\n'.join(f'"{req}"' for req in requirements)
 
-        toml_content = '''
+        toml_content = f'''
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -343,23 +345,25 @@ classifiers = [
 
 # Add your dependencies here
 dependencies = [
-'''+ str(requirements_string) +'''
+'''+ str(requirements_string) +f'''
 ]
 
 [project.urls]
 Homepage = "https://github.com/pypa/sampleproject"
 Issues = "https://github.com/pypa/sampleproject/issues"
 
-[project.scripts]
-'''+NAME+''' = "__main__"
 
 # Specify the directory where your Python package code is located
 [tool.hatch.build.targets.sdist]
 include = ["*"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["*"]
-'''
+include = ["*"]
+
+# Define entry points for CLI
+[project.scripts]
+'''+f'''{NAME} = "{NAME}:main"'''
+
         readme_content = f'''
 # {NAME} Project
 '''
@@ -396,9 +400,7 @@ SOFTWARE.
             cmd = 'python'
         else:
             cmd = 'python'
-
-        # print('changing directory...')
-        # os.chdir('cli')
+        # os.chdir('../')
         print('checking for README.md...')
         if 'README.md' not in os.listdir('.'):
             f = open('README.md', 'x')
@@ -421,12 +423,54 @@ SOFTWARE.
             if requirements_string == '':
                 print('*Note: No requirements.txt was found. Create this file and delete the pyproject.toml to populate the dependencies for the whl package (ex. python -m pip freeze > requirements.txt)*')
             return
-
         os.system(f'{cmd} -m build')
     except Exception as e:
         print('Error: '+str(e))
         print('*NOTE: Be sure to change directory to the desired platform to package (ex. cd <path to target app platform>)*')
 
+def check_golang_installed():
+    """Check if Go is installed by trying to run 'go version'."""
+    try:
+        subprocess.run(["go", "version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("Golang is already installed.")
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print("Golang is not installed.")
+        return False
+
+@click.command()
+def install_go():
+    if not check_golang_installed():
+        """Install Go by downloading and running the installer based on the OS."""
+        print("Installing Golang...")
+
+        if sys.platform == "win32":
+            # Windows installation (assumes curl is available)
+            url = "https://golang.org/dl/go1.18.3.windows-amd64.msi"
+            installer_file = "go_installer.msi"
+            subprocess.run(["curl", "-o", installer_file, url], check=True)
+            subprocess.run(["msiexec", "/i", installer_file, "/quiet", "/norestart"], check=True)
+        elif sys.platform == "darwin":
+            # macOS installation
+            url = "https://golang.org/dl/go1.18.3.darwin-amd64.pkg"
+            installer_file = "go_installer.pkg"
+            subprocess.run(["curl", "-o", installer_file, url], check=True)
+            subprocess.run(["sudo", "installer", "-pkg", installer_file, "-target", "/"], check=True)
+        elif sys.platform == "linux":
+            # Linux installation
+            url = "https://golang.org/dl/go1.18.3.linux-amd64.tar.gz"
+            tar_file = "go_installer.tar.gz"
+            subprocess.run(["curl", "-o", tar_file, url], check=True)
+            subprocess.run(["sudo", "tar", "-C", "/usr/local", "-xzf", tar_file], check=True)
+
+            # Add Go to PATH
+            go_path = "/usr/local/go/bin"
+            bashrc_path = os.path.expanduser("~/.bashrc")
+            with open(bashrc_path, "a") as bashrc:
+                bashrc.write(f"\nexport PATH=$PATH:{go_path}\n")
+            subprocess.run(["source", bashrc_path], shell=True, check=True)
+        else:
+            raise Exception(f"Platform {sys.platform} is not supported for Go installation.")
 
 def main():
     cli.add_command(create) #Add command for cli
@@ -436,6 +480,7 @@ def main():
     cli.add_command(gopherize)
     cli.add_command(assemble)
     cli.add_command(package)
+    cli.add_command(install_go)
     cli() #Run cli
 
 if __name__ == '__main__':
