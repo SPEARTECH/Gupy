@@ -1108,7 +1108,7 @@ func openChrome(url string) {
         self.assemble()
 
     def run(self):
-        if os.path.exists(f'desktop/server.py'):
+        if os.path.exists(f'server.py'):
             # add check here for platform type and language 
             system = platform.system()
 
@@ -1119,12 +1119,14 @@ func openChrome(url string) {
             else:
                 cmd = 'python'
 
-            os.system(f'{cmd} desktop/server.py')
-        else:
+            os.system(f'{cmd} server.py')
+        elif os.path.exists(f'server.go'):
             os.chdir(f'desktop')
             os.system(f'go mod tidy')
             os.system(f'go run server.go')
-
+        else:
+            print('Server file not found to run. Rename the main entry file to server.py or server.go.')
+            return
     # convert all py files to pyd extensions other than the __main__.py and __init__.py files
     def cythonize(self):
         if os.path.exists(f"desktop/python_modules") and os.path.exists(f"desktop/server.py"):

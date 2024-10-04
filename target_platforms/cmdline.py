@@ -130,7 +130,7 @@ import {self.name}
             cmd = 'python'
 
         # os.system(f'{cmd} {name}/desktop/dev/server/server.py')
-        os.system(f'{cmd} cli/{self.name}.py')
+        os.system(f'{cmd} {self.name}.py')
         
 
 
