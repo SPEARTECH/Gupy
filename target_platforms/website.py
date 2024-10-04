@@ -4,7 +4,7 @@ import platform
 import glob
 import re
 import subprocess
-
+import shutil
 
 class Website(base.Base):
 
@@ -1055,6 +1055,7 @@ function getCSRFTokenFromDOM() {
             }
 
     def create(self):
+      import shutil
       system = platform.system()
 
       if system == 'Darwin':
@@ -1067,12 +1068,12 @@ function getCSRFTokenFromDOM() {
       # check if platform project already exists, if so, prompt the user
       if self.folders[0] in os.listdir('.'):
           while True:
-              userselection = input(self.folders[0]' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
+              userselection = input(self.folders[0]+' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
               if userselection.lower() == 'y':
                   userselection = input('Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +'? (y/n)')
                   if userselection.lower() == 'y':
                       print("Removing old version of project...")
-                      os.system(f'rm -r "{self.folders[0]}"')
+                      shutil.rmtree(os.path.join(os.getcwd(), self.folders[0]))
                       print("Continuing app platform creation.")
                       break
                   elif userselection.lower() != 'n':
@@ -1094,7 +1095,7 @@ function getCSRFTokenFromDOM() {
           print(f'created "{folder}" folder.')
       print('starting django project...')
       os.system('echo changing directory...')
-      os.chdir(f'{self.name}/website/') #go into newly created folder
+      os.chdir(f'website/') #go into newly created folder
       # os.system('pwd')
       try:
         os.system(f'django-admin startproject {self.name}')
@@ -1122,9 +1123,15 @@ function getCSRFTokenFromDOM() {
       os.mkdir(f'static')
       import shutil
       os.mkdir(f'static/css')
-      os.chdir('../../../../')
-      print(os.getcwd())
-      shutil.copy('gupy_logo.png', f'website/{self.name}/{self.name}_app/static/gupy_logo.png')
+      os.chdir('../../../')
+      # Get the directory of the current script
+      current_directory = os.path.dirname(os.path.abspath(__file__))
+
+      # Construct the path to the target file
+      logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
+      
+      shutil.copy(logo_directory, f'website/{self.name}/{self.name}_app/static/gupy_logo.png')
+
       # add npm install, init, tailwindcss install, init, daisyui install, tailwind config generation (with daisy theme)
       os.mkdir(f'website/{self.name}/{self.name}_app/static/go_wasm')
       for file in self.files:
@@ -1175,7 +1182,7 @@ function getCSRFTokenFromDOM() {
       # Create the secret_key.py file with the extracted SECRET_KEY value
 
       self.create_secret_key_file(secret_key_file_path, secret_key_value)
-      os.chdir(f'../../../../')
+      os.chdir(f'../../')
       # print(os.getcwd())
       self.cythonize()
       self.gopherize()
@@ -1254,7 +1261,7 @@ setup(
             print(f'Updated setup.py file.')
             f.close()
             os.system(f'python ./setup.py build_ext --inplace')
-            os.chdir('../../../../../')
+            os.chdir('../../../../')
             print(os.getcwd())
 
     def gopherize(self):
@@ -1267,7 +1274,7 @@ setup(
             for file in files:
                 print(f'Building {file} file...')
                 os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
-        os.chdir('../../../../../')
+            os.chdir('../../../../')
         print(os.getcwd())
 
     def assemble(self):
@@ -1294,6 +1301,6 @@ setup(
         files = [f for f in glob.glob('*.go')]
         for filename in files:
           build_wasm(filename)
-        os.chdir('../../../../../../')
+        os.chdir('../../../../../')
 
         # add assembly of cython modules

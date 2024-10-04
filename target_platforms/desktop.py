@@ -3,6 +3,7 @@ import os
 import platform
 import glob
 import subprocess
+import shutil
 
 class Desktop(base.Base):
     index_content = '''
@@ -294,7 +295,7 @@ def example_api_endpoint():
     # Return the modified data as JSON
     return jsonify({'result': data})
 
-if __name__ == '__main__':
+def main():
     stop_previous_flask_server()
 
     pid_file = f'{os.path.expanduser("~")}/flask_server.pid'
@@ -315,6 +316,8 @@ if __name__ == '__main__':
     # else:
     app.run(debug=True, threaded=True, port=8001, use_reloader=False)
 
+if __name__ == '__main__':
+    main()
     '''
 
     python_modules_content = '''
@@ -964,7 +967,11 @@ return event.result;
           f'desktop/static/go_wasm',
           # f'{self.name}/desktop/dev/templates/python_wasm',
         ]
+        self.main_content = f'''
+import server
 
+server.main()
+'''
         if self.lang == 'go':
             self.server_content = '''
 package main
@@ -1013,6 +1020,8 @@ func openChrome(url string) {
             '''
 
         self.files = {
+            f'desktop/__init__.py': '',
+            f'desktop/__main__.py': self.main_content,
             f'desktop/templates/index.html': self.index_content,
             f'desktop/static/go_wasm/go_wasm.go': self.go_wasm_content,
             f'desktop/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
@@ -1029,15 +1038,16 @@ func openChrome(url string) {
             self.files[f'desktop/server.go'] = self.server_content
 
     def create(self):
+        import shutil
         # check if platform project already exists, if so, prompt the user
         if self.folders[0] in os.listdir('.'):
             while True:
-                userselection = input(self.folders[0]' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
+                userselection = input(self.folders[0]+' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
                 if userselection.lower() == 'y':
                     userselection = input('Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +'? (y/n)')
                     if userselection.lower() == 'y':
                         print("Removing old version of project...")
-                        os.system(f'rm -r "{self.folders[0]}"')
+                        shutil.rmtree(os.path.join(os.getcwd(), self.folders[0]))
                         print("Continuing app platform creation.")
                         break
                     elif userselection.lower() != 'n':
@@ -1069,7 +1079,7 @@ func openChrome(url string) {
 
         os.chdir(f'desktop/static/go_wasm/')
         os.system(f'go mod init example/go_modules')
-        os.chdir(f'../')
+        os.chdir(f'../../')
         if self.lang == 'py':
             os.chdir(f'go_modules/')
             os.system(f'go mod init example/go_modules')
@@ -1084,9 +1094,15 @@ func openChrome(url string) {
         #     cmd = 'cp'
         # else:
         #     cmd = 'copy'
-        import shutil
-        os.chdir(f'cd ../../../')
-        shutil.copy('gupy_logo.png', f'desktop/static/gupy_logo.png')
+
+        os.chdir(f'../../')
+        # Get the directory of the current script
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+
+        # Construct the path to the target file
+        logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
+        
+        shutil.copy(logo_directory, f'desktop/static/gupy_logo.png')
         self.cythonize()
         self.gopherize()
         self.assemble()
@@ -1164,7 +1180,7 @@ setup(
 
     # convert all go files to .c extensions other than ones in the go_wasm folder
     def gopherize(self):
-        if os.path.exists(f"desktop/go_modules") and os.path.exists(f"desktop/dev/server.py"):
+        if os.path.exists(f"desktop/go_modules") and os.path.exists(f"desktop/server.py"):
             os.chdir(f'desktop/go_modules')
             os.system(f'go mod tidy')
             files = [f for f in glob.glob('*.go')]
@@ -1201,6 +1217,3 @@ setup(
 
         # add assembly of cython modules
 
-    # add packaging app to whl for pip install
-    def package(self):
-        pass

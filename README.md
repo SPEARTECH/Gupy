@@ -10,3 +10,9 @@ Templates include:
 - Django Websites      - **Vue, Python, Go Extensions, Go Web Assembly, Cython Extensions**
 - Desktop Applications - **Gin/Flask, Go Extensions, Go Web Assembly, Cython Extensions**
 - CLI Tools            - **Python, Go Extensions, Cython Extensions**
+
+Future roadmap:
+- Mobile projects & compilation with Go build
+- API creation (flask, fastapi, gin)
+- Postgres instead of sqlite
+- Go website projects

@@ -227,7 +227,7 @@ onmessage = function(message){
     postMessage(message.data)
 }  
 
-    '''
+'''
 
     go_wasm_content = '''
 package main
@@ -237,7 +237,7 @@ import "fmt"
 func main() {
 	fmt.Println("Hello, from Go WebAssembly!")
 }
-    '''
+'''
 
     wasm_exec_content = r'''
 // Copyright 2018 The Go Authors. All rights reserved.
@@ -801,7 +801,7 @@ return event.result;
 }
 }
 })();
-    '''
+'''
 
     def __init__(self, name):
         self.name = name
@@ -842,30 +842,31 @@ return event.result;
             }
 
     def create(self):
-      # check if platform project already exists, if so, prompt the user
-      if self.folders[0] in os.listdir('.'):
-          while True:
-              userselection = input(self.folders[0]' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
-              if userselection.lower() == 'y':
-                  userselection = input('Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +'? (y/n)')
-                  if userselection.lower() == 'y':
-                      print("Removing old version of project...")
-                      os.system(f'rm -r "{self.folders[0]}"')
-                      print("Continuing app platform creation.")
-                      break
-                  elif userselection.lower() != 'n':
-                      print('Invalid input, please type y or n then press enter...')
-                      continue
-                  else:
-                      print('Aborting app platform creation.')
-                      return
-              elif userselection.lower() != 'n':
-                  print('Invalid input, please type y or n then press enter...')
-                  continue
-              else:
-                  print('Aborting app platform creation.')
-                  return
-                  
+        import shutil
+        # check if platform project already exists, if so, prompt the user
+        if self.folders[0] in os.listdir('.'):
+            while True:
+                userselection = input(self.folders[0]+' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
+                if userselection.lower() == 'y':
+                    userselection = input('Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +'? (y/n)')
+                    if userselection.lower() == 'y':
+                        print("Removing old version of project...")
+                        shutil.rmtree(os.path.join(os.getcwd(), self.folders[0]))
+                        print("Continuing app platform creation.")
+                        break
+                    elif userselection.lower() != 'n':
+                        print('Invalid input, please type y or n then press enter...')
+                        continue
+                    else:
+                        print('Aborting app platform creation.')
+                        return
+                elif userselection.lower() != 'n':
+                    print('Invalid input, please type y or n then press enter...')
+                    continue
+                else:
+                    print('Aborting app platform creation.')
+                    return
+
         for folder in self.folders:
             os.mkdir(folder)
             print(f'created "{folder}" folder.')
@@ -875,29 +876,34 @@ return event.result;
             f.write(self.files.get(file))
             print(f'created "{file}" file.')
             f.close()
+        # Get the directory of the current script
+        current_directory = os.path.dirname(os.path.abspath(__file__))
 
-        shutil.copy('gupy_logo.png', f'pwa/gupy_logo.png')
+        # Construct the path to the target file
+        logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
+        
+        shutil.copy(logo_directory, f'pwa/gupy_logo.png')
 
         os.chdir(f'pwa/go_wasm')
         os.system(f'go mod init example/go_wasm')
         os.system(f'go mod tidy')
         def build_wasm():
-          # Set the environment variables
-          env = os.environ.copy()
-          env['GOOS'] = 'js'
-          env['GOARCH'] = 'wasm'
-          
-          # Command to execute
-          command = 'go build -o go_wasm.wasm'
-          
-          # Execute the command
-          result = subprocess.run(command, shell=True, env=env)
-          
-          # Check if the command was successful
-          if result.returncode == 0:
-              print("Build successful.")
-          else:
-              print("Build failed.")
+            # Set the environment variables
+            env = os.environ.copy()
+            env['GOOS'] = 'js'
+            env['GOARCH'] = 'wasm'
+            
+            # Command to execute
+            command = 'go build -o go_wasm.wasm'
+            
+            # Execute the command
+            result = subprocess.run(command, shell=True, env=env)
+            
+            # Check if the command was successful
+            if result.returncode == 0:
+                print("Build successful.")
+            else:
+                print("Build failed.")
 
         build_wasm()
         # os.system(f"$env:GOOS='js'; $env:GOARCH='wasm'; go build -o main.wasm")
@@ -915,53 +921,53 @@ return event.result;
         # Copy wasm_exec.js to the current directory
         shutil.copy(wasm_exec_path, '.')
         # shutil.copy("$(go env GOROOT)/misc/wasm/wasm_exec.js", '.')
-        os.chdir(f'../../../../')
-        self.assemble(self.name)
+        os.chdir(f'../../')
+        self.assemble()
 
     # launch index file in browser
     def run(self):
-      os.chdir(f'pwa')
-      # add check here for platform type and language 
-      system = platform.system()
+        os.chdir(f'pwa')
+        # add check here for platform type and language 
+        system = platform.system()
 
-      if system == 'Darwin':
-          cmd = 'python3'
-      elif system == 'Linux':
-          cmd = 'python'
-      else:
-          cmd = 'python'
+        if system == 'Darwin':
+            cmd = 'python3'
+        elif system == 'Linux':
+            cmd = 'python'
+        else:
+            cmd = 'python'
 
-      os.system(f'{cmd} -m http.server')
+        os.system(f'{cmd} -m http.server')
 
-    # def cythonize(self, name):
-    #   pass
+      # def cythonize(self, name):
+      #   pass
 
     def assemble(self):
-      # detect if currently in go_wasm, otherwise, cd to go_wasm to run cmds
-      os.chdir(f'pwa/go_wasm')
-      os.system(f'go mod tidy')
-      def build_wasm(filename):
-        # Set the environment variables
-        env = os.environ.copy()
-        env['GOOS'] = 'js'
-        env['GOARCH'] = 'wasm'
-        
-        # Command to execute
-        command = f'go build -o {os.path.splitext(filename)[0]}.wasm'
-        
-        # Execute the command
-        result = subprocess.run(command, shell=True, env=env)
-        
-        # Check if the command was successful
-        if result.returncode == 0:
-            print("Build successful.")
-        else:
-            print("Build failed.")
-      files = [f for f in glob.glob('*.go')]
-      for filename in files:
-        build_wasm(filename)
-      os.chdir('../../')
+        # detect if currently in go_wasm, otherwise, cd to go_wasm to run cmds
+        os.chdir(f'pwa/go_wasm')
+        os.system(f'go mod tidy')
+        def build_wasm(filename):
+            # Set the environment variables
+            env = os.environ.copy()
+            env['GOOS'] = 'js'
+            env['GOARCH'] = 'wasm'
+            
+            # Command to execute
+            command = f'go build -o {os.path.splitext(filename)[0]}.wasm'
+            
+            # Execute the command
+            result = subprocess.run(command, shell=True, env=env)
+            
+            # Check if the command was successful
+            if result.returncode == 0:
+                print("Build successful.")
+            else:
+                print("Build failed.")
+        files = [f for f in glob.glob('*.go')]
+        for filename in files:
+            build_wasm(filename)
+        os.chdir('../../')
 
-      # add assembly of cython modules
+        # add assembly of cython modules
 
     

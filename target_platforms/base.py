@@ -9,7 +9,7 @@ class Base:
 
     def create_project_folder(self): 
         #Create project folder
-        dir_list = os.getcwd().split('\\\\')
+        dir_list = os.getcwd().split('\\')
         def change_dir(dir_list,name):
             if name in dir_list: 
                 index = dir_list.index(name)

@@ -1,5 +1,6 @@
 from . import base
 import os
+import shutil
 
 class CLI(base.Base):
     index_content = '''
@@ -69,27 +70,28 @@ if __name__ == '__main__':
         #   f'gupy_apps/{self.name}/cli/dev/python_modules',
         #   f'gupy_apps/{self.name}/cli/dev/cython_modules',
           ]
+        self.main_content = f'''
+import {self.name}
+
+{self.name}.main()
+'''
         self.files = {
             f'cli/__init__.py': '',
             f'cli/__main__.py': self.main_content,
             f'cli/{self.name}.py': self.index_content,
             }
-        main_content = f'''
-import {self.name}
-
-{self.name}.main()
-'''
 
     def create(self):
+        import shutil
         # check if platform project already exists, if so, prompt the user
         if self.folders[0] in os.listdir('.'):
             while True:
-                userselection = input(self.folders[0]' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
+                userselection = input(self.folders[0]+' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
                 if userselection.lower() == 'y':
                     userselection = input('Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +'? (y/n)')
                     if userselection.lower() == 'y':
                         print("Removing old version of project...")
-                        os.system(f'rm -r "{self.folders[0]}"')
+                        shutil.rmtree(os.path.join(os.getcwd(), self.folders[0]))
                         print("Continuing app platform creation.")
                         break
                     elif userselection.lower() != 'n':
@@ -129,5 +131,7 @@ import {self.name}
         # os.system(f'{cmd} {name}/desktop/dev/server/server.py')
         os.system(f'{cmd} cli/{name}.py')
         
-    def package(self):
-        pass
+
+
+
+

@@ -48,8 +48,13 @@ def cli():
 def create(name,target_platform, language):
     NAME=name #Assigning project name
     LANG=language
-
-    if not LANG and target_platform != 'pwa' and target_platform != 'website' and target_platform != ('pwa', 'website'):
+    if '-' in NAME:
+        print('Error: Invalid character of "-" in app name. Rename your app to '+ NAME.replace('-','_') +'.')
+        return
+    elif '.' in NAME:
+        print('Error: Invalid character of "." in app name. Rename your app to '+ NAME.replace('.','_') +'.')
+        return
+    if not LANG and 'pwa' not in target_platform and 'website' not in target_platform:
         print("Error: Option '-l/--language' is required for ['desktop', 'cli', 'api'] targets.")
         return
     elif LANG and LANG.lower() != 'py' and LANG.lower() != 'go':
@@ -60,7 +65,7 @@ def create(name,target_platform, language):
     elif not LANG and target_platform == 'website':
         LANG = 'python'
 
-    dir_list = os.getcwd().split('\\\\')
+    dir_list = os.getcwd().split('\\')
     if NAME in dir_list or NAME in os.listdir('.'):
         print('Error: App named '+NAME+' already exists in this location')
 
@@ -98,10 +103,12 @@ Confirm?
         cmdline.CLI(NAME,LANG).create()
 
     if 'api' in TARGETS:
-        pass
-    
+        print('The API feature is not yet available...')
+        return
+
     if 'mobile' in TARGETS:
-        pass
+        print('The Mobile feature is not yet available...')
+        return
 
 @click.command()
 @click.option(
@@ -122,26 +129,34 @@ def run(target_platform):
     # overwrite prompt if yes
     # create name/target-platform folder then create files within it
     TARGET=target_platform
-    if os.path.exists(f"{NAME}"):
-        if os.path.exists(f"{NAME}/{TARGET}"):
-            if TARGET == 'desktop':
-                app_obj = desktop.Desktop(NAME)
-                app_obj.run(NAME)
-            elif TARGET == 'cli':
-                app_obj = cmdline.CLI(NAME)
-                app_obj.run(NAME)
-            elif TARGET == 'website':
-                app_obj = website.Website(NAME)
-                app_obj.run(NAME)
-            elif TARGET == 'pwa':
-                app_obj = pwa.Pwa(NAME)
-                app_obj.run(NAME)
-            else:
-                print('other platforms not enabled for this feature yet...')
-        else:
-            print(f'{NAME} app does not have a target platform of {TARGET}.')
+    if 'desktop' in dir_list or 'desktop' in os.listdir('.'):
+        TARGET='desktop'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd())
+        app_obj = desktop.Desktop(NAME)
+        app_obj.run(NAME)
+    elif 'pwa' in dir_list or 'pwa' in os.listdir('.'):
+        TARGET='pwa'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd())
+        app_obj = pwa.Pwa(NAME)
+        app_obj.run(NAME)
+    elif 'website' in dir_list or 'website' in os.listdir('.'):
+        TARGET='website'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd())
+        app_obj = website.Website(NAME)
+        app_obj.run(NAME)
+    elif 'cli' in dir_list or 'cli' in os.listdir('.'):
+        TARGET='cli'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd())
+        app_obj = cmdline.CLI(NAME)
+        app_obj.run(NAME)
+    elif TARGET == 'desktop' or TARGET == 'pwa' or TARGET == 'website' or TARGET == 'cli':
+        print(f'{NAME} app does not have a project platform of {TARGET}. Use the create command and try again.')
     else:
-        print(f'{NAME} folder does not exist. Try listing all apps with "python ./gupy.py list" or "python -m gupy list"')
+        print(f'{TARGET} is not yet enabled for this feature...')
 
 # @click.command()
 # def list():
@@ -182,103 +197,54 @@ def compile(file):
 @click.option(
     '--file',
     '-f',
-    required=False,
-    default=[''], 
-    help="Select a single file to cythonize or keep blank to cythonize recursively from current directory (ie. -f script.py)."
+    required=True,
+    multiple=True, 
+    default=[], 
+    help="Select a single file to cythonize or select multiple (ie. -f script1.py -f script2.py)."
     )
 def cythonize(file):
-    # files = [f for f in os.listdir('.') if os.path.isfile(f)]
-    if file == '':
-        setup_content = '''
-from distutils.core import setup
-from Cython.Build import cythonize
-import os
+    files = [f for f in os.listdir('.') if os.path.isfile(f)]
+    if '-' in os.getcwd().split('\\')[-1]:
+        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split('\\')[-1].replace('-','_') +'.')
+        return
+    elif '.' in os.getcwd().split('\\')[-1]:
+        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split('\\')[-1].replace('.','_') +'.')
+        return
 
-# Recursively find all Python files
-def find_python_files(base_dir):
-    python_files = []
-    for root, dirs, files in os.walk(base_dir):
-        for file in files:
-            if file.endswith(".py"):
-                if file != "__init__.py" and file != "__main__.py" and file != "setup.py":
-                    full_path = os.path.join(root, file)
-                    python_files.append(full_path)
-    return python_files
-
-# find all python files recursively other than __init__.py __main__.py and setup.py
-python_files = find_python_files(".")
-
-setup(
-    ext_modules=cythonize(python_files, compiler_directives={'language_level': "3"}),
-)
-'''
-    else:
-        if os.path.exists(file):
-            setup_content = '''
-from distutils.core import setup
-from Cython.Build import cythonize
-
-setup(
-    ext_modules=cythonize("'''+file+'''", compiler_directives={'language_level': "3"}),
-)
-'''
-        else:
-            print('Error: '+file+' not found. Try again...')
-            return
-
-    if os.path.exists('setup.py'):
-        f = open('setup.py', 'r+')
-        f.seek(0)
-        f.truncate()
-        f.close()
-    else:
-        f = open('setup.py', 'x')
-    f = open('setup.py', 'r+')
-    f.write(setup_content)
-    print(f'Updated setup.py file.')
-    f.close()
-    os.system(f'python ./setup.py build_ext --inplace')
+    for item in file:
+        print(f'Building {item} file...')
+        os.system(f'cythonize -i {os.path.splitext(item)[0]}.py')
 
 @click.command()
 @click.option(
     '--file',
     '-f',
-    required=False,
-    help='Select a single file to gopherize or keep blank to gopherize recursively (excluding the go_wasm folder) from current directory (ie. -f main.go).'
+    required=True,
+    multiple=True, 
+    default=[], 
+    help='Select a single file to gopherize or select multiple (ie. -f module1.go -f module2.go).'
     )
 def gopherize(file):
-    FILE=file
-    # Recursively find all Python files
-    def find_go_files(base_dir):
-        files = []
-        for root, dirs, files in os.walk(base_dir):
-            for file in files:
-                if file.endswith(".go"):
-                    full_path = os.path.join(root, file)
-                    files.append(full_path)
-        return files
-    if not FILE:
-        # os.system(f'go mod tidy')
-        # find all go files recursively
-        files = find_go_files(".")        
-        # files = [f for f in glob.glob('*.go')]
-    else:
-        files = [FILE]
+    if '-' in os.getcwd().split('\\')[-1]:
+        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split('\\')[-1].replace('-','_') +'.')
+        return
+    elif '.' in os.getcwd().split('\\')[-1]:
+        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split('\\')[-1].replace('.','_') +'.')
+        return
 
-    for file in files:
-        print(f'Building {file} file...')
-        os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
+    for item in file:
+        print(f'Building {item} file...')
+        os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {item} ')
 
 @click.command()
 @click.option(
     '--file',
     '-f',
     required=False,
-    help='Select a single file to gopherize or keep blank to gopherize recursively (excluding the go_wasm folder) from current directory (ie. -f main.go).'
+    help='Select a single file to assemble or select multiple (ie. -f module1.go -f module2.go).'
     )
 def assemble(file):
-    FILE=file
-    dir_list = os.getcwd().split('\\\\')
+    dir_list = os.getcwd().split('\\')
     def change_dir(dir_list,target):
         if target in dir_list: 
             index = dir_list.index(target)
@@ -290,12 +256,15 @@ def assemble(file):
     if 'desktop' in dir_list or 'desktop' in os.listdir('.'):
         TARGET='desktop'
         change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd())
     elif 'pwa' in dir_list or 'pwa' in os.listdir('.'):
         TARGET='pwa'
         change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd())
     elif 'website' in dir_list or 'website' in os.listdir('.'):
         TARGET='website'
         change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd())
     else:
         print(f'Error: No target platform folder of {TARGET} found. Change directory to your app and try again (ex. cd <path to app>).')
         return
@@ -312,8 +281,134 @@ def assemble(file):
     else:
         print(TARGET+' platform not enabled for assembly. Change directory to your app root folder with desktop, pwa, or website platforms (ex. cd <path to app>/<platform>).')
 
+@click.command()
+@click.option(
+    '--target-platform',
+    '-t',
+    type=click.Choice(
+        ['desktop', 'cli'], 
+        case_sensitive=False
+        ),
+    required=True,
+    multiple=False, 
+    default=[], 
+    help="Select the app platform you intend to run (ie. -t desktop)"
+    )
 def package():
-    pass
+    dir_list = os.getcwd().split('\\')
+    def change_dir(dir_list,target):
+        if target in dir_list: 
+            index = dir_list.index(target)
+            chdir_num = len(dir_list) - index
+            os.chdir('../'*chdir_num)
+        elif target in os.listdir('.'):
+            os.chdir(target)
+    # detect the platform in the current directory or parent directories and then change directory to its root for operation
+    if 'desktop' in dir_list or 'desktop' in os.listdir('.'):
+        TARGET='desktop'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd())
+    elif 'cli' in dir_list or 'cli' in os.listdir('.'):
+        TARGET='cli'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd())
+    else:
+        print(f'Error: No target platform folder of {TARGET} found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
+        return
+
+    toml_content = '''
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "'''+NAME+'''"
+version = "0.0.1"
+authors = [
+{ name="Example Author", email="author@example.com" },
+]
+description = "A small example package"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+"Programming Language :: Python :: 3",
+"License :: OSI Approved :: MIT License",
+"Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/pypa/sampleproject"
+Issues = "https://github.com/pypa/sampleproject/issues"
+
+# Specify the directory where your Python package code is located
+[tool.hatch.build.targets.sdist]
+include = ["*"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["*"]
+'''
+    readme_content = f'''
+# {NAME} Project
+'''
+    license_content = '''
+MIT License
+
+Copyright (c) 2022 SPEARTECH
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+'''
+    # add check here for platform type and language 
+    system = platform.system()
+
+    if system == 'Darwin':
+        cmd = 'python3'
+    elif system == 'Linux':
+        cmd = 'python'
+    else:
+        cmd = 'python'
+
+    print('changing directory...')
+    os.chdir('cli/')
+    print('checking for README.md...')
+    if 'README.md' not in os.listdir('.'):
+        f = open(file, 'x')
+        f.write(readme_content)
+        print(f'created "{file}" file.')
+        f.close()
+    print('checking for LICENSE...')
+    if 'LICENSE' not in os.listdir('.'):
+        f = open(file, 'x')
+        f.write(license_content)
+        print(f'created "{file}" file.')
+        f.close()
+    print('checking for pyproject.toml...')
+    if 'pyproject.toml' not in os.listdir('.'):
+        f = open(file, 'x')
+        f.write(toml_content)
+        print(f'created "{file}" file.')
+        f.close()
+        print('pyproject.toml created with default values. Modify it to your liking and rerun the package command.')
+        return
+
+    os.system(f'{cmd} -m build')
+
 
 def main():
     cli.add_command(create) #Add command for cli
