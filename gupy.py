@@ -6,6 +6,7 @@ from target_platforms import *
 import platform
 import chardet
 import subprocess
+import shutil
 
 NAME=''
 TARGETS=[]
@@ -50,7 +51,7 @@ def cli():
     )
 def create(name,target_platform, language):
     NAME=name #Assigning project name
-    LANG=language
+    LANG=language.lower()
     if '-' in NAME:
         print('Error: Invalid character of "-" in app name. Rename your app to '+ NAME.replace('-','_') +'.')
         return
@@ -60,7 +61,7 @@ def create(name,target_platform, language):
     if not LANG and 'pwa' not in target_platform and 'website' not in target_platform:
         print("Error: Option '-l/--language' is required for ['desktop', 'cli', 'api'] targets.")
         return
-    elif LANG and LANG.lower() != 'py' and LANG.lower() != 'go':
+    elif LANG and LANG != 'py' and LANG != 'go':
         print(f'Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang)')
         return
     elif not LANG and target_platform == ('pwa',):
@@ -183,7 +184,7 @@ def compile(file):
             if file.split('.')[-1] == 'py':
                 os.system(f'nuitka --standalone --onefile --disable-console {file}')
             elif file.split('.')[-1] == 'go':
-                os.system(f'go mod tidy')
+                # os.system(f'go mod tidy')
                 os.system(f'go build')
     except Exception as e:
         print(e)
@@ -298,6 +299,21 @@ def package():
         else:
             print(f'Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
             return
+
+        # creating project folder if doesnt already exist
+        os.makedirs(NAME, exist_ok=True)
+
+        # copying all files into project folder for packaging
+        files = os.listdir(os.cwd())
+        folders = []
+        for file_name in files:
+            full_file_name = os.path.join(os.getcwd(), file_name)
+            if os.path.isfile(full_file_name):
+                shutil.copy(full_file_name, NAME)
+            elif os.path.isdir(full_file_name) and file_name != NAME:
+                shutil.copytree(full_file_name, NAME)
+        # prompt user to modify files and toml and run package again
+
         # checking for requirements.txt to add to pyproject.toml
         file_path = 'requirements.txt'
 
@@ -362,7 +378,7 @@ include = ["*"]
 
 # Define entry points for CLI
 [project.scripts]
-'''+f'''{NAME} = "{NAME}:main"'''
+'''+f'''{NAME} = "{NAME}.__main__:main"'''
 
         readme_content = f'''
 # {NAME} Project
@@ -472,6 +488,41 @@ def install_go():
         else:
             raise Exception(f"Platform {sys.platform} is not supported for Go installation.")
 
+@click.command()
+def distribute():
+    try:
+        # add project folder if not already created
+        # move files+folders into project folder if just created
+        # detect python version in pyd files
+        # package latest python if not selected - make python folder with windows/mac/linux
+        # install requirements with new python location
+        # create go file for starting entry script for current os
+        # compile go file
+        # create run.sh for entry script
+        # create run.bat for entry script
+        pass
+    except Exception as e:
+        print('Error: '+str(e))
+        return
+
+@click.command()
+@click.option(
+    '--file',
+    '-f',
+    required=True,
+    multiple=True, 
+    default=[], 
+    help='Select a single javascript file to obfuscate or select multiple (ie. -f view1.html -f view2.html).'
+    )
+def obfuscate():
+    try:
+        # for each file, obfuscate javascript (test with html file + vue options api - select lib to do this)
+        pass
+    except Exception as e:
+        print('Error: '+str(e))
+        return
+
+
 def main():
     cli.add_command(create) #Add command for cli
     cli.add_command(run) #Add command for cli
@@ -481,6 +532,9 @@ def main():
     cli.add_command(assemble)
     cli.add_command(package)
     cli.add_command(install_go)
+    cli.add_command(distribute)
+    cli.add_command(obfuscate)
+
     cli() #Run cli
 
 if __name__ == '__main__':

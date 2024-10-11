@@ -986,7 +986,7 @@ func main() {
 	r.GET("/", index)
 
 	// Start the server
-	go openChrome("http://127.0.0.1:8080") // Open Chrome with your server URL
+	go openChrome("http://127.0.0.1:8000") // Open Chrome with your server URL
 	r.Run(":8080")
 }
 
@@ -1010,12 +1010,15 @@ func openChrome(url string) {
 		fmt.Println("Failed to open Chrome:", err)
 	}
 }
+'''
+        elif self.lang == 'py':
+            self.main_content = f'''
+import server
 
-
-            '''
+server.main()
+'''
 
         self.files = {
-            f'desktop/__init__.py': '',
             f'desktop/templates/index.html': self.index_content,
             f'desktop/static/go_wasm/go_wasm.go': self.go_wasm_content,
             f'desktop/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
@@ -1023,6 +1026,8 @@ func openChrome(url string) {
             }
 
         if self.lang == 'py':
+            self.files[f'desktop/__init__.py'] = ""
+            self.files[f'desktop/__main__.py'] = self.main_content
             self.files[f'desktop/server.py'] = self.server_content
             self.folders.append(f'desktop/python_modules')
             self.files[f'desktop/python_modules/python_modules.py'] = self.python_modules_content
