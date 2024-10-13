@@ -465,19 +465,52 @@ def install_go():
             url = "https://golang.org/dl/go1.18.3.windows-amd64.msi"
             installer_file = "go_installer.msi"
             subprocess.run(["curl", "-o", installer_file, url], check=True)
-            subprocess.run(["msiexec", "/i", installer_file, "/quiet", "/norestart"], check=True)
+            # Check if the file was downloaded successfully
+            if os.path.exists(installer_file):
+                # Get the absolute path of the installer file
+                installer_path = os.path.abspath(installer_file)
+                
+                try:
+                    # Run msiexec with the absolute path of the installer
+                    subprocess.run(["msiexec", "/i", installer_file, "/quiet", "/norestart"], check=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"Installation failed with error: {e}")
+            else:
+                print(f"Failed to download the installer from {url}")
         elif sys.platform == "darwin":
             # macOS installation
             url = "https://golang.org/dl/go1.18.3.darwin-amd64.pkg"
             installer_file = "go_installer.pkg"
             subprocess.run(["curl", "-o", installer_file, url], check=True)
-            subprocess.run(["sudo", "installer", "-pkg", installer_file, "-target", "/"], check=True)
+            # Check if the file was downloaded successfully
+            if os.path.exists(installer_file):
+                # Get the absolute path of the installer file
+                installer_path = os.path.abspath(installer_file)
+                
+                try:
+                    # Run msiexec with the absolute path of the installer
+                    subprocess.run(["sudo", "installer", "-pkg", installer_file, "-target", "/"], check=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"Installation failed with error: {e}")
+            else:
+                print(f"Failed to download the installer from {url}")            
         elif sys.platform == "linux":
             # Linux installation
             url = "https://golang.org/dl/go1.18.3.linux-amd64.tar.gz"
             tar_file = "go_installer.tar.gz"
             subprocess.run(["curl", "-o", tar_file, url], check=True)
-            subprocess.run(["sudo", "tar", "-C", "/usr/local", "-xzf", tar_file], check=True)
+            # Check if the file was downloaded successfully
+            if os.path.exists(installer_file):
+                # Get the absolute path of the installer file
+                installer_path = os.path.abspath(installer_file)
+                
+                try:
+                    # Run msiexec with the absolute path of the installer
+                    subprocess.run(["sudo", "tar", "-C", "/usr/local", "-xzf", tar_file], check=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"Installation failed with error: {e}")
+            else:
+                print(f"Failed to download the installer from {url}")            
 
             # Add Go to PATH
             go_path = "/usr/local/go/bin"
