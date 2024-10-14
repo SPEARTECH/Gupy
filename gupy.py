@@ -500,9 +500,9 @@ def install_go():
             tar_file = "go_installer.tar.gz"
             subprocess.run(["curl", "-o", tar_file, url], check=True)
             # Check if the file was downloaded successfully
-            if os.path.exists(installer_file):
+            if os.path.exists(tar_file):
                 # Get the absolute path of the installer file
-                installer_path = os.path.abspath(installer_file)
+                installer_path = os.path.abspath(tar_file)
                 
                 try:
                     # Run msiexec with the absolute path of the installer
