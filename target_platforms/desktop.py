@@ -1102,6 +1102,11 @@ server.main()
         logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
         
         shutil.copy(logo_directory, f'desktop/static/gupy_logo.png')
+
+        ico_directory = os.path.join(os.path.dirname(current_directory), 'gupy.ico')       
+        
+        shutil.copy(ico_directory, f'desktop/static/gupy.ico')
+        
         self.cythonize()
         self.gopherize()
         self.assemble()

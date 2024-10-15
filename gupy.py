@@ -7,6 +7,7 @@ import platform
 import chardet
 import subprocess
 import shutil
+import glob
 
 NAME=''
 TARGETS=[]
@@ -254,6 +255,9 @@ def assemble():
         TARGET='website'
         change_dir(dir_list,TARGET)
         NAME=os.path.basename(os.getcwd())
+    elif 'cli' in dir_list or 'api' in dir_list or 'mobile' in dir_list:
+        print('Error: --assemble is only available for desktop, pwa, and website projects.')
+        return
     else:
         print(f'Error: No target platform folder found. Change directory to your app and try again (ex. cd <path to app>).')
         return
@@ -284,22 +288,18 @@ def package():
             TARGET='desktop'
             change_dir(dir_list,TARGET)
             NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
-        elif 'pwa' in dir_list:
-            TARGET='pwa'
-            change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
-        elif 'website' in dir_list:
-            TARGET='website'
-            change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
         elif 'cli' in dir_list:
             TARGET='cli'
             change_dir(dir_list,TARGET)
             NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
+        elif 'pwa' in dir_list or 'website' in dir_list:
+            print('Error: --package is only available for desktop, and cli projects.')
+            return
         else:
             print(f'Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
             return
 
+        NAME = 'pkg_'+NAME
         # creating project folder if doesnt already exist
         os.makedirs(NAME, exist_ok=True)
 
@@ -444,116 +444,337 @@ SOFTWARE.
         print('Error: '+str(e))
         print('*NOTE: Be sure to change directory to the desired platform to package (ex. cd <path to target app platform>)*')
 
-def check_golang_installed():
-    """Check if Go is installed by trying to run 'go version'."""
-    try:
-        subprocess.run(["go", "version"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("Golang is already installed.")
-        return True
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        print("Golang is not installed.")
-        return False
-
-@click.command()
-def install_go():
-    if not check_golang_installed():
-        """Install Go by downloading and running the installer based on the OS."""
-        print("Installing Golang...")
-
-        if sys.platform == "win32":
-            # Windows installation (assumes curl is available)
-            url = "https://golang.org/dl/go1.18.3.windows-amd64.msi"
-            installer_file = "go_installer.msi"
-            subprocess.run(["curl", "-o", installer_file, url], check=True)
-            # Check if the file was downloaded successfully
-            if os.path.exists(installer_file):
-                # Get the absolute path of the installer file
-                installer_path = os.path.abspath(installer_file)
-                
-                try:
-                    # Run msiexec with the absolute path of the installer
-                    subprocess.run(["msiexec", "/i", installer_file, "/quiet", "/norestart"], check=True)
-                except subprocess.CalledProcessError as e:
-                    print(f"Installation failed with error: {e}")
-            else:
-                print(f"Failed to download the installer from {url}")
-        elif sys.platform == "darwin":
-            # macOS installation
-            url = "https://golang.org/dl/go1.18.3.darwin-amd64.pkg"
-            installer_file = "go_installer.pkg"
-            subprocess.run(["curl", "-o", installer_file, url], check=True)
-            # Check if the file was downloaded successfully
-            if os.path.exists(installer_file):
-                # Get the absolute path of the installer file
-                installer_path = os.path.abspath(installer_file)
-                
-                try:
-                    # Run msiexec with the absolute path of the installer
-                    subprocess.run(["sudo", "installer", "-pkg", installer_file, "-target", "/"], check=True)
-                except subprocess.CalledProcessError as e:
-                    print(f"Installation failed with error: {e}")
-            else:
-                print(f"Failed to download the installer from {url}")            
-        elif sys.platform == "linux":
-            # Linux installation
-            url = "https://golang.org/dl/go1.18.3.linux-amd64.tar.gz"
-            tar_file = "go_installer.tar.gz"
-            subprocess.run(["curl", "-o", tar_file, url], check=True)
-            # Check if the file was downloaded successfully
-            if os.path.exists(tar_file):
-                # Get the absolute path of the installer file
-                installer_path = os.path.abspath(tar_file)
-                
-                try:
-                    # Run msiexec with the absolute path of the installer
-                    subprocess.run(["sudo", "tar", "-C", "/usr/local", "-xzf", tar_file], check=True)
-                except subprocess.CalledProcessError as e:
-                    print(f"Installation failed with error: {e}")
-            else:
-                print(f"Failed to download the installer from {url}")            
-
-            # Add Go to PATH
-            go_path = "/usr/local/go/bin"
-            bashrc_path = os.path.expanduser("~/.bashrc")
-            with open(bashrc_path, "a") as bashrc:
-                bashrc.write(f"\nexport PATH=$PATH:{go_path}\n")
-            subprocess.run(["source", bashrc_path], shell=True, check=True)
-        else:
-            raise Exception(f"Platform {sys.platform} is not supported for Go installation.")
-
-@click.command()
-def distribute():
-    try:
-        # add project folder if not already created
-        # move files+folders into project folder if just created
-        # detect python version in pyd files
-        # package latest python if not selected - make python folder with windows/mac/linux
-        # install requirements with new python location
-        # create go file for starting entry script for current os
-        # compile go file
-        # create run.sh for entry script
-        # create run.bat for entry script
-        pass
-    except Exception as e:
-        print('Error: '+str(e))
-        return
-
 @click.command()
 @click.option(
-    '--file',
-    '-f',
+    '--version',
+    '-v',
     required=True,
-    multiple=True, 
-    default=[], 
-    help='Select a single javascript file to obfuscate or select multiple (ie. -f view1.html -f view2.html).'
+    help='Desired version for distribution (ie. -v 1.0.0).'
     )
-def obfuscate():
+def distribute(version):
+    VERSION = version.replace('.','_')
     try:
-        # for each file, obfuscate javascript (test with html file + vue options api - select lib to do this)
-        pass
+        dir_list = os.getcwd().split('\\')
+        def change_dir(dir_list,target):
+            index = dir_list.index(target)
+            chdir_num = len(dir_list) - (index +1)
+            if not chdir_num == 0:
+                os.chdir('../'*chdir_num)
+        # detect the platform in the current directory or parent directories and then change directory to its root for operation
+        if 'desktop' in dir_list:
+            TARGET='desktop'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
+        # perhaps run logic for .pyd/.so files, moving all that are to be deployed...? mobile to apk?
+        elif 'pwa' in dir_list or 'website' in dir_list or 'api' in dir_list or 'mobile' in dir_list or 'cli' in dir_list:
+            print('Error: --distribute is only available for desktop projects.')
+            return
+        else:
+            print(f'Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
+            return
+
+        # creating project folder if doesnt already exist
+        NAME = 'dist_'+NAME
+        os.makedirs(NAME, exist_ok=True)
+        os.chdir(NAME)
+
+        # creating version folder is doesnt already exist
+        os.makedirs(VERSION, exist_ok=True)
+        shutil.rmtree(VERSION)
+        os.makedirs(VERSION, exist_ok=True)
+        os.chdir(VERSION)
+
+        # detect os and make folder
+        system = platform.system()
+
+        if system == 'Darwin':
+            system = 'darwin'
+            folder = 'mac'
+        elif system == 'Linux':
+            system = 'linux'
+            folder = 'linux'
+        else:
+            system = 'win'
+            folder = 'windows'
+
+        os.makedirs(folder, exist_ok=True)
+        shutil.rmtree(folder)
+        os.makedirs(folder, exist_ok=True)
+        os.chdir('../../')
+
+        # move files+folders into project folder if just created
+        if folder == 'linux' or folder == 'mac':
+            comp_file_ext = 'so'
+        elif folder == 'windows':
+            comp_file_ext = 'pyd'
+
+        # get python location
+        python_loc = os.path.dirname(sys.executable)
+        python_executable = sys.executable.split('\\')[-1]
+        python_version = "".join(sys.version.split(' ')[0].split('.')[0:2]) 
+        # print(os.getcwd())
+        # moves files and folders - only checks the cythonized files in root directory.
+        files = os.listdir(os.getcwd())
+        folders = []
+        for file_name in files:
+            full_file_name = os.path.join(os.getcwd(), file_name)
+            if os.path.isfile(full_file_name):
+                if comp_file_ext in file_name.split('.')[-1] and system in file_name:
+                    shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
+                elif comp_file_ext in file_name.split('.')[-1] and system in file_name:
+                    shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
+                elif file_name.split('.')[-1] != 'pyd' and file_name.split('.')[-1] != 'so':
+                    shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
+            elif os.path.isdir(full_file_name) and file_name != NAME:
+                shutil.copytree(full_file_name, f"{NAME}/{VERSION}/{folder}/{file_name}", dirs_exist_ok=True)
+            print('Copied '+file_name+' to '+f"{NAME}/{VERSION}/{folder}/{file_name}"+'...')
+        # package latest python if not selected - make python folder with windows/mac/linux
+        os.makedirs(f"{NAME}/{VERSION}/{folder}/python", exist_ok=True)
+        print('Copied python folder...')
+        shutil.copytree(python_loc, f"{NAME}/{VERSION}/{folder}/python", dirs_exist_ok=True)
+        # install requirements with new python location if it exists
+        if os.path.exists('requirements.txt'):
+            if folder == 'windows':
+                command = f".\\{NAME}\\{VERSION}\\{folder}\\python\\{python_executable} -m pip install -r requirements.txt"
+            else:
+                command = f".\\{NAME}\\{VERSION}\\{folder}\\python\\lib\\{python_executable} -m pip install -r requirements.txt"
+            # Run the command
+            result = subprocess.run(command, shell=True, check=True)
+            # Check if the command was successful
+            if result.returncode == 0:
+                print("Requirements installed successfully.")
+            else:
+                print("Failed to install requirements.txt - ensure it exists.")
+
+        def get_goroot():
+            # Run 'go env GOROOT' command and capture the output
+            result = subprocess.run(["go", "env", "GOROOT"], capture_output=True, text=True)
+            if result.returncode == 0:
+                return result.stdout.strip()  # Remove any surrounding whitespace/newlines
+            else:
+                raise Exception("Failed to get GOROOT: " + result.stderr)
+
+        # copy go folder contents into go/ folder
+        def get_golang_install_location():
+            goroot = get_goroot()
+
+            if goroot:
+                return goroot
+            else:
+                return "GOROOT environment variable is not set."
+
+        golang_location = get_golang_install_location()
+        print(f"Golang is installed at: {golang_location}")
+
+        os.makedirs(f"{NAME}/{VERSION}/{folder}/go", exist_ok=True)
+        shutil.copytree(golang_location, f"{NAME}/{VERSION}/{folder}/go", dirs_exist_ok=True)
+        print('Copied go folder...')
+        # create run.go and go.mod for starting entry script for current os
+        os.chdir(f"{NAME}/{VERSION}/{folder}")
+        subprocess.run(f'.\\go\\bin\\go.exe mod init example.com/{NAME}', shell=True, check=True)
+        # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
+        # Use glob to find all .ico files in the folder
+        ico_files = glob.glob(os.path.join('static', '*.ico'))
+        ico = ico_files[0]
+
+        # create install.bat/sh for compiling run.go
+        if folder == 'mac' or folder == 'linux':
+            run_go_content = r'''
+package main
+
+import (
+    "fmt"
+    "os"
+    "path/filepath"
+	"os/exec"
+)
+
+func main() {
+
+    // Run the Python script
+    runPythonScript()
+}
+
+// Runs the Python script 'gui.py'
+func runPythonScript() {
+    currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+    if err != nil {
+        fmt.Println("Error getting current directory:", err)
+        return
+    }
+
+    pythonExe := filepath.Join(currentDir, "python", "lib", "'''+ python_executable +r'''") 
+    scriptPath := filepath.Join(currentDir, "__main__.py")
+
+    fmt.Printf("Current directory is: %s\n", currentDir)
+    fmt.Printf("Running Python script %s...\n", scriptPath)
+
+    cmd := exec.Command(pythonExe, scriptPath)
+    cmd.Stdout = os.Stdout
+    cmd.Stderr = os.Stderr
+
+    err = cmd.Run()
+    if err != nil {
+        fmt.Println("Error running Python script:", err)
+    }
+}'''        
+            install_script_content = r'''
+#!/bin/bash
+
+# Navigate to the script's directory
+cd "$(dirname "$0")"
+sudo chmod 755 python/lib/'''+ python_executable +r'''
+
+echo "Compiling run.go..."
+go/bin/go build run.go
+
+if [ $? -ne 0 ]; then
+    echo "Go build failed. Exiting..."
+    exit 1
+fi
+
+# Define paths for the icon and the target executable
+ICON_PATH="$PWD/static/'''+ ico +r'''"
+TARGET_PATH="$PWD/run"
+
+# Create the .desktop shortcut for the desktop
+DESKTOP_SHORTCUT="$HOME/Desktop/'''+NAME+r'''.desktop"
+cat > "$DESKTOP_SHORTCUT" <<EOL
+[Desktop Entry]
+Version=1.0
+Name='''+NAME+r'''
+Comment='''+NAME+r''' Application
+Exec=$TARGET_PATH
+Icon=$ICON_PATH
+Terminal=false
+Type=Application
+Categories=Application;
+EOL
+
+# Make the desktop shortcut executable
+chmod +x "$DESKTOP_SHORTCUT"
+
+# Create the .desktop shortcut in the application directory
+DIR_SHORTCUT="$TARGET_PATH.desktop"
+cat > "$DIR_SHORTCUT" <<EOL
+[Desktop Entry]
+Version=1.0
+Name='''+NAME+r'''
+Comment='''+NAME+r''' Application
+Exec=$TARGET_PATH
+Icon=$ICON_PATH
+Terminal=false
+Type=Application
+Categories=Application;
+EOL
+
+# Make the directory shortcut executable
+chmod +x "$DIR_SHORTCUT"
+
+echo "Shortcuts created successfully!"
+'''
+            with open('install.sh', 'w') as f:
+                f.write(install_script_content)
+            with open('run.go', 'w') as f:
+                f.write(run_go_content)
+        else:
+            run_go_content = r'''
+package main
+
+import (
+    "fmt"
+    "os"
+    "path/filepath"
+	"os/exec"
+)
+
+func main() {
+
+    // Run the Python script
+    runPythonScript()
+}
+
+// Runs the Python script 'gui.py'
+func runPythonScript() {
+    currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+    if err != nil {
+        fmt.Println("Error getting current directory:", err)
+        return
+    }
+
+    pythonExe := filepath.Join(currentDir, "python", "'''+ python_executable +r'''") 
+    scriptPath := filepath.Join(currentDir, "__main__.py")
+
+    fmt.Printf("Current directory is: %s\n", currentDir)
+    fmt.Printf("Running Python script %s...\n", scriptPath)
+
+    cmd := exec.Command(pythonExe, scriptPath)
+    cmd.Stdout = os.Stdout
+    cmd.Stderr = os.Stderr
+
+    err = cmd.Run()
+    if err != nil {
+        fmt.Println("Error running Python script:", err)
+    }
+}'''        
+            install_script_content = r'''
+@echo off
+cd /d "%~dp0"
+
+%~dp0go/bin/go.exe build run.go
+
+if %errorlevel% neq 0 (
+    echo Go build failed. Exiting...
+    exit /b 1
+)
+
+REM Create a VBScript to make a desktop shortcut with an icon
+echo Set objShell = CreateObject("WScript.Shell") > CreateShortcut.vbs
+echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desktop") ^& "\\'''+NAME+r'''.lnk") >> CreateShortcut.vbs
+echo desktopShortcut.TargetPath = "%cd%\run.exe" >> CreateShortcut.vbs
+echo desktopShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
+echo desktopShortcut.Save >> CreateShortcut.vbs
+
+REM Create a shortcut in the same directory as run.exe
+echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+NAME+r'''.lnk") >> CreateShortcut.vbs
+echo dirShortcut.TargetPath = "%cd%\run.exe" >> CreateShortcut.vbs
+echo dirShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
+echo dirShortcut.Save >> CreateShortcut.vbs
+
+REM Run the VBScript to create the shortcuts
+cscript CreateShortcut.vbs
+
+REM Clean up the VBScript file
+del CreateShortcut.vbs
+
+echo Shortcuts created successfully!
+pause
+'''     
+            with open('install.bat', 'w') as f:
+                f.write(install_script_content)
+            with open('run.go', 'w') as f:
+                f.write(run_go_content)
+
     except Exception as e:
         print('Error: '+str(e))
         return
+
+# @click.command()
+# @click.option(
+#     '--file',
+#     '-f',
+#     required=True,
+#     multiple=True, 
+#     default=[], 
+#     help='Select a single javascript file to obfuscate or select multiple (ie. -f view1.html -f view2.html).'
+#     )
+# def obfuscate():
+#     try:
+#         # for each file, obfuscate javascript (test with html file + vue options api - select lib to do this)
+#         pass
+#     except Exception as e:
+#         print('Error: '+str(e))
+#         return
 
 
 def main():
@@ -564,9 +785,8 @@ def main():
     cli.add_command(gopherize)
     cli.add_command(assemble)
     cli.add_command(package)
-    cli.add_command(install_go)
     cli.add_command(distribute)
-    cli.add_command(obfuscate)
+    # cli.add_command(obfuscate)
 
     cli() #Run cli
 
