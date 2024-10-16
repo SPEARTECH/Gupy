@@ -310,7 +310,7 @@ def package():
             if os.path.isfile(full_file_name):
                 shutil.copy(full_file_name, NAME)
             elif os.path.isdir(full_file_name) and file_name != NAME:
-                shutil.copytree(full_file_name, NAME)
+                shutil.copytree(full_file_name, NAME, dirs_exist_ok=True)
         # prompt user to modify files and toml and run package again
 
         # checking for requirements.txt to add to pyproject.toml
