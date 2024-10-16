@@ -574,7 +574,7 @@ def distribute(version):
         shutil.copytree(python_loc, f"{NAME}/{VERSION}/{folder}/python", dirs_exist_ok=True)
         # install requirements with new python location if it exists
         if os.path.exists('requirements.txt'):
-            if folder == 'windows':
+            if folder == 'windows' or folder == 'mac':
                 command = f"./{NAME}/{VERSION}/{folder}/python/{python_executable} -m pip install -r requirements.txt"
             else:
                 command = f"./{NAME}/{VERSION}/{folder}/python/lib/{python_executable} -m pip install -r requirements.txt"

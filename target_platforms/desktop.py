@@ -1033,6 +1033,7 @@ server.main()
             self.files[f'desktop/python_modules/python_modules.py'] = self.python_modules_content
             self.folders.append(f'desktop/go_modules')
             self.files[f'desktop/go_modules/go_modules.go'] = self.go_modules_content
+            self.files['desktop/requirements.txt'] = ''
         else:
             self.files[f'desktop/server.go'] = self.server_content
 
