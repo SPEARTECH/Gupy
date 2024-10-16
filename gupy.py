@@ -565,7 +565,7 @@ def distribute(version):
                     shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
                 elif file_name.split('.')[-1] != 'pyd' and file_name.split('.')[-1] != 'so':
                     shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
-            elif os.path.isdir(full_file_name) and file_name != NAME:
+            elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist':
                 shutil.copytree(full_file_name, f"{NAME}/{VERSION}/{folder}/{file_name}", dirs_exist_ok=True)
             print('Copied '+file_name+' to '+f"{NAME}/{VERSION}/{folder}/{file_name}"+'...')
         # package latest python if not selected - make python folder with windows/mac/linux
