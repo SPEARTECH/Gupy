@@ -927,15 +927,8 @@ return event.result;
     # launch index file in browser
     def run(self):
         os.chdir(f'pwa')
-        # add check here for platform type and language 
-        system = platform.system()
-
-        if system == 'Darwin':
-            cmd = 'python3'
-        elif system == 'Linux':
-            cmd = 'python'
-        else:
-            cmd = 'python'
+        # assign current python executable to use
+        cmd = sys.executable.split('\\')[-1]
 
         os.system(f'{cmd} -m http.server')
 

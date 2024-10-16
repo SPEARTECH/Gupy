@@ -1056,14 +1056,7 @@ function getCSRFTokenFromDOM() {
 
     def create(self):
       import shutil
-      system = platform.system()
-
-      if system == 'Darwin':
-          cmd = 'python3'
-      elif system == 'Linux':
-          cmd = 'python'
-      else:
-          cmd = 'python'
+      cmd = sys.executable.split('\\')[-1]
 
       # check if platform project already exists, if so, prompt the user
       if self.folders[0] in os.listdir('.'):

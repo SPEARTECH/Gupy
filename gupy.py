@@ -406,15 +406,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 '''
-        # add check here for platform type and language 
-        system = platform.system()
-
-        if system == 'Darwin':
-            cmd = 'python3'
-        elif system == 'Linux':
-            cmd = 'python'
-        else:
-            cmd = 'python'
+        # assign current python executable to use
+        cmd = sys.executable.split('\\')[-1]
         # os.chdir('../')
         print('checking for README.md...')
         if 'README.md' not in os.listdir('.'):
