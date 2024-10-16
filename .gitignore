@@ -3,3 +3,4 @@ gupy_apps/
 __pycache__
 dist
 cli
+apps/
