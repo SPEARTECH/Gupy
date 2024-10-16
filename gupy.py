@@ -575,9 +575,9 @@ def distribute(version):
         # install requirements with new python location if it exists
         if os.path.exists('requirements.txt'):
             if folder == 'windows':
-                command = f".\\{NAME}\\{VERSION}\\{folder}\\python\\{python_executable} -m pip install -r requirements.txt"
+                command = f"./{NAME}/{VERSION}/{folder}/python/{python_executable} -m pip install -r requirements.txt"
             else:
-                command = f".\\{NAME}\\{VERSION}\\{folder}\\python\\lib\\{python_executable} -m pip install -r requirements.txt"
+                command = f"./{NAME}/{VERSION}/{folder}/python/lib/{python_executable} -m pip install -r requirements.txt"
             # Run the command
             result = subprocess.run(command, shell=True, check=True)
             # Check if the command was successful
@@ -611,7 +611,7 @@ def distribute(version):
         print('Copied go folder...')
         # create run.go and go.mod for starting entry script for current os
         os.chdir(f"{NAME}/{VERSION}/{folder}")
-        subprocess.run(f'.\\go\\bin\\go.exe mod init example.com/{NAME}', shell=True, check=True)
+        subprocess.run(f'./go/bin/go.exe mod init example.com/{NAME}', shell=True, check=True)
         # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
         # Use glob to find all .ico files in the folder
         ico_files = glob.glob(os.path.join('static', '*.ico'))
