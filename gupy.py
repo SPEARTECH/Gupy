@@ -60,7 +60,7 @@ def create(name,target_platform, language):
         delim = '\\'
 
     dir_list = os.getcwd().split(delim)    
-    NAME=name #Assigning project name
+    NAME=name.replace(' ','_').replace('.','_').replace('-','_') #Assigning project name
     LANG=language.lower()
     if '-' in NAME:
         print('Error: Invalid character of "-" in app name. Rename your app to '+ NAME.replace('-','_') +'.')
@@ -283,15 +283,15 @@ def assemble():
     if 'desktop' in dir_list:
         TARGET='desktop'
         change_dir(dir_list,TARGET)
-        NAME=os.path.basename(os.getcwd())
+        NAME=os.path.basename(os.getcwd()).replace(' ','_')
     elif 'pwa' in dir_list:
         TARGET='pwa'
         change_dir(dir_list,TARGET)
-        NAME=os.path.basename(os.getcwd())
+        NAME=os.path.basename(os.getcwd()).replace(' ','_')
     elif 'website' in dir_list:
         TARGET='website'
         change_dir(dir_list,TARGET)
-        NAME=os.path.basename(os.getcwd())
+        NAME=os.path.basename(os.getcwd()).replace(' ','_')
     elif 'cli' in dir_list or 'api' in dir_list or 'mobile' in dir_list:
         print('Error: --assemble is only available for desktop, pwa, and website projects.')
         return
@@ -331,11 +331,11 @@ def package():
         if 'desktop' in dir_list:
             TARGET='desktop'
             change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
         elif 'cli' in dir_list:
             TARGET='cli'
             change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
         elif 'pwa' in dir_list or 'website' in dir_list:
             print('Error: --package is only available for desktop, and cli projects.')
             return
@@ -493,10 +493,19 @@ def distribute(version):
         # detect os and make folder
         system = platform.system()
 
-        if system == 'Darwin' or system == 'Linux':
+        if system == 'Darwin':
+            system = 'darwin'
+            folder = 'mac'
+            delim = '/'
+        elif system == 'Linux':
+            system = 'linux'
+            folder = 'linux'
             delim = '/'
         else:
+            system = 'win'
+            folder = 'windows'
             delim = '\\'
+
 
         dir_list = os.getcwd().split(delim)
         def change_dir(dir_list,target):
@@ -518,7 +527,7 @@ def distribute(version):
             return
 
         # creating project folder if doesnt already exist
-        NAME = 'dist_'+NAME
+        NAME = 'dist_'+NAME.replace(' ','_')
         os.makedirs(NAME, exist_ok=True)
         os.chdir(NAME)
 
@@ -527,22 +536,6 @@ def distribute(version):
         shutil.rmtree(VERSION)
         os.makedirs(VERSION, exist_ok=True)
         os.chdir(VERSION)
-
-        # detect os and make folder
-        system = platform.system()
-
-        if system == 'Darwin':
-            system = 'darwin'
-            folder = 'mac'
-            delim = '/'
-        elif system == 'Linux':
-            system = 'linux'
-            folder = 'linux'
-            delim = '/'
-        else:
-            system = 'win'
-            folder = 'windows'
-            delim = '\\'
 
         os.makedirs(folder, exist_ok=True)
         shutil.rmtree(folder)
