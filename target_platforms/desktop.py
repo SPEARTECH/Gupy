@@ -4,6 +4,7 @@ import platform
 import glob
 import subprocess
 import shutil
+import sys
 
 class Desktop(base.Base):
     index_content = '''

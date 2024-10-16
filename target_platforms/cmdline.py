@@ -2,6 +2,7 @@ from . import base
 import os
 import shutil
 import platform
+import sys
 
 class CLI(base.Base):
     index_content = '''

@@ -4,6 +4,7 @@ import platform
 import subprocess
 import shutil
 import glob
+import sys
 
 class Pwa(base.Base):
     index_content = '''
