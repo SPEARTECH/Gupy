@@ -1112,9 +1112,16 @@ server.main()
         self.assemble()
 
     def run(self):
+        # detect os and make folder
+        system = platform.system()
+
+        if system == 'Darwin' or system == 'Linux':
+            delim = '/'
+        else:
+            delim = '\\'
         if os.path.exists(f'server.py'):
             # assign current python executable to use
-            cmd = sys.executable.split('\\')[-1]
+            cmd = sys.executable.split(delim)[-1]
 
             os.system(f'{cmd} server.py')
         elif os.path.exists(f'server.go'):

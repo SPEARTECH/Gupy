@@ -121,8 +121,15 @@ import {self.name}
             f.close()
 
     def run(self):
+        # detect os and make folder
+        system = platform.system()
+
+        if system == 'Darwin' or system == 'Linux':
+            delim = '/'
+        else:
+            delim = '\\'
         # assign current python executable to use
-        cmd = sys.executable.split('\\')[-1]
+        cmd = sys.executable.split(delim)[-1]
 
         # os.system(f'{cmd} {name}/desktop/dev/server/server.py')
         os.system(f'{cmd} __main__.py')

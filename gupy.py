@@ -51,6 +51,15 @@ def cli():
     help="Select the base language for the app ('py' or 'go')"
     )
 def create(name,target_platform, language):
+    # detect os and make folder
+    system = platform.system()
+
+    if system == 'Darwin' or system == 'Linux':
+        delim = '/'
+    else:
+        delim = '\\'
+
+    dir_list = os.getcwd().split(delim)    
     NAME=name #Assigning project name
     LANG=language.lower()
     if '-' in NAME:
@@ -70,7 +79,7 @@ def create(name,target_platform, language):
     elif not LANG and target_platform == ('website',):
         LANG = 'py'
 
-    dir_list = os.getcwd().split('\\')
+    dir_list = os.getcwd().split(delim)
     if NAME in dir_list or NAME in os.listdir('.'):
         print('Error: App named '+NAME+' already exists in this location')
 
@@ -129,10 +138,17 @@ Confirm?
 #     help="Select the app platform you intend to run (ie. -t desktop)"
 #     )
 def run():
+    # detect os and make folder
+    system = platform.system()
+
+    if system == 'Darwin' or system == 'Linux':
+        delim = '/'
+    else:
+        delim = '\\'
     try:
         # check if target-platform folder exists in path
         print(os.getcwd())
-        dir_list = os.getcwd().split('\\')
+        dir_list = os.getcwd().split(delim)
         def change_dir(dir_list,target):
             if target in dir_list: 
                 index = dir_list.index(target)
@@ -143,25 +159,25 @@ def run():
         if 'desktop' in dir_list:
             TARGET='desktop'
             change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
             app_obj = desktop.Desktop(NAME)
             app_obj.run()
         elif 'pwa' in dir_list:
             TARGET='pwa'
             change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
             app_obj = pwa.Pwa(NAME)
             app_obj.run()
         elif 'website' in dir_list:
             TARGET='website'
             change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
             app_obj = website.Website(NAME)
             app_obj.run()
         elif 'cli' in dir_list:
             TARGET='cli'
             change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
             app_obj = cmdline.CLI(NAME)
             app_obj.run()
 
@@ -200,12 +216,19 @@ def compile(file):
     help="Select a single file to cythonize or select multiple (ie. -f script1.py -f script2.py)."
     )
 def cythonize(file):
+    # detect os and make folder
+    system = platform.system()
+
+    if system == 'Darwin' or system == 'Linux':
+        delim = '/'
+    else:
+        delim = '\\'
     files = [f for f in os.listdir('.') if os.path.isfile(f)]
-    if '-' in os.getcwd().split('\\')[-1]:
-        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split('\\')[-1].replace('-','_') +'.')
+    if '-' in os.getcwd().split(delim)[-1]:
+        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('-','_') +'.')
         return
-    elif '.' in os.getcwd().split('\\')[-1]:
-        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split('\\')[-1].replace('.','_') +'.')
+    elif '.' in os.getcwd().split(delim)[-1]:
+        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('.','_') +'.')
         return
 
     for item in file:
@@ -222,11 +245,18 @@ def cythonize(file):
     help='Select a single file to gopherize or select multiple (ie. -f module1.go -f module2.go).'
     )
 def gopherize(file):
-    if '-' in os.getcwd().split('\\')[-1]:
-        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split('\\')[-1].replace('-','_') +'.')
+    # detect os and make folder
+    system = platform.system()
+
+    if system == 'Darwin' or system == 'Linux':
+        delim = '/'
+    else:
+        delim = '\\'
+    if '-' in os.getcwd().split(delim)[-1]:
+        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('-','_') +'.')
         return
-    elif '.' in os.getcwd().split('\\')[-1]:
-        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split('\\')[-1].replace('.','_') +'.')
+    elif '.' in os.getcwd().split(delim)[-1]:
+        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('.','_') +'.')
         return
 
     for item in file:
@@ -235,7 +265,14 @@ def gopherize(file):
 
 @click.command()
 def assemble():
-    dir_list = os.getcwd().split('\\')
+    # detect os and make folder
+    system = platform.system()
+
+    if system == 'Darwin' or system == 'Linux':
+        delim = '/'
+    else:
+        delim = '\\'
+    dir_list = os.getcwd().split(delim)
     def change_dir(dir_list,target):
         if target in dir_list: 
             index = dir_list.index(target)
@@ -276,8 +313,15 @@ def assemble():
 
 @click.command()
 def package():
+    # detect os and make folder
+    system = platform.system()
+
+    if system == 'Darwin' or system == 'Linux':
+        delim = '/'
+    else:
+        delim = '\\'
     try:
-        dir_list = os.getcwd().split('\\')
+        dir_list = os.getcwd().split(delim)
         def change_dir(dir_list,target):
             index = dir_list.index(target)
             chdir_num = len(dir_list) - (index +1)
@@ -287,11 +331,11 @@ def package():
         if 'desktop' in dir_list:
             TARGET='desktop'
             change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
         elif 'cli' in dir_list:
             TARGET='cli'
             change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
         elif 'pwa' in dir_list or 'website' in dir_list:
             print('Error: --package is only available for desktop, and cli projects.')
             return
@@ -407,7 +451,7 @@ SOFTWARE.
 
 '''
         # assign current python executable to use
-        cmd = sys.executable.split('\\')[-1]
+        cmd = sys.executable.split(delim)[-1]
         # os.chdir('../')
         print('checking for README.md...')
         if 'README.md' not in os.listdir('.'):
@@ -446,7 +490,15 @@ SOFTWARE.
 def distribute(version):
     VERSION = version.replace('.','_')
     try:
-        dir_list = os.getcwd().split('\\')
+        # detect os and make folder
+        system = platform.system()
+
+        if system == 'Darwin' or system == 'Linux':
+            delim = '/'
+        else:
+            delim = '\\'
+
+        dir_list = os.getcwd().split(delim)
         def change_dir(dir_list,target):
             index = dir_list.index(target)
             chdir_num = len(dir_list) - (index +1)
@@ -456,7 +508,7 @@ def distribute(version):
         if 'desktop' in dir_list:
             TARGET='desktop'
             change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split('\\')[-1]
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
         # perhaps run logic for .pyd/.so files, moving all that are to be deployed...? mobile to apk?
         elif 'pwa' in dir_list or 'website' in dir_list or 'api' in dir_list or 'mobile' in dir_list or 'cli' in dir_list:
             print('Error: --distribute is only available for desktop projects.')
@@ -482,12 +534,15 @@ def distribute(version):
         if system == 'Darwin':
             system = 'darwin'
             folder = 'mac'
+            delim = '/'
         elif system == 'Linux':
             system = 'linux'
             folder = 'linux'
+            delim = '/'
         else:
             system = 'win'
             folder = 'windows'
+            delim = '\\'
 
         os.makedirs(folder, exist_ok=True)
         shutil.rmtree(folder)
@@ -502,7 +557,7 @@ def distribute(version):
 
         # get python location
         python_loc = os.path.dirname(sys.executable)
-        python_executable = sys.executable.split('\\')[-1]
+        python_executable = sys.executable.split(delim)[-1]
         python_version = "".join(sys.version.split(' ')[0].split('.')[0:2]) 
         # print(os.getcwd())
         # moves files and folders - only checks the cythonized files in root directory.

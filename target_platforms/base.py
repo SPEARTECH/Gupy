@@ -7,9 +7,16 @@ class Base:
         self.project_folder = name
         self.platform = os.name #not needed at the moment (not using platform specific terminal commands)
 
-    def create_project_folder(self): 
+    def create_project_folder(self):
+        # detect os and make folder
+        system = platform.system()
+
+        if system == 'Darwin' or system == 'Linux':
+            delim = '/'
+        else:
+            delim = '\\'
         #Create project folder
-        dir_list = os.getcwd().split('\\')
+        dir_list = os.getcwd().split(delim)
         def change_dir(dir_list,name):
             if name in dir_list: 
                 index = dir_list.index(name)

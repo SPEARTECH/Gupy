@@ -926,9 +926,16 @@ return event.result;
 
     # launch index file in browser
     def run(self):
+        # detect os and make folder
+        system = platform.system()
+
+        if system == 'Darwin' or system == 'Linux':
+            delim = '/'
+        else:
+            delim = '\\'
         os.chdir(f'pwa')
         # assign current python executable to use
-        cmd = sys.executable.split('\\')[-1]
+        cmd = sys.executable.split(delim)[-1]
 
         os.system(f'{cmd} -m http.server')
 
