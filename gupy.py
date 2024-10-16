@@ -303,7 +303,7 @@ def package():
         os.makedirs(NAME, exist_ok=True)
 
         # copying all files into project folder for packaging
-        files = os.listdir(os.cwd())
+        files = os.listdir(os.getcwd())
         folders = []
         for file_name in files:
             full_file_name = os.path.join(os.getcwd(), file_name)
