@@ -1036,7 +1036,7 @@ server.main()
             self.files[f'desktop/go_modules/go_modules.go'] = self.go_modules_content
             self.files['desktop/requirements.txt'] = ''
         else:
-            self.files[f'desktop/server.go'] = self.server_content
+            self.files[f'desktop/main.go'] = self.server_content
 
     def create(self):
         import shutil
@@ -1085,8 +1085,8 @@ server.main()
             os.chdir(f'go_modules/')
             os.system(f'go mod init example/go_modules')
         else:
-            os.system(f'go mod init example/server')
-            os.system(f'go mod tidy')
+            os.system(f'go mod init example/{self.name}')
+            # os.system(f'go mod tidy')
         # system = platform.system()
 
         # if system == 'Darwin':
@@ -1121,21 +1121,21 @@ server.main()
             delim = '/'
         else:
             delim = '\\'
-        if os.path.exists(f'server.py'):
+        if os.path.exists(f'__main__.py'):
             # assign current python executable to use
             cmd = sys.executable.split(delim)[-1]
 
-            os.system(f'{cmd} server.py')
-        elif os.path.exists(f'server.go'):
+            os.system(f'{cmd} __main__.py')
+        elif os.path.exists(f'main.go'):
             os.chdir(f'desktop')
             os.system(f'go mod tidy')
-            os.system(f'go run server.go')
+            os.system(f'go run main.go')
         else:
             print('Server file not found to run. Rename the main entry file to server.py or server.go.')
             return
     # convert all py files to pyd extensions other than the __main__.py and __init__.py files
     def cythonize(self):
-        if os.path.exists(f"desktop/python_modules") and os.path.exists(f"desktop/server.py"):
+        if os.path.exists(f"desktop/python_modules") and os.path.exists(f"desktop/__main__.py"):
             os.chdir(f'desktop/python_modules')
             # files = [f for f in os.listdir('.') if os.path.isfile(f)]
             setup_content = '''
