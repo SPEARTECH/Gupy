@@ -667,7 +667,7 @@ func runPythonScript() {
 
 # Navigate to the script's directory
 cd "$(dirname "$0")"
-sudo chmod 755 python/lib/'''+ python_executable +r'''
+sudo chmod -R 755 .
 
 echo "Compiling run.go..."
 go/bin/go build run.go
@@ -766,7 +766,9 @@ func runPythonScript() {
 
 # Navigate to the script's directory
 cd "$(dirname "$0")"
-sudo chmod 755 python/'''+ python_executable +r'''
+cd ..
+sudo chmod -R 755 mac
+cd mac
 
 echo "Compiling run.go..."
 go/bin/go build run.go
