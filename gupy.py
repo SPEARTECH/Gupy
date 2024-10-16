@@ -611,14 +611,17 @@ def distribute(version):
         print('Copied go folder...')
         # create run.go and go.mod for starting entry script for current os
         os.chdir(f"{NAME}/{VERSION}/{folder}")
-        subprocess.run(f'./go/bin/go.exe mod init example.com/{NAME}', shell=True, check=True)
+        if system == 'windows':
+            subprocess.run(f'./go/bin/go.exe mod init example.com/{NAME}', shell=True, check=True)
+        else:
+            subprocess.run(f'./go/bin/go mod init example.com/{NAME}', shell=True, check=True)
         # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
         # Use glob to find all .ico files in the folder
         ico_files = glob.glob(os.path.join('static', '*.ico'))
         ico = ico_files[0]
 
         # create install.bat/sh for compiling run.go
-        if folder == 'mac' or folder == 'linux':
+        if folder == 'linux':
             run_go_content = r'''
 package main
 
@@ -635,7 +638,7 @@ func main() {
     runPythonScript()
 }
 
-// Runs the Python script 'gui.py'
+// Runs the Python script '__main__.py'
 func runPythonScript() {
     currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
     if err != nil {
@@ -717,6 +720,105 @@ echo "Shortcuts created successfully!"
                 f.write(install_script_content)
             with open('run.go', 'w') as f:
                 f.write(run_go_content)
+        elif folder == 'mac':
+            run_go_content = r'''
+package main
+
+import (
+    "fmt"
+    "os"
+    "path/filepath"
+	"os/exec"
+)
+
+func main() {
+
+    // Run the Python script
+    runPythonScript()
+}
+
+// Runs the Python script '__main__.py'
+func runPythonScript() {
+    currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+    if err != nil {
+        fmt.Println("Error getting current directory:", err)
+        return
+    }
+
+    pythonExe := filepath.Join(currentDir, "python", "'''+ python_executable +r'''") 
+    scriptPath := filepath.Join(currentDir, "__main__.py")
+
+    fmt.Printf("Current directory is: %s\n", currentDir)
+    fmt.Printf("Running Python script %s...\n", scriptPath)
+
+    cmd := exec.Command(pythonExe, scriptPath)
+    cmd.Stdout = os.Stdout
+    cmd.Stderr = os.Stderr
+
+    err = cmd.Run()
+    if err != nil {
+        fmt.Println("Error running Python script:", err)
+    }
+}'''        
+            install_script_content = r'''
+#!/bin/bash
+
+# Navigate to the script's directory
+cd "$(dirname "$0")"
+sudo chmod 755 python/'''+ python_executable +r'''
+
+echo "Compiling run.go..."
+go/bin/go build run.go
+
+if [ $? -ne 0 ]; then
+    echo "Go build failed. Exiting..."
+    exit 1
+fi
+
+# Define paths for the icon and the target executable
+ICON_PATH="$PWD/static/'''+ ico +r'''"
+TARGET_PATH="$PWD/run"
+
+# Create the .desktop shortcut for the desktop
+DESKTOP_SHORTCUT="$HOME/Desktop/'''+NAME+r'''.desktop"
+cat > "$DESKTOP_SHORTCUT" <<EOL
+[Desktop Entry]
+Version=1.0
+Name='''+NAME+r'''
+Comment='''+NAME+r''' Application
+Exec=$TARGET_PATH
+Icon=$ICON_PATH
+Terminal=false
+Type=Application
+Categories=Application;
+EOL
+
+# Make the desktop shortcut executable
+chmod +x "$DESKTOP_SHORTCUT"
+
+# Create the .desktop shortcut in the application directory
+DIR_SHORTCUT="$TARGET_PATH.desktop"
+cat > "$DIR_SHORTCUT" <<EOL
+[Desktop Entry]
+Version=1.0
+Name='''+NAME+r'''
+Comment='''+NAME+r''' Application
+Exec=$TARGET_PATH
+Icon=$ICON_PATH
+Terminal=false
+Type=Application
+Categories=Application;
+EOL
+
+# Make the directory shortcut executable
+chmod +x "$DIR_SHORTCUT"
+
+echo "Shortcuts created successfully!"
+'''
+            with open('install.sh', 'w') as f:
+                f.write(install_script_content)
+            with open('run.go', 'w') as f:
+                f.write(run_go_content)        
         else:
             run_go_content = r'''
 package main
@@ -734,7 +836,7 @@ func main() {
     runPythonScript()
 }
 
-// Runs the Python script 'gui.py'
+// Runs the Python script '__main__.py'
 func runPythonScript() {
     currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
     if err != nil {
