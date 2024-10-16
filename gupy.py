@@ -669,8 +669,10 @@ func runPythonScript() {
 cd "$(dirname "$0")"
 sudo chmod -R 755 .
 
+echo "Adding go to PATH..."
+export PATH=$PATH:/usr/local/go/bin
 echo "Compiling run.go..."
-go/bin/go build run.go
+./go/bin/go build run.go
 
 if [ $? -ne 0 ]; then
     echo "Go build failed. Exiting..."
@@ -769,6 +771,9 @@ cd "$(dirname "$0")"
 cd ..
 sudo chmod -R 755 mac
 cd mac
+
+echo "Adding go to PATH..."
+export PATH=$PATH:/usr/local/go/bin
 
 echo "Compiling run.go..."
 go/bin/go build run.go
