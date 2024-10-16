@@ -1016,7 +1016,11 @@ func openChrome(url string) {
             self.main_content = f'''
 import server
 
-server.main()
+def main():
+    server.main()
+
+if __name__ == "__main__":
+    main()
 '''
 
         self.files = {
