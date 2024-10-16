@@ -621,6 +621,7 @@ def distribute(version):
         ico = ico_files[0]
 
         # create install.bat/sh for compiling run.go
+        NAME = NAME.replace('dist_', '')
         if folder == 'linux':
             run_go_content = r'''
 package main
@@ -775,45 +776,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Define paths for the icon and the target executable
-ICON_PATH="$PWD/static/'''+ ico +r'''"
-TARGET_PATH="$PWD/run"
+# need to add desktop shortcut functionality to mac install script - 10-26-24
 
-# Create the .desktop shortcut for the desktop
-DESKTOP_SHORTCUT="$HOME/Desktop/'''+NAME+r'''.desktop"
-cat > "$DESKTOP_SHORTCUT" <<EOL
-[Desktop Entry]
-Version=1.0
-Name='''+NAME+r'''
-Comment='''+NAME+r''' Application
-Exec=$TARGET_PATH
-Icon=$ICON_PATH
-Terminal=false
-Type=Application
-Categories=Application;
-EOL
-
-# Make the desktop shortcut executable
-chmod +x "$DESKTOP_SHORTCUT"
-
-# Create the .desktop shortcut in the application directory
-DIR_SHORTCUT="$TARGET_PATH.desktop"
-cat > "$DIR_SHORTCUT" <<EOL
-[Desktop Entry]
-Version=1.0
-Name='''+NAME+r'''
-Comment='''+NAME+r''' Application
-Exec=$TARGET_PATH
-Icon=$ICON_PATH
-Terminal=false
-Type=Application
-Categories=Application;
-EOL
-
-# Make the directory shortcut executable
-chmod +x "$DIR_SHORTCUT"
-
-echo "Shortcuts created successfully!"
 '''
             with open('install.sh', 'w') as f:
                 f.write(install_script_content)
