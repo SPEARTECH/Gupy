@@ -62,10 +62,16 @@ if __name__ == '__main__':
 '''
 
 
-
     def __init__(self, name, lang=''):
         self.name = name
         self.lang = lang
+
+        self.main_content = f'''
+import {self.name}
+
+{self.name}.main()
+'''
+
         self.folders = [
           f'cli',
         #   f'gupy_apps/{self.name}/cli/dev/python_modules',
@@ -74,6 +80,7 @@ if __name__ == '__main__':
           
         self.files = {
             f'cli/__init__.py': '',
+            f'cli/__main__.py': self.main_content,
             f'cli/{self.name}.py': self.index_content,
             }
 
@@ -125,7 +132,7 @@ if __name__ == '__main__':
             cmd = 'python'
 
         # os.system(f'{cmd} {name}/desktop/dev/server/server.py')
-        os.system(f'{cmd} {self.name}.py')
+        os.system(f'{cmd} __main__.py')
         
 
 

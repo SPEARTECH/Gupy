@@ -299,7 +299,6 @@ def package():
             print(f'Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
             return
 
-        NAME = 'pkg_'+NAME
         # creating project folder if doesnt already exist
         os.makedirs(NAME, exist_ok=True)
 
