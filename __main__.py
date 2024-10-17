@@ -1,4 +1,4 @@
-import gupy
+from gupy import gupy
 
 def main():
     gupy.main()

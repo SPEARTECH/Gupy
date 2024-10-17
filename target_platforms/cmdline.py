@@ -62,15 +62,24 @@ if __name__ == '__main__':
 
 '''
 
+    init_content = '''
+import sys
+import os
+# Add the parent directory of 'target_platforms' to the sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))'''
 
     def __init__(self, name, lang=''):
         self.name = name
         self.lang = lang
 
         self.main_content = f'''
-import {self.name}
+from {self.name} import {self.name}
 
-{self.name}.main()
+def main():
+    {self.name}.main()
+
+if __name__ == "__main__":
+    main()
 '''
 
         self.folders = [
@@ -80,7 +89,7 @@ import {self.name}
           ]
           
         self.files = {
-            f'cli/__init__.py': '',
+            f'cli/__init__.py': self.init_content,
             f'cli/__main__.py': self.main_content,
             f'cli/{self.name}.py': self.index_content,
             }

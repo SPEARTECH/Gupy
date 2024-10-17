@@ -958,6 +958,12 @@ return event.result;
 
     '''
     
+    init_content = '''
+import sys
+import os
+# Add the parent directory of 'target_platforms' to the sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))'''
+
     def __init__(self, name, lang=''):
         self.name = name
         self.lang = lang
@@ -1014,7 +1020,7 @@ func openChrome(url string) {
 '''
         elif self.lang == 'py':
             self.main_content = f'''
-import server
+from {self.name} import server
 
 def main():
     server.main()
@@ -1031,7 +1037,7 @@ if __name__ == "__main__":
             }
 
         if self.lang == 'py':
-            self.files[f'desktop/__init__.py'] = ""
+            self.files[f'desktop/__init__.py'] = self.init_content
             self.files[f'desktop/__main__.py'] = self.main_content
             self.files[f'desktop/server.py'] = self.server_content
             self.folders.append(f'desktop/python_modules')

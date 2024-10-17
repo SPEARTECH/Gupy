@@ -1,9 +1,9 @@
 from logging import exception
 import click
-import sys
-import os
 from target_platforms import *
 import platform
+import sys
+import os
 import chardet
 import subprocess
 import shutil
@@ -348,13 +348,13 @@ def package():
 
         # copying all files into project folder for packaging
         files = os.listdir(os.getcwd())
-        folders = []
         for file_name in files:
             full_file_name = os.path.join(os.getcwd(), file_name)
             if os.path.isfile(full_file_name):
                 shutil.copy(full_file_name, NAME)
-            elif os.path.isdir(full_file_name) and file_name != NAME:
-                shutil.copytree(full_file_name, NAME, dirs_exist_ok=True)
+            elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist':
+                shutil.copytree(full_file_name, f"{NAME}/{file_name}", dirs_exist_ok=True)
+        
         # prompt user to modify files and toml and run package again
 
         # checking for requirements.txt to add to pyproject.toml
@@ -555,7 +555,6 @@ def distribute(version):
         # print(os.getcwd())
         # moves files and folders - only checks the cythonized files in root directory.
         files = os.listdir(os.getcwd())
-        folders = []
         for file_name in files:
             full_file_name = os.path.join(os.getcwd(), file_name)
             if os.path.isfile(full_file_name):
