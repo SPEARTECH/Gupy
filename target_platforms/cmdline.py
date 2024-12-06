@@ -41,7 +41,7 @@ def cli():
         ),
     multiple=True, 
     default=['1'], 
-    help="Select numbers you would like to return (ie. -t 1 -t 2 -t 3)"
+    help="Select numbers you would like to return (ie. -c 1 -c 2 -c 3)"
     )
 def run(string,choice_list):
     STRING=string

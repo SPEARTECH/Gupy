@@ -1,11 +1,12 @@
 import os
+import platform
 
 class Base:
     project_folder = ''
     
     def __init__(self, name):
         self.project_folder = name
-        self.platform = os.name #not needed at the moment (not using platform specific terminal commands)
+        # self.platform = os.name #not needed at the moment (not using platform specific terminal commands)
 
     def create_project_folder(self):
         # detect os and make folder
