@@ -3,5 +3,6 @@ __all__ = [
     'desktop',
     'cmdline',
     'pwa',
-    'website'
+    'website',
+    'script'
 ]

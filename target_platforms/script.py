@@ -4,64 +4,15 @@ import shutil
 import platform
 import sys
 
-class CLI(base.Base):
-    index_content = '''
-# Documentation: 
-# https://click.palletsprojects.com/en/8.1.x/
-
-from logging import exception
-import click
-import sys
-import os
-
-STRING = ''
-CHOICE = ''
-
-@click.group()
-def cli():
-    ##Running checks on python version
-    version = '.'.join(sys.version.split(' ')[0].split('.')[:2])
-    if float(version) < 3.0:
-        raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
-
-@click.command()
-@click.option(
-    '--string',
-    '-s',
-    required=True,
-    help='String to return'
-    )
-
-@click.option(
-    '--choice-list',
-    '-c',
-    type=click.Choice(
-        ['1', '2', '3'], 
-        case_sensitive=False
-        ),
-    multiple=True, 
-    default=['1'], 
-    help="Select numbers you would like to return (ie. -c 1 -c 2 -c 3)"
-    )
-def run(string,choice_list):
-    STRING=string
-    CHOICE=choice_list
-    print('String entered = '+ STRING)
-    print('Choices entered =')
-    for choice in choice_list:
-      print(choice)
-
+class Script(base.Base):
+    script_content = '''
 def main():
-    cli.add_command(run) #Add command for cli
-    cli() #Run cli
+    print('Script run complete.')
 
 if __name__ == '__main__':
     main()
-
-
-
+    
 '''
-
     init_content = '''
 import sys
 import os
@@ -83,15 +34,15 @@ if __name__ == "__main__":
 '''
 
         self.folders = [
-          f'cli',
+          f'script',
         #   f'gupy_apps/{self.name}/cli/dev/python_modules',
         #   f'gupy_apps/{self.name}/cli/dev/cython_modules',
           ]
           
         self.files = {
-            f'cli/__init__.py': self.init_content,
-            f'cli/__main__.py': self.main_content,
-            f'cli/{self.name}.py': self.index_content,
+            f'script/__init__.py': self.init_content,
+            f'script/__main__.py': self.main_content,
+            f'script/{self.name}.py': self.script_content,
             }
 
     def create(self):

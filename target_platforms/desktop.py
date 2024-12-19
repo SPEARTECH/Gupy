@@ -1131,11 +1131,11 @@ if __name__ == "__main__":
             delim = '/'
         else:
             delim = '\\'
-        if os.path.exists(f'__main__.py'):
+        if os.path.exists(f'server.py'):
             # assign current python executable to use
             cmd = sys.executable.split(delim)[-1]
 
-            os.system(f'{cmd} __main__.py')
+            os.system(f'{cmd} server.py')
         elif os.path.exists(f'main.go'):
             os.chdir(f'desktop')
             os.system(f'go mod tidy')

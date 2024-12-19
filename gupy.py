@@ -31,7 +31,7 @@ def cli():
     '--target-platform',
     '-t',
     type=click.Choice(
-        ['desktop', 'pwa', 'website', 'cli', 'api', 'mobile'], 
+        ['desktop', 'pwa', 'website', 'cli', 'api', 'mobile', 'script'], 
         case_sensitive=False
         ),
     multiple=True, 
@@ -61,7 +61,10 @@ def create(name,target_platform, language):
 
     dir_list = os.getcwd().split(delim)    
     NAME=name.replace(' ','_').replace('.','_').replace('-','_') #Assigning project name
-    LANG=language.lower()
+    if language:
+        LANG=language.lower()
+    else:
+        LANG = ''
     if '-' in NAME:
         print('Error: Invalid character of "-" in app name. Rename your app to '+ NAME.replace('-','_') +'.')
         return
@@ -69,7 +72,7 @@ def create(name,target_platform, language):
         print('Error: Invalid character of "." in app name. Rename your app to '+ NAME.replace('.','_') +'.')
         return
     if not LANG and 'pwa' not in target_platform and 'website' not in target_platform:
-        print("Error: Option '-l/--language' is required for ['desktop', 'cli', 'api'] targets.")
+        print("Error: Option '-l/--language' is required for ['desktop', 'cli', 'api', 'script'] targets.")
         return
     elif LANG and LANG != 'py' and LANG != 'go':
         print(f'Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang)')
@@ -115,6 +118,9 @@ Confirm?
 
     if 'cli' in TARGETS: #create files/folder structure for cli app if applicable
         cmdline.CLI(NAME,LANG).create()
+
+    if 'script' in TARGETS: #create files/folder structure for script app if applicable
+        script.Script(NAME,LANG).create()
 
     if 'api' in TARGETS:
         print('The API feature is not yet available...')
@@ -180,7 +186,12 @@ def run():
             NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
             app_obj = cmdline.CLI(NAME)
             app_obj.run()
-
+        elif 'script' in dir_list:
+            TARGET='script'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
+            app_obj = script.Script(NAME)
+            app_obj.run()
         else:
             print(f'Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
             return
@@ -292,7 +303,7 @@ def assemble():
         TARGET='website'
         change_dir(dir_list,TARGET)
         NAME=os.path.basename(os.getcwd()).replace(' ','_')
-    elif 'cli' in dir_list or 'api' in dir_list or 'mobile' in dir_list:
+    elif 'cli' in dir_list or 'api' in dir_list or 'mobile' in dir_list or 'script' in dir_list:
         print('Error: --assemble is only available for desktop, pwa, and website projects.')
         return
     else:
@@ -336,8 +347,12 @@ def package():
             TARGET='cli'
             change_dir(dir_list,TARGET)
             NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+        elif 'script' in dir_list:
+            TARGET='script'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
         elif 'pwa' in dir_list or 'website' in dir_list:
-            print('Error: --package is only available for desktop, and cli projects.')
+            print('Error: --package is only available for desktop, cli, and script projects.')
             return
         else:
             print(f'Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
