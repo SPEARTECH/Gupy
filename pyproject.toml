@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gupy-framework"
-version = "0.0.7"
+version = "0.2.7"
 authors = [
 { name="Speartech", email="Tyler@Speartech.org" },
 ]
-description = "Gupy! A simple and efficient framework for developing cross-platform applications."
+description = "Gupy! Simplifying Cross-Platform development with Go, Vue, and Python"
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
@@ -74,4 +74,4 @@ include = ["gupy"]
 
 # Define entry points for CLI
 [project.scripts]
-gupy = "gupy:main"
+gupy = "gupy.__main__:main"

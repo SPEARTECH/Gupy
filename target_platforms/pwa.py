@@ -5,6 +5,7 @@ import subprocess
 import shutil
 import glob
 import sys
+from colorama import Fore, Style
 
 class Pwa(base.Base):
     index_content = '''
@@ -849,23 +850,23 @@ return event.result;
             while True:
                 userselection = input(self.folders[0]+' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
                 if userselection.lower() == 'y':
-                    userselection = input('Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +'? (y/n)')
+                    userselection = input(f'{Fore.YELLOW}Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +f'? (y/n){Style.RESET_ALL}')
                     if userselection.lower() == 'y':
                         print("Removing old version of project...")
                         shutil.rmtree(os.path.join(os.getcwd(), self.folders[0]))
                         print("Continuing app platform creation.")
                         break
                     elif userselection.lower() != 'n':
-                        print('Invalid input, please type y or n then press enter...')
+                        print(f'{Fore.RED}Invalid input, please type y or n then press enter...{Style.RESET_ALL}')
                         continue
                     else:
-                        print('Aborting app platform creation.')
+                        print(f'{Fore.RED}Aborting app platform creation.{Style.RESET_ALL}')
                         return
                 elif userselection.lower() != 'n':
-                    print('Invalid input, please type y or n then press enter...')
+                    print(f'{Fore.RED}Invalid input, please type y or n then press enter...{Style.RESET_ALL}')
                     continue
                 else:
-                    print('Aborting app platform creation.')
+                    print(f'{Fore.RED}Aborting app platform creation.{Style.RESET_ALL}')
                     return
 
         for folder in self.folders:
@@ -902,9 +903,9 @@ return event.result;
             
             # Check if the command was successful
             if result.returncode == 0:
-                print("Build successful.")
+                print(f"{Fore.GREEN}Build successful.{Style.RESET_ALL}")
             else:
-                print("Build failed.")
+                print(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
 
         build_wasm()
         # os.system(f"$env:GOOS='js'; $env:GOARCH='wasm'; go build -o main.wasm")
@@ -961,9 +962,9 @@ return event.result;
             
             # Check if the command was successful
             if result.returncode == 0:
-                print("Build successful.")
+                print(f"{Fore.GREEN}Build successful.{Style.RESET_ALL}")
             else:
-                print("Build failed.")
+                print(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
         files = [f for f in glob.glob('*.go')]
         for filename in files:
             build_wasm(filename)

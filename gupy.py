@@ -8,19 +8,59 @@ import chardet
 import subprocess
 import shutil
 import glob
+from colorama import Fore, Style
 
 NAME=''
 TARGETS=[]
 LANG=''
 
+
 @click.group()
 def cli():
+    """
+.........................-=+##+*@**#=............................
+........................##==*%+=*#++%+-==+++==-:.................
+......................-*@%+==*###%%%#**+====++*###*=:............
+.....................+%=-=***#%%*=-    :.........:=*##+:.........
+....................:%%*++*#%*-  -===------        ..-*#*-.......
+...................+%+-=*%%+  -=+++=+*######*=        :+@@*=:....
+...................#%**#%+:-=+++++#%#=-    -++        -+--=*%*:..
+.......-++++=:......-#@*--==++++*%#-      :         :       *@=.
+......-@#=-=*%*:....*%=-++++++++%#    +%@@#*+         =%@%*+:.*@-
+:=****#@+=-:.:*%-.-%#=+****#**+#@-   #@%+*=.*%       +@#++:+%.:@*
+@#+=-=#@*=====:*%+%#+*#%####%%#%@:  -@@#:=%%%@-      #@=:#%%@-.%#
+@#====+*###*+++=%@#+#%#-  :--+*%@=   #@@@@@@@#       =%@@@%%#.:@+
+=@#+++===+*####%%*+*#%#++++****#@+.  :=**#%#+         =*%%#+..#%:
+.-#%#########%@%*****#@%####*+*%*.  :     -     ==-------    :#%:
+.:#%*======+*#%%%#**#%%=----=*%%=.              +@%%%%%#-    :+@-
+=@*:.:-=++**+*%@@#*###%%%##%%%##+.              -#*+*%%=      #%.
+@*.-=+#@#=--+##%%%%%%%%##########-              :-***+-      *@=.
+%%*++*@#==+##*#+%%@%%%%%##########=---            :--      -#@=..
+:*%%*#@******#=+@-*@@%%%%%######%%%#+==----          :---=+%%-...
+..:=*#%###%#+-+%=..:*@@%%%%%%%%%%%%%%##*++=====---======+#%+.....
+.......:--##*#*:.....:=*%@%%%%######%%%%%*============*%%*:......
+...........--...........:+#@@%%####%%##*+=========++#%#+:........
+...........................-+*#%%%%#*+=======++*##%#+-...........
+...............................:=+*###%%#######*+-:..............
+.................................................................
+................ ▄▄▄▄▄▄▄ ▄▄   ▄▄ ▄▄▄▄▄▄▄ ▄▄   ▄▄ ▄▄ .............
+................█       █  █ █  █       █  █ █  █  █.............
+................█   ▄▄▄▄█  █ █  █    ▄  █  █▄█  █  █.............
+................█  █  ▄▄█  █▄█  █   █▄█ █       █  █.............
+................█  █ █  █       █    ▄▄▄█▄     ▄█▄▄█.............
+................█  █▄▄█ █       █   █     █   █  ▄▄ .............
+................█▄▄▄▄▄▄▄█▄▄▄▄▄▄▄█▄▄▄█     █▄▄▄█ █▄▄█.............
+.................................................................
+............ Simplifying Cross-Platform development with ........
+....................... Go, Vue, and Python .....................
+"""
+
     ##Running checks on python version
     version = '.'.join(sys.version.split(' ')[0].split('.')[:2])
     if float(version) < 3.0:
         raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
     
-@click.command()
+@click.command(help='Creates an app template for desired target platforms')
 @click.option(
     '--name',
     '-n',
@@ -66,16 +106,16 @@ def create(name,target_platform, language):
     else:
         LANG = ''
     if '-' in NAME:
-        print('Error: Invalid character of "-" in app name. Rename your app to '+ NAME.replace('-','_') +'.')
+        print(f'{Fore.RED}Error: Invalid character of "-" in app name. Rename your app to '+ NAME.replace('-','_') +f'.{Style.RESET_ALL}')
         return
     elif '.' in NAME:
-        print('Error: Invalid character of "." in app name. Rename your app to '+ NAME.replace('.','_') +'.')
+        print(f'{Fore.RED}Error: Invalid character of "." in app name. Rename your app to '+ NAME.replace('.','_') +f'.{Style.RESET_ALL}')
         return
     if not LANG and 'pwa' not in target_platform and 'website' not in target_platform:
-        print("Error: Option '-l/--language' is required for ['desktop', 'cli', 'api', 'script'] targets.")
+        print(f"{Fore.RED}Error: Option '-l/--language' is required for ['desktop', 'cli', 'api', 'script'] targets.{Style.RESET_ALL}")
         return
     elif LANG and LANG != 'py' and LANG != 'go':
-        print(f'Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang)')
+        print(f'{Fore.RED}Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang){Style.RESET_ALL}')
         return
     elif not LANG and target_platform == ('pwa',):
         LANG = 'js'
@@ -84,7 +124,7 @@ def create(name,target_platform, language):
 
     dir_list = os.getcwd().split(delim)
     if NAME in dir_list or NAME in os.listdir('.'):
-        print('Error: App named '+NAME+' already exists in this location')
+        print(f'{Fore.RED}Error: App named '+NAME+f' already exists in this location{Style.RESET_ALL}')
 
 
     for target in target_platform: #Assigning target platforms
@@ -94,14 +134,14 @@ def create(name,target_platform, language):
 Creating project with the following settings:
 Project Name =\t{NAME}
      Targets =\t{TARGETS}
-    Language =\t{LANG}
+    Language =\t{Fore.BLUE if LANG == 'go' else Fore.YELLOW if LANG == 'py' else Fore.CYAN}{LANG}{Style.RESET_ALL}
 
 Confirm?  
 ''', default=True, show_default=True
 ) #Confirm user's settings
 
     if confirmation == False: #Exit if settings are incorrect
-        click.echo('Exiting...')
+        click.echo(f'{Fore.GREEN}Exiting...{Style.RESET_ALL}')
         return
 
     obj = base.Base(NAME)
@@ -114,23 +154,29 @@ Confirm?
         pwa.Pwa(NAME).create()
 
     if 'website' in TARGETS: #create files/folder for django project if applicable
+        if LANG == 'go':
+            print(f'{Fore.RED}Go Website feature is not yet available...{Style.RESET_ALL}')
+            return
         website.Website(NAME).create()
 
     if 'cli' in TARGETS: #create files/folder structure for cli app if applicable
+        if LANG == 'go':
+            print(f'{Fore.RED}Go CLI feature is not yet available...{Style.RESET_ALL}')
+            return
         cmdline.CLI(NAME,LANG).create()
 
     if 'script' in TARGETS: #create files/folder structure for script app if applicable
         script.Script(NAME,LANG).create()
 
     if 'api' in TARGETS:
-        print('The API feature is not yet available...')
+        print(f'{Fore.RED}The API feature is not yet available...{Style.RESET_ALL}')
         return
 
     if 'mobile' in TARGETS:
-        print('The Mobile feature is not yet available...')
+        print(f'{Fore.RED}The Mobile feature is not yet available...{Style.RESET_ALL}')
         return
 
-@click.command()
+@click.command(help='Runs the developing app in current platform directory\n\nSupported target platforms:\n\n.... Desktop\n\n.... PWA\n\n.... Website\n\n.... API\n\n.... CLI')
 # @click.option(
 #     '--target-platform',
 #     '-t',
@@ -199,7 +245,7 @@ def run():
         print('Error: '+str(e))
         print('*NOTE: Be sure to change directory to the desired platform to run (ex. cd <path to target app platform>)*')
 
-@click.command()
+@click.command(help='Compiles py and go files into exe binaries')
 @click.option(
     '--file',
     '-f',
@@ -217,7 +263,7 @@ def compile(file):
     except Exception as e:
         print(e)
 
-@click.command()
+@click.command(help='Compiles py files into cython binaries')
 @click.option(
     '--file',
     '-f',
@@ -246,7 +292,7 @@ def cythonize(file):
         print(f'Building {item} file...')
         os.system(f'cythonize -i {os.path.splitext(item)[0]}.py')
 
-@click.command()
+@click.command(help='Compiles go files into .so binaries')
 @click.option(
     '--file',
     '-f',
@@ -294,8 +340,12 @@ def check_status():
         pass
     else:
         # Get the source and destination paths
-        source = os.path.join(os.getcwd(), "gcc/gcc.exe")  # Current directory
-        destination = os.path.join(os.environ["USERPROFILE"], "go", "bin", "gcc.exe")
+        source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gcc/gcc.exe")  # Current directory
+
+        result = subprocess.run(["go", "env", "GOROOT"], capture_output=True, text=True, check=True)
+        goroot = result.stdout.strip()
+
+        destination = os.path.join(goroot, "bin", "gcc.exe")
 
         # If gcc is not found, copy it to %USERPROFILE%/go/bin
         if not is_gcc_in_path():
@@ -303,7 +353,10 @@ def check_status():
                 print("gcc not found in PATH. Copying gcc.exe...")
                 os.makedirs(os.path.dirname(destination), exist_ok=True)
                 shutil.copy2(source, destination)
-                print(f"Copied gcc.exe to {destination}")
+                # if not is_gcc_in_path():
+                #     print('Unable to add gcc.exe to PATH. You may have to do this manually or refer to https://gupy-framework.com for further assistance')
+                #     return
+                print(f"Copied gcc.exe to {destination}. Restart your terminal session and try again.")
             except Exception as e:
                 print(e)
                 return 'True','False','False'
@@ -319,14 +372,23 @@ def check_status():
         print("Go is not installed or not in PATH.")
         return 'True','True','False'
         
-@click.command()
+@click.command(help='''Checks dependency commands in PATH\n\n.... Go\t\tRuns go commands\n\n.... Gcc\tCompiles py files to cython binaries\n\n.... Cgo\tCompiles go files to so binaries''')
 def check():
     go,gcc,cgo = check_status()
-    print(f'Go\t{go}')
-    print(f'Gcc\t{gcc}')
-    print(f'Cgo\t{cgo}')
+    if go == 'True':
+        print(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
+    else:
+        print(f'Go\t{Fore.RED}{go}{Style.RESET_ALL}')    
+    if gcc == 'True':
+        print(f'Gcc\t{Fore.GREEN}{gcc}{Style.RESET_ALL}')
+    else:
+        print(f'Gcc\t{Fore.RED}{gcc}{Style.RESET_ALL}')
+    if cgo == 'True':
+        print(f'Cgo\t{Fore.GREEN}{cgo}{Style.RESET_ALL}')
+    else:
+        print(f'Cgo\t{Fore.RED}{cgo}{Style.RESET_ALL}')
 
-@click.command()
+@click.command(help='Re-compiles all webassembly code in your go_wasm folder\n\nSupported target platforms:\n\n.... Desktop\n\n.... PWA\n\n.... Website')
 def assemble():
     # detect os and make folder
     system = platform.system()
@@ -374,7 +436,7 @@ def assemble():
     else:
         print('Platform not enabled for assembly. Change directory to your app root folder with desktop, pwa, or website platforms (ex. cd <path to app>/<platform>).')
 
-@click.command()
+@click.command(help='Packages a python app for upload to pypi.org')
 def package():
     # detect os and make folder
     system = platform.system()
@@ -464,9 +526,9 @@ description = "A small example package"
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
-"Programming Language :: Python :: 3",
-"License :: OSI Approved :: MIT License",
-"Operating System :: OS Independent",
+"Programming Language    Python    3",
+"License    OSI Approved    MIT License",
+"Operating System    OS Independent",
 ]
 
 # Add your dependencies here
@@ -540,14 +602,16 @@ SOFTWARE.
             f.close()
             print('pyproject.toml created with default values. Modify it to your liking and rerun the package command.')
             if requirements_string == '':
-                print('*Note: No requirements.txt was found. Create this file and delete the pyproject.toml to populate the dependencies for the whl package (ex. python -m pip freeze > requirements.txt)*')
+                print(f'*{Fore.YELLOW}Note:{Style.RESET_ALL} No requirements.txt was found. Create this file and delete the pyproject.toml to populate the dependencies for the whl package (ex. python -m pip freeze > requirements.txt)*')
             return
         os.system(f'{cmd} -m build')
-    except Exception as e:
-        print('Error: '+str(e))
-        print('*NOTE: Be sure to change directory to the desired platform to package (ex. cd <path to target app platform>)*')
+        shutil.rmtree(NAME)
 
-@click.command()
+    except Exception as e:
+        print(f'{Fore.RED}Error: {Style.RESET_ALL}'+str(e))
+        print(f'*{Fore.YELLOW}NOTE:{Style.RESET_ALL} Be sure to change directory to the desired platform to package (ex. cd <path to target app platform>)*')
+
+@click.command(help='Packages desktop apps for distribution with install script')
 @click.option(
     '--version',
     '-v',

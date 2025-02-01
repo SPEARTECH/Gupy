@@ -6,6 +6,7 @@ import re
 import subprocess
 import shutil
 import sys
+from colorama import Fore, Style
 
 class Website(base.Base):
 
@@ -1071,23 +1072,23 @@ function getCSRFTokenFromDOM() {
           while True:
               userselection = input(self.folders[0]+' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
               if userselection.lower() == 'y':
-                  userselection = input('Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +'? (y/n)')
+                  userselection = input(f'{Fore.RED}Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +f'? (y/n){Style.RESET_ALL}')
                   if userselection.lower() == 'y':
                       print("Removing old version of project...")
                       shutil.rmtree(os.path.join(os.getcwd(), self.folders[0]))
                       print("Continuing app platform creation.")
                       break
                   elif userselection.lower() != 'n':
-                      print('Invalid input, please type y or n then press enter...')
+                      print(f'{Fore.RED}Invalid input, please type y or n then press enter...{Style.RESET_ALL}')
                       continue
                   else:
-                      print('Aborting app platform creation.')
+                      print(f'{Fore.RED}Aborting app platform creation.{Style.RESET_ALL}')
                       return
               elif userselection.lower() != 'n':
-                  print('Invalid input, please type y or n then press enter...')
+                  print(f'{Fore.RED}Invalid input, please type y or n then press enter...{Style.RESET_ALL}')
                   continue
               else:
-                  print('Aborting app platform creation.')
+                  print(f'{Fore.RED}Aborting app platform creation.{Style.RESET_ALL}')
                   return
 
 
@@ -1101,7 +1102,7 @@ function getCSRFTokenFromDOM() {
       try:
         os.system(f'django-admin startproject {self.name}')
       except Exception as e:
-        print(str(e)+'\nFailure to run django-admin; try installing django with `python -m pip install django`')
+        print(str(e)+f'\n{Fore.RED}Failure to run django-admin; try installing django with `python -m pip install django`{Style.RESET_ALL}')
         return
       print('creating django app...')
       # print(os.getcwd())
@@ -1300,9 +1301,9 @@ setup(
           
           # Check if the command was successful
           if result.returncode == 0:
-              print("Build successful.")
+              print(f"{Fore.GREEN}Build successful.{Style.RESET_ALL}")
           else:
-              print("Build failed.")
+              print(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
         files = [f for f in glob.glob('*.go')]
         for filename in files:
           build_wasm(filename)
