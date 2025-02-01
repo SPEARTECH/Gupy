@@ -975,6 +975,142 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))'''
           # f'{self.name}/desktop/dev/templates/python_wasm',
         ]
         if self.lang == 'go':
+            self.index_content = '''
+
+ <!-- Documentation:
+   https://daisyui.com/
+   https://tailwindcss.com/
+   https://www.highcharts.com/
+   https://vuejs.org/
+   https://pyodide.org/en/stable/
+   https://www.papaparse.com/
+   https://danfo.jsdata.org/
+   https://axios-http.com/docs/intro -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gupy App</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/boost.js"></script>
+  <script src="https://code.highcharts.com/modules/exporting.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+  <link rel="icon" href="/static/gupy_logo.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  </head>
+<body>
+  <div id="app" style="text-align: center;">
+    <center>
+      <div class="h-full">
+        <img class="mt-4 mask mask-squircle h-96 hover:-translate-y-2 ease-in-out transition" src="/static/gupy_logo.png" />
+        <br>
+        <button class="btn bg-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/50 text-base-100">[[ message ]] </button>
+      </div>
+    </center>
+</body>
+<!-- <script>
+  // Disable right-clicking
+document.addEventListener('contextmenu', function(event) {
+    event.preventDefault();
+});
+</script> -->
+<script src="{{url_for('static', filename='go_wasm/wasm_exec.js')}}"></script>
+
+  <script>
+    const { createApp } = Vue
+    
+    createApp({
+      delimiters : ['[[', ']]'],
+        data(){
+          return {
+            message: 'Welcome to Gupy!',
+            pyodide_msg: 'This is from Pyodide!',
+            data: {},
+          }
+        },
+        methods: {
+
+        },
+        watch: {
+
+        },
+        created(){
+            // Make a request for a user with a given ID
+            axios.get('/api/example_api_endpoint')
+            .then(function (response) {
+                // handle success
+                console.log(response);
+                this.data = JSON.parse(JSON.stringify(response['data']))
+                console.log(this.data)
+            })
+            .catch(function (error) {
+                // handle error
+                console.log(error);
+
+          try {
+            // use pyodide instead of api example
+            async function main(){
+              const pyodide = await loadPyodide();
+              pyodide.registerJsModule("mymodule", {
+                pyodide_msg: this.pyodide_msg,
+              })
+              await pyodide.loadPackage("numpy")
+              const result = await pyodide.runPython(`
+#import variables
+import mymodule
+
+# use variable
+pyodide_msg = mymodule.pyodide_msg
+
+# change variable
+pyodide_msg = 'This is the changed pyodide message!'
+
+# output response
+response = {'new_msg':pyodide_msg}
+`)
+              return JSON.parse(response)
+          }
+            response = main()
+            console.log(response.new_msg)
+          } catch (error) {
+            console.log('An error occurred: ', error);
+          }
+
+        })
+        .finally(function () {
+          // always executed
+        });
+
+      },
+        mounted() {
+          const go = new Go();
+          WebAssembly.instantiateStreaming(fetch("{{url_for('static', filename='go_wasm/go_wasm.wasm')}}"), go.importObject).then((result) => {
+            go.run(result.instance);
+          });
+
+          let worker = new Worker("{{url_for('static', filename='worker.js')}}");
+          worker.postMessage({ message: '' });
+          worker.onmessage = function (message) {
+            console.log(message.data)
+          }
+
+        },
+        computed:{
+
+        }
+
+    }).mount('#app')
+  </script>
+</html>      
+  
+'''
             self.server_content = '''
 package main
 
@@ -989,11 +1125,14 @@ import (
 func main() {
 	r := gin.Default()
 
+  // Serve static files
+  r.Static("/static", "./static")
+
 	// Routes
 	r.GET("/", index)
 
 	// Start the server
-	go openChrome("http://127.0.0.1:8000") // Open Chrome with your server URL
+	go openChrome("http://127.0.0.1:8080") // Open Chrome with your server URL
 	r.Run(":8080")
 }
 
@@ -1044,7 +1183,6 @@ if __name__ == "__main__":
             self.files[f'desktop/python_modules/python_modules.py'] = self.python_modules_content
             self.folders.append(f'desktop/go_modules')
             self.files[f'desktop/go_modules/go_modules.go'] = self.go_modules_content
-            self.files['desktop/requirements.txt'] = ''
         else:
             self.files[f'desktop/main.go'] = self.server_content
 
@@ -1094,9 +1232,12 @@ if __name__ == "__main__":
         if self.lang == 'py':
             os.chdir(f'go_modules/')
             os.system(f'go mod init example/go_modules')
+            os.chdir(f'../../')
         else:
             os.system(f'go mod init example/{self.name}')
+            os.system(f'go get github.com/gin-gonic/gin')
             # os.system(f'go mod tidy')
+            os.chdir(f'../')
         # system = platform.system()
 
         # if system == 'Darwin':
@@ -1106,11 +1247,15 @@ if __name__ == "__main__":
         # else:
         #     cmd = 'copy'
 
-        os.chdir(f'../../')
         # Get the directory of the current script
         current_directory = os.path.dirname(os.path.abspath(__file__))
 
-        # Construct the path to the target file
+        if self.lang == 'py':
+            # Construct the path to the target file
+            requirements_directory = os.path.join(os.path.dirname(current_directory), 'requirements.txt')       
+            
+            shutil.copy(requirements_directory, f'desktop/requirements.txt')
+
         logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
         
         shutil.copy(logo_directory, f'desktop/static/gupy_logo.png')
@@ -1137,7 +1282,7 @@ if __name__ == "__main__":
 
             os.system(f'{cmd} server.py')
         elif os.path.exists(f'main.go'):
-            os.chdir(f'desktop')
+            # os.chdir(f'desktop')
             os.system(f'go mod tidy')
             os.system(f'go run main.go')
         else:

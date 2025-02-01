@@ -1129,6 +1129,10 @@ function getCSRFTokenFromDOM() {
       current_directory = os.path.dirname(os.path.abspath(__file__))
 
       # Construct the path to the target file
+      requirements_directory = os.path.join(os.path.dirname(current_directory), 'requirements.txt')       
+      
+      shutil.copy(requirements_directory, f'website/requirements.txt')
+
       logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
       
       shutil.copy(logo_directory, f'website/{self.name}/{self.name}_app/static/gupy_logo.png')

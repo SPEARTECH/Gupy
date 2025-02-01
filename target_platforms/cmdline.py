@@ -130,6 +130,14 @@ if __name__ == "__main__":
             print(f'created "{file}" file.')
             f.close()
 
+        # Get the directory of the current script
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+
+        # Construct the path to the target file
+        requirements_directory = os.path.join(os.path.dirname(current_directory), 'requirements.txt')       
+        
+        shutil.copy(requirements_directory, f'cli/requirements.txt')
+
     def run(self):
         # detect os and make folder
         system = platform.system()
