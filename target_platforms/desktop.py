@@ -1350,7 +1350,11 @@ setup(
             files = [f for f in glob.glob('*.go')]
             for file in files:
                 print(f'Building {file} file...')
-                os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
+                try:
+                  os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
+                except Exception as e:
+                  print(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
+                  print(e)
             os.chdir('../../')
 
     # convert all go modules in the go_wasm folder to wasm

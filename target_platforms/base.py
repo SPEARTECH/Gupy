@@ -21,8 +21,11 @@ class Base:
         def change_dir(dir_list,name):
             if name in dir_list: 
                 index = dir_list.index(name)
-                chdir_num = len(dir_list) - index
-                os.chdir('../'*chdir_num )
+                print('index:'+str(index))
+                chdir_num = (len(dir_list)-1) - index
+                print('chdir_num:'+str(chdir_num))
+                if chdir_num > 0:
+                    os.chdir('../'*chdir_num )
             elif name in os.listdir('.'):
                 os.chdir(name)
 
@@ -30,6 +33,7 @@ class Base:
             print(f'"{self.project_folder}" already exists, changing directory to its root folder.')
             change_dir(dir_list,self.project_folder)
             print(f'Changed directory to {self.project_folder}')
+            print(os.getcwd())
         else:
             os.mkdir(self.project_folder)
             os.chdir(self.project_folder)

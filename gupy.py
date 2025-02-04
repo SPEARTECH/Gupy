@@ -59,6 +59,20 @@ def cli():
     version = '.'.join(sys.version.split(' ')[0].split('.')[:2])
     if float(version) < 3.0:
         raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
+    go,gcc,cgo = check_status()
+    if go == 'True':
+        print(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
+    else:
+        print(f'Go\t{Fore.RED}{go}{Style.RESET_ALL}')    
+    if gcc == 'True':
+        print(f'Gcc\t{Fore.GREEN}{gcc}{Style.RESET_ALL}')
+    else:
+        print(f'Gcc\t{Fore.RED}{gcc}{Style.RESET_ALL}')
+    if cgo == 'True':
+        print(f'Cgo\t{Fore.GREEN}{cgo}{Style.RESET_ALL}')
+    else:
+        print(f'Cgo\t{Fore.RED}{cgo}{Style.RESET_ALL}')
+
     
 @click.command(help='Creates an app template for desired target platforms')
 @click.option(
@@ -124,7 +138,7 @@ def create(name,target_platform, language):
 
     dir_list = os.getcwd().split(delim)
     if NAME in dir_list or NAME in os.listdir('.'):
-        print(f'{Fore.RED}Error: App named '+NAME+f' already exists in this location{Style.RESET_ALL}')
+        print(f'{Fore.YELLOW}App named '+NAME+f' already exists in this location{Style.RESET_ALL}')
 
 
     for target in target_platform: #Assigning target platforms
@@ -176,19 +190,7 @@ Confirm?
         print(f'{Fore.RED}The Mobile feature is not yet available...{Style.RESET_ALL}')
         return
 
-@click.command(help='Runs the developing app in current platform directory\n\nSupported target platforms:\n\n.... Desktop\n\n.... PWA\n\n.... Website\n\n.... API\n\n.... CLI')
-# @click.option(
-#     '--target-platform',
-#     '-t',
-#     type=click.Choice(
-#         ['desktop', 'pwa', 'website', 'cli', 'api', 'mobile'], 
-#         case_sensitive=False
-#         ),
-#     required=True,
-#     multiple=False, 
-#     default=['desktop'], 
-#     help="Select the app platform you intend to run (ie. -t desktop)"
-#     )
+@click.command(help='Runs the app in current platform directory\n\nSupported target platforms:\n\n.... Desktop\n\n.... PWA\n\n.... Website\n\n.... API\n\n.... CLI')
 def run():
     # detect os and make folder
     system = platform.system()
@@ -238,6 +240,18 @@ def run():
             NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
             app_obj = script.Script(NAME)
             app_obj.run()
+        elif 'api' in dir_list:
+            TARGET='api'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
+            app_obj = api.Api(NAME)
+            app_obj.run()
+        elif 'mobile' in dir_list:
+            TARGET='mobile'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
+            app_obj = mobile.Mobile(NAME)
+            app_obj.run()
         else:
             print(f'Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
             return
@@ -263,7 +277,7 @@ def compile(file):
     except Exception as e:
         print(e)
 
-@click.command(help='Compiles py files into cython binaries')
+@click.command(help='Compiles py files into c-shared modules')
 @click.option(
     '--file',
     '-f',
@@ -292,7 +306,7 @@ def cythonize(file):
         print(f'Building {item} file...')
         os.system(f'cythonize -i {os.path.splitext(item)[0]}.py')
 
-@click.command(help='Compiles go files into .so binaries')
+@click.command(help='Compiles go files into c-shared modules')
 @click.option(
     '--file',
     '-f',
@@ -334,33 +348,57 @@ def check_status():
     def is_gcc_in_path():
         return shutil.which("gcc") is not None
 
+    def is_cc_in_path():
+        return shutil.which("cc") is not None
+
+
     system = platform.system()
 
     if system == 'Darwin' or system == 'Linux':
         pass
     else:
-        # Get the source and destination paths
-        source = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gcc/gcc.exe")  # Current directory
-
-        result = subprocess.run(["go", "env", "GOROOT"], capture_output=True, text=True, check=True)
+        result = subprocess.run(["go", "env", "GOPATH"], capture_output=True, text=True, check=True)
         goroot = result.stdout.strip()
 
-        destination = os.path.join(goroot, "bin", "gcc.exe")
+        # Function to copy contents from source to destination (merging files)
+        def copy_folder_contents(src, dest):
+            if not os.path.exists(src):  # Skip if source folder doesn't exist
+                return
 
-        # If gcc is not found, copy it to %USERPROFILE%/go/bin
-        if not is_gcc_in_path():
+            os.makedirs(dest, exist_ok=True)  # Ensure destination exists
+
+            for item in os.listdir(src):
+                src_path = os.path.join(src, item)
+                dest_path = os.path.join(dest, item)
+
+                if os.path.isdir(src_path):
+                    copy_folder_contents(src_path, dest_path)  # Recursively copy subfolders
+                else:
+                    shutil.copy2(src_path, dest_path)  # Copy file, overwriting if necessary
+
+        # Check if gcc or cc is in PATH
+        if not is_gcc_in_path() or not is_cc_in_path():
             try:
-                print("gcc not found in PATH. Copying gcc.exe...")
-                os.makedirs(os.path.dirname(destination), exist_ok=True)
-                shutil.copy2(source, destination)
-                # if not is_gcc_in_path():
-                #     print('Unable to add gcc.exe to PATH. You may have to do this manually or refer to https://gupy-framework.com for further assistance')
-                #     return
-                print(f"Copied gcc.exe to {destination}. Restart your terminal session and try again.")
+                # Define the source and destination directories
+                src_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mingw64")
+                dest_root = goroot
+
+                # List of directories to copy
+                folders = ["bin", "etc", "include", "lib", "share"]
+
+                for folder in folders:
+                    source = os.path.join(src_root, folder)
+                    destination = os.path.join(dest_root, folder)
+
+                    print(f"Merging {folder}...")
+
+                    copy_folder_contents(source, destination)
+
+                print(f"Merged mingw64 files into {goroot}. Try running `gupy check` again.")
+
             except Exception as e:
                 print(e)
-                return 'True','False','False'
-
+                return 'True', 'False', 'False'
     try:
         subprocess.run(["go", "env", "-w", "CGO_ENABLED=1"], check=True)
         # print("Successfully set CGO_ENABLED=1")
@@ -605,6 +643,7 @@ SOFTWARE.
                 print(f'*{Fore.YELLOW}Note:{Style.RESET_ALL} No requirements.txt was found. Create this file and delete the pyproject.toml to populate the dependencies for the whl package (ex. python -m pip freeze > requirements.txt)*')
             return
         os.system(f'{cmd} -m build')
+        print(f'Removing temporary project folder: {NAME}')
         shutil.rmtree(NAME)
 
     except Exception as e:
@@ -1228,7 +1267,6 @@ pause
 
 
 def main():
-    check_status()
     cli.add_command(create) #Add command for cli
     cli.add_command(run) #Add command for cli
     cli.add_command(compile)

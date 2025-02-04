@@ -889,25 +889,25 @@ return event.result;
         os.chdir(f'pwa/go_wasm')
         os.system(f'go mod init example/go_wasm')
         os.system(f'go mod tidy')
-        def build_wasm():
-            # Set the environment variables
-            env = os.environ.copy()
-            env['GOOS'] = 'js'
-            env['GOARCH'] = 'wasm'
+        # def build_wasm():
+        #     # Set the environment variables
+        #     env = os.environ.copy()
+        #     env['GOOS'] = 'js'
+        #     env['GOARCH'] = 'wasm'
             
-            # Command to execute
-            command = 'go build -o go_wasm.wasm'
+        #     # Command to execute
+        #     command = 'go build -o go_wasm.wasm'
             
-            # Execute the command
-            result = subprocess.run(command, shell=True, env=env)
+        #     # Execute the command
+        #     result = subprocess.run(command, shell=True, env=env)
             
-            # Check if the command was successful
-            if result.returncode == 0:
-                print(f"{Fore.GREEN}Build successful.{Style.RESET_ALL}")
-            else:
-                print(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
+        #     # Check if the command was successful
+        #     if result.returncode == 0:
+        #         print(f"{Fore.GREEN}Build successful.{Style.RESET_ALL}")
+        #     else:
+        #         print(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
 
-        build_wasm()
+        # build_wasm()
         # os.system(f"$env:GOOS='js'; $env:GOARCH='wasm'; go build -o main.wasm")
         # Function to get the GOROOT environment variable using the 'go env' command
         def get_goroot():

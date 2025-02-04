@@ -39,13 +39,27 @@ if __name__ == "__main__":
         #   f'gupy_apps/{self.name}/cli/dev/python_modules',
         #   f'gupy_apps/{self.name}/cli/dev/cython_modules',
           ]
-          
-        self.files = {
-            f'script/__init__.py': self.init_content,
-            f'script/__main__.py': self.main_content,
-            f'script/{self.name}.py': self.script_content,
-            }
+        if self.lang == 'py':
+            self.files = {
+                f'script/__init__.py': self.init_content,
+                f'script/__main__.py': self.main_content,
+                f'script/{self.name}.py': self.script_content,
+                }
+        else:
+            self.script_content = '''
+package main
 
+import (
+    "fmt"
+)
+
+func main(){
+    fmt.Println("Script run complete.")
+}
+            '''
+            self.files = {
+                f'script/main.go': self.script_content,
+                }
     def create(self):
         import shutil
         # check if platform project already exists, if so, prompt the user
@@ -81,14 +95,18 @@ if __name__ == "__main__":
             f.write(self.files.get(file))
             print(f'created "{file}" file.')
             f.close()
-        # Get the directory of the current script
-        current_directory = os.path.dirname(os.path.abspath(__file__))
 
-        # Construct the path to the target file
-        requirements_directory = os.path.join(os.path.dirname(current_directory), 'requirements.txt')       
-        
-        shutil.copy(requirements_directory, f'script/requirements.txt')
+        if self.lang == 'py':
+            # Get the directory of the current script
+            current_directory = os.path.dirname(os.path.abspath(__file__))
 
+            # Construct the path to the target file
+            requirements_directory = os.path.join(os.path.dirname(current_directory), 'requirements.txt')       
+            
+            shutil.copy(requirements_directory, f'script/requirements.txt')
+        else:
+            os.chdir('script')
+            os.system(f'go mod init example/{self.name}')
 
     def run(self):
         # detect os and make folder
