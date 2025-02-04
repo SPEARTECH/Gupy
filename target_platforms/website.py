@@ -202,23 +202,9 @@ urlpatterns = [
     
     python_modules_content = '''
 import os
-from ctypes import cdll, c_char_p
 
 def main():
-    path = os.path.dirname(os.path.realpath(__file__))
-
-    # Load the shared library
-    try:
-        go_modules = cdll.LoadLibrary(path+'/../go_modules/go_modules.so')
-    except Exception as e:
-        print(str(e)+'\\n Try running `python ./gupy.py gopherize -t <target_platform> -n <app_name>`')
-        return
-
-    # Define the return type of the function
-    go_modules.go_module.restype = c_char_p
-
-    # Call the Go function and decode the returned bytes to a string
-    result = go_modules.go_module().decode('utf-8')
+    result = 'Welcome to Gupy!'
 
     return result
 
@@ -954,6 +940,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+import os
+
 # Create your views here.
 def index(request):
 '''+r'''
@@ -963,8 +951,40 @@ def index(request):
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 def api_endpoint(request):
-    response = {'data':'success'}
+'''+f'''
+    # Get the data from the request
+    # data = request.json.get('data') # for POST requests with data
+
+    #read from python/cython module
+    from {self.name}_app.python_modules import python_modules
+
+    py_message = python_modules.main()
+    
+    #read from go module
+    from ctypes import cdll, c_char_p
+
+    path = os.path.dirname(os.path.realpath(__file__))
+
+    # Load the shared library
+    try:
+        go_modules = cdll.LoadLibrary(path+'/go_modules/go_modules.so')
+    except Exception as e:
+        print(str(e)+'\\n Try running `python ./gupy.py gopherize -t <target_platform> -n <app_name>`')
+        return
+
+    # Define the return type of the function
+    go_modules.go_module.restype = c_char_p
+    
+    go_message = go_modules.go_module().decode('utf-8')
+'''+r'''
+    data = {'Python Module Message':py_message,'Go Module Message':go_message}
+
+    # Perform data processing
+
+    response = {'data':data}
+
     return JsonResponse(response, safe=False)
+
 
 '''
         self.manifest_content = '''
@@ -1073,7 +1093,7 @@ function getCSRFTokenFromDOM() {
           while True:
               userselection = input(self.folders[0]+' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
               if userselection.lower() == 'y':
-                  click.echo(f'{Fore.RED}Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +f'? (y/n){Style.RESET_ALL}')
+                  click.echo(f'{Fore.YELLOW}Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +f'? (y/n){Style.RESET_ALL}')
                   userselection = input()
                   if userselection.lower() == 'y':
                       print("Removing old version of project...")
