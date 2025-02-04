@@ -6,6 +6,7 @@ import subprocess
 import shutil
 import sys
 from colorama import Fore, Style
+import click
 
 class Desktop(base.Base):
     index_content = '''
@@ -287,10 +288,30 @@ def index():
 def example_api_endpoint():
     # Get the data from the request
     # data = request.json.get('data') # for POST requests with data
-    from python_modules import python_modules
-    go_message = python_modules.main()
 
-    data = {'Go Module Message':go_message}
+    #read from python/cython module
+    from python_modules import python_modules
+
+    py_message = python_modules.main()
+    
+    #read from go module
+    from ctypes import cdll, c_char_p
+
+    path = os.path.dirname(os.path.realpath(__file__))
+
+    # Load the shared library
+    try:
+        go_modules = cdll.LoadLibrary(path+'/go_modules/go_modules.so')
+    except Exception as e:
+        print(str(e)+'\\n Try running `python ./gupy.py gopherize -t <target_platform> -n <app_name>`')
+        return
+
+    # Define the return type of the function
+    go_modules.go_module.restype = c_char_p
+    
+    go_message = go_modules.go_module().decode('utf-8')
+
+    data = {'Python Module Message':py_message,'Go Module Message':go_message}
 
     # Perform data processing
 
@@ -324,23 +345,9 @@ if __name__ == '__main__':
 
     python_modules_content = '''
 import os
-from ctypes import cdll, c_char_p
 
 def main():
-    path = os.path.dirname(os.path.realpath(__file__))
-
-    # Load the shared library
-    try:
-        go_modules = cdll.LoadLibrary(path+'/../go_modules/go_modules.so')
-    except Exception as e:
-        print(str(e)+'\\n Try running `python ./gupy.py gopherize -t <target_platform> -n <app_name>`')
-        return
-
-    # Define the return type of the function
-    go_modules.go_module.restype = c_char_p
-
-    # Call the Go function and decode the returned bytes to a string
-    result = go_modules.go_module().decode('utf-8')
+    result = 'Welcome to Gupy!'
 
     return result
 
@@ -1194,23 +1201,24 @@ if __name__ == "__main__":
             while True:
                 userselection = input(self.folders[0]+' already exists for the app '+ self.name +'. Would you like to overwrite the existing '+ self.folders[0]+' project? (y/n): ')
                 if userselection.lower() == 'y':
-                    userselection = input(f'{Fore.YELLOW}Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +f'? (y/n){Style.RESET_ALL}')
+                    click.echo(f'{Fore.YELLOW}Are you sure you want to recreate the '+ self.folders[0]+' project for '+ self.name +f'? (y/n){Style.RESET_ALL}')
+                    userselection = input()
                     if userselection.lower() == 'y':
                         print("Removing old version of project...")
                         shutil.rmtree(os.path.join(os.getcwd(), self.folders[0]))
                         print("Continuing app platform creation.")
                         break
                     elif userselection.lower() != 'n':
-                        print(f'{Fore.RED}Invalid input, please type y or n then press enter...{Style.RESET_ALL}')
+                        click.echo(f'{Fore.RED}Invalid input, please type y or n then press enter...{Style.RESET_ALL}')
                         continue
                     else:
-                        print(f'{Fore.RED}Aborting app platform creation.{Style.RESET_ALL}')
+                        click.echo(f'{Fore.RED}Aborting app platform creation.{Style.RESET_ALL}')
                         return
                 elif userselection.lower() != 'n':
-                    print(f'{Fore.RED}Invalid input, please type y or n then press enter...{Style.RESET_ALL}')
+                    click.echo(f'{Fore.RED}Invalid input, please type y or n then press enter...{Style.RESET_ALL}')
                     continue
                 else:
-                    print(f'{Fore.RED}Aborting app platform creation.{Style.RESET_ALL}')
+                    click.echo(f'{Fore.RED}Aborting app platform creation.{Style.RESET_ALL}')
                     return
                     
         for folder in self.folders:
@@ -1218,7 +1226,7 @@ if __name__ == "__main__":
                 os.mkdir(folder)
                 print(f'created "{folder}" folder.')
             else:
-                print(f'{Fore.RED}"{folder}" already exists.\nAborting...{Style.RESET_ALL}')
+                click.echo(f'{Fore.RED}"{folder}" already exists.\nAborting...{Style.RESET_ALL}')
                 return
         
         for file in self.files:
@@ -1287,7 +1295,7 @@ if __name__ == "__main__":
             os.system(f'go mod tidy')
             os.system(f'go run main.go')
         else:
-            print(f'{Fore.RED}Server file not found to run. Rename the main entry file to server.py or server.go.{Style.RESET_ALL}')
+            click.echo(f'{Fore.RED}Server file not found to run. Rename the main entry file to server.py or server.go.{Style.RESET_ALL}')
             return
     # convert all py files to pyd extensions other than the __main__.py and __init__.py files
     def cythonize(self):
@@ -1353,7 +1361,7 @@ setup(
                 try:
                   os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
                 except Exception as e:
-                  print(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
+                  click.echo(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
                   print(e)
             os.chdir('../../')
 
@@ -1375,9 +1383,9 @@ setup(
           
           # Check if the command was successful
           if result.returncode == 0:
-              print(f"{Fore.GREEN}Build successful.{Style.RESET_ALL}")
+              click.echo(f"{Fore.GREEN}Build successful.{Style.RESET_ALL}")
           else:
-              print(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
+              click.echo(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
         files = [f for f in glob.glob('*.go')]
         for filename in files:
           build_wasm(filename)

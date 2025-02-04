@@ -61,17 +61,17 @@ def cli():
         raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
     go,gcc,cgo = check_status()
     if go == 'True':
-        print(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
+        click.echo(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
     else:
-        print(f'Go\t{Fore.RED}{go}{Style.RESET_ALL}')    
+        click.echo(f'Go\t{Fore.RED}{go}{Style.RESET_ALL}')    
     if gcc == 'True':
-        print(f'Gcc\t{Fore.GREEN}{gcc}{Style.RESET_ALL}')
+        click.echo(f'Gcc\t{Fore.GREEN}{gcc}{Style.RESET_ALL}')
     else:
-        print(f'Gcc\t{Fore.RED}{gcc}{Style.RESET_ALL}')
+        click.echo(f'Gcc\t{Fore.RED}{gcc}{Style.RESET_ALL}')
     if cgo == 'True':
-        print(f'Cgo\t{Fore.GREEN}{cgo}{Style.RESET_ALL}')
+        click.echo(f'Cgo\t{Fore.GREEN}{cgo}{Style.RESET_ALL}')
     else:
-        print(f'Cgo\t{Fore.RED}{cgo}{Style.RESET_ALL}')
+        click.echo(f'Cgo\t{Fore.RED}{cgo}{Style.RESET_ALL}')
 
     
 @click.command(help='Creates an app template for desired target platforms')
@@ -120,16 +120,16 @@ def create(name,target_platform, language):
     else:
         LANG = ''
     if '-' in NAME:
-        print(f'{Fore.RED}Error: Invalid character of "-" in app name. Rename your app to '+ NAME.replace('-','_') +f'.{Style.RESET_ALL}')
+        click.echo(f'{Fore.RED}Error: Invalid character of "-" in app name. Rename your app to '+ NAME.replace('-','_') +f'.{Style.RESET_ALL}')
         return
     elif '.' in NAME:
-        print(f'{Fore.RED}Error: Invalid character of "." in app name. Rename your app to '+ NAME.replace('.','_') +f'.{Style.RESET_ALL}')
+        click.echo(f'{Fore.RED}Error: Invalid character of "." in app name. Rename your app to '+ NAME.replace('.','_') +f'.{Style.RESET_ALL}')
         return
     if not LANG and 'pwa' not in target_platform and 'website' not in target_platform and 'mobile' not in target_platform:
-        print(f"{Fore.RED}Error: Option '-l/--language' is required for ['desktop', 'cli', 'api', 'script'] targets.{Style.RESET_ALL}")
+        click.echo(f"{Fore.RED}Error: Option '-l/--language' is required for ['desktop', 'cli', 'api', 'script'] targets.{Style.RESET_ALL}")
         return
     elif LANG and LANG != 'py' and LANG != 'go':
-        print(f'{Fore.RED}Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang){Style.RESET_ALL}')
+        click.echo(f'{Fore.RED}Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang){Style.RESET_ALL}')
         return
     elif not LANG and (target_platform == ('pwa',) or target_platform == ('mobile',) or target_platform == ('pwa','mobile',)):
         LANG = 'js'
@@ -138,7 +138,7 @@ def create(name,target_platform, language):
 
     dir_list = os.getcwd().split(delim)
     if NAME in dir_list or NAME in os.listdir('.'):
-        print(f'{Fore.YELLOW}App named '+NAME+f' already exists in this location{Style.RESET_ALL}')
+        click.echo(f'{Fore.YELLOW}App named '+NAME+f' already exists in this location{Style.RESET_ALL}')
 
 
     for target in target_platform: #Assigning target platforms
@@ -169,13 +169,13 @@ Confirm?
 
     if 'website' in TARGETS: #create files/folder for django project if applicable
         if LANG == 'go':
-            print(f'{Fore.RED}Go Website feature is not yet available...{Style.RESET_ALL}')
+            click.echo(f'{Fore.RED}Go Website feature is not yet available...{Style.RESET_ALL}')
             return
         website.Website(NAME).create()
 
     if 'cli' in TARGETS: #create files/folder structure for cli app if applicable
         if LANG == 'go':
-            print(f'{Fore.RED}Go CLI feature is not yet available...{Style.RESET_ALL}')
+            click.echo(f'{Fore.RED}Go CLI feature is not yet available...{Style.RESET_ALL}')
             return
         cmdline.CLI(NAME,LANG).create()
 
@@ -183,12 +183,12 @@ Confirm?
         script.Script(NAME,LANG).create()
 
     if 'api' in TARGETS:
-        # print(f'{Fore.RED}The API feature is not yet available...{Style.RESET_ALL}')
+        # click.echo(f'{Fore.RED}The API feature is not yet available...{Style.RESET_ALL}')
         # return
         api.Api(NAME,LANG).create()
 
     if 'mobile' in TARGETS:
-        # print(f'{Fore.RED}The Mobile feature is not yet available...{Style.RESET_ALL}')
+        # click.echo(f'{Fore.RED}The Mobile feature is not yet available...{Style.RESET_ALL}')
         # return
         mobile.Mobile(NAME).create()
 
@@ -326,10 +326,10 @@ def gopherize(file):
     else:
         delim = '\\'
     if '-' in os.getcwd().split(delim)[-1]:
-        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('-','_') +'.')
+        click.echo(f'{Fore.RED}Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('-','_') +f'.{Style.RESET_ALL}')
         return
     elif '.' in os.getcwd().split(delim)[-1]:
-        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('.','_') +'.')
+        click.echo(f'{Fore.RED}Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('.','_') +f'.{Style.RESET_ALL}')
         return
 
     for item in file:
@@ -343,7 +343,7 @@ def check_status():
     
     # If go is not found, prompt user
     if not is_go_in_path():
-        print("go not found in PATH. Download Go at https://go.dev/doc/install or add the go/bin folder to PATH...")
+        click.echo(f"{Fore.RED}go not found in PATH. Download Go at https://go.dev/doc/install or add the go/bin folder to PATH.{Style.RESET_ALL}")
         return 'False','False','False'
 
     #checking if gcc.exe is in path for windows users for gopherize command
@@ -362,54 +362,56 @@ def check_status():
         result = subprocess.run(["go", "env", "GOPATH"], capture_output=True, text=True, check=True)
         goroot = result.stdout.strip()
 
-        # Function to copy contents from source to destination (merging files)
-        def copy_folder_contents(src, dest):
-            if not os.path.exists(src):  # Skip if source folder doesn't exist
-                return
+        # # Function to copy contents from source to destination (merging files)
+        # def copy_folder_contents(src, dest):
+        #     if not os.path.exists(src):  # Skip if source folder doesn't exist
+        #         return
 
-            os.makedirs(dest, exist_ok=True)  # Ensure destination exists
+        #     os.makedirs(dest, exist_ok=True)  # Ensure destination exists
 
-            for item in os.listdir(src):
-                src_path = os.path.join(src, item)
-                dest_path = os.path.join(dest, item)
+        #     for item in os.listdir(src):
+        #         src_path = os.path.join(src, item)
+        #         dest_path = os.path.join(dest, item)
 
-                if os.path.isdir(src_path):
-                    copy_folder_contents(src_path, dest_path)  # Recursively copy subfolders
-                else:
-                    shutil.copy2(src_path, dest_path)  # Copy file, overwriting if necessary
+        #         if os.path.isdir(src_path):
+        #             copy_folder_contents(src_path, dest_path)  # Recursively copy subfolders
+        #         else:
+        #             shutil.copy2(src_path, dest_path)  # Copy file, overwriting if necessary
 
         # Check if gcc or cc is in PATH
         if not is_gcc_in_path() or not is_cc_in_path():
-            try:
-                # Define the source and destination directories
-                src_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mingw64")
-                dest_root = goroot
+            # try:
+            #     # Define the source and destination directories
+            #     src_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mingw64")
+            #     dest_root = goroot
 
-                # List of directories to copy
-                folders = ["bin", "etc", "include", "lib", "share"]
+            #     # List of directories to copy
+            #     folders = ["bin", "etc", "include", "lib", "share"]
 
-                for folder in folders:
-                    source = os.path.join(src_root, folder)
-                    destination = os.path.join(dest_root, folder)
+            #     for folder in folders:
+            #         source = os.path.join(src_root, folder)
+            #         destination = os.path.join(dest_root, folder)
 
-                    print(f"Merging {folder}...")
+            #         print(f"Merging {folder}...")
 
-                    copy_folder_contents(source, destination)
+            #         copy_folder_contents(source, destination)
 
-                print(f"Merged mingw64 files into {goroot}. Try running `gupy check` again.")
+            #     print(f"Merged mingw64 files into {goroot}. Try running `gupy check` again.")
 
-            except Exception as e:
-                print(e)
-                return 'True', 'False', 'False'
+            # except Exception as e:
+            #     print(e)
+            #     return 'True', 'False', 'False'
+            click.echo(f'{Fore.RED}gcc and/or cc is not a valid command; Add their bin folder to PATH and/or follow the instructions at https://www.msys2.org/ and restart the terminal session.{Style.RESET_ALL}')
+            return 'True', 'False', 'False'
     try:
-        subprocess.run(["go", "env", "-w", "CGO_ENABLED=1"], check=True)
+        subprocess.run(["go", "env", "-w", "CGO_ENABLED=1{Style.RESET_ALL}"], check=True)
         # print("Successfully set CGO_ENABLED=1")
         return 'True','True','True'
     except subprocess.CalledProcessError as e:
-        print(f"Error setting CGO_ENABLED: {e}")
+        click.echo(f"{Fore.RED}Error setting CGO_ENABLED:{Style.RESET_ALL} {e}")
         return 'True','True','False'
     except FileNotFoundError:
-        print("Go is not installed or not in PATH.")
+        click.echo(f"{Fore.RED}Go is not installed or not in PATH.{Style.RESET_ALL}")
         return 'True','True','False'
         
 @click.command(help='''Checks dependency commands in PATH\n\n.... Go\t\tRuns go commands\n\n.... Gcc\tCompiles py files to cython binaries\n\n.... Cgo\tCompiles go files to so binaries''')
@@ -507,10 +509,10 @@ def package():
             change_dir(dir_list,TARGET)
             NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
         elif 'pwa' in dir_list or 'website' in dir_list:
-            print('Error: --package is only available for desktop, cli, and script projects.')
+            click.echo(f'{Fore.RED}Error: --package is only available for desktop, cli, and script projects.{Style.RESET_ALL}')
             return
         else:
-            print(f'Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
+            click.echo(f'{Fore.RED}Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).{Style.RESET_ALL}')
             return
 
         # creating project folder if doesnt already exist
@@ -641,17 +643,17 @@ SOFTWARE.
             f.write(toml_content)
             print(f'created "pyproject.toml" file.')
             f.close()
-            print('pyproject.toml created with default values. Modify it to your liking and rerun the package command.')
+            click.echo(f'{Fore.GREEN}pyproject.toml created with default values. Modify it to your liking and rerun the package command.{Style.RESET_ALL}')
             if requirements_string == '':
-                print(f'*{Fore.YELLOW}Note:{Style.RESET_ALL} No requirements.txt was found. Create this file and delete the pyproject.toml to populate the dependencies for the whl package (ex. python -m pip freeze > requirements.txt)*')
+                click.echo(f'*{Fore.YELLOW}Note:{Style.RESET_ALL} No requirements.txt was found. Create this file and delete the pyproject.toml to populate the dependencies for the whl package (ex. python -m pip freeze > requirements.txt)*')
             return
         os.system(f'{cmd} -m build')
         print(f'Removing temporary project folder: {NAME}')
         shutil.rmtree(NAME)
 
     except Exception as e:
-        print(f'{Fore.RED}Error: {Style.RESET_ALL}'+str(e))
-        print(f'*{Fore.YELLOW}NOTE:{Style.RESET_ALL} Be sure to change directory to the desired platform to package (ex. cd <path to target app platform>)*')
+        click.echo(f'{Fore.RED}Error: {Style.RESET_ALL}'+str(e))
+        click.echo(f'*{Fore.YELLOW}NOTE:{Style.RESET_ALL} Be sure to change directory to the desired platform to package (ex. cd <path to target app platform>)*')
 
 @click.command(help='Packages desktop apps for distribution with install script')
 @click.option(
