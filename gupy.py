@@ -125,13 +125,13 @@ def create(name,target_platform, language):
     elif '.' in NAME:
         print(f'{Fore.RED}Error: Invalid character of "." in app name. Rename your app to '+ NAME.replace('.','_') +f'.{Style.RESET_ALL}')
         return
-    if not LANG and 'pwa' not in target_platform and 'website' not in target_platform:
+    if not LANG and 'pwa' not in target_platform and 'website' not in target_platform and 'mobile' not in target_platform:
         print(f"{Fore.RED}Error: Option '-l/--language' is required for ['desktop', 'cli', 'api', 'script'] targets.{Style.RESET_ALL}")
         return
     elif LANG and LANG != 'py' and LANG != 'go':
         print(f'{Fore.RED}Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang){Style.RESET_ALL}')
         return
-    elif not LANG and target_platform == ('pwa',):
+    elif not LANG and (target_platform == ('pwa',) or target_platform == ('mobile',) or target_platform == ('pwa','mobile',)):
         LANG = 'js'
     elif not LANG and target_platform == ('website',):
         LANG = 'py'
@@ -183,12 +183,14 @@ Confirm?
         script.Script(NAME,LANG).create()
 
     if 'api' in TARGETS:
-        print(f'{Fore.RED}The API feature is not yet available...{Style.RESET_ALL}')
-        return
+        # print(f'{Fore.RED}The API feature is not yet available...{Style.RESET_ALL}')
+        # return
+        api.Api(NAME,LANG).create()
 
     if 'mobile' in TARGETS:
-        print(f'{Fore.RED}The Mobile feature is not yet available...{Style.RESET_ALL}')
-        return
+        # print(f'{Fore.RED}The Mobile feature is not yet available...{Style.RESET_ALL}')
+        # return
+        mobile.Mobile(NAME).create()
 
 @click.command(help='Runs the app in current platform directory\n\nSupported target platforms:\n\n.... Desktop\n\n.... PWA\n\n.... Website\n\n.... API\n\n.... CLI')
 def run():
@@ -412,19 +414,20 @@ def check_status():
         
 @click.command(help='''Checks dependency commands in PATH\n\n.... Go\t\tRuns go commands\n\n.... Gcc\tCompiles py files to cython binaries\n\n.... Cgo\tCompiles go files to so binaries''')
 def check():
-    go,gcc,cgo = check_status()
-    if go == 'True':
-        print(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
-    else:
-        print(f'Go\t{Fore.RED}{go}{Style.RESET_ALL}')    
-    if gcc == 'True':
-        print(f'Gcc\t{Fore.GREEN}{gcc}{Style.RESET_ALL}')
-    else:
-        print(f'Gcc\t{Fore.RED}{gcc}{Style.RESET_ALL}')
-    if cgo == 'True':
-        print(f'Cgo\t{Fore.GREEN}{cgo}{Style.RESET_ALL}')
-    else:
-        print(f'Cgo\t{Fore.RED}{cgo}{Style.RESET_ALL}')
+    # go,gcc,cgo = check_status()
+    # if go == 'True':
+    #     print(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
+    # else:
+    #     print(f'Go\t{Fore.RED}{go}{Style.RESET_ALL}')    
+    # if gcc == 'True':
+    #     print(f'Gcc\t{Fore.GREEN}{gcc}{Style.RESET_ALL}')
+    # else:
+    #     print(f'Gcc\t{Fore.RED}{gcc}{Style.RESET_ALL}')
+    # if cgo == 'True':
+    #     print(f'Cgo\t{Fore.GREEN}{cgo}{Style.RESET_ALL}')
+    # else:
+    #     print(f'Cgo\t{Fore.RED}{cgo}{Style.RESET_ALL}')
+    return # code check executes with every command given, this just needs to return it
 
 @click.command(help='Re-compiles all webassembly code in your go_wasm folder\n\nSupported target platforms:\n\n.... Desktop\n\n.... PWA\n\n.... Website')
 def assemble():

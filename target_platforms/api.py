@@ -1055,7 +1055,7 @@ if __name__ == "__main__":
             print(f'created "{file}" file.')
             f.close()
 
-        os.chdir(f'desktop/static/go_wasm/')
+        os.chdir(f'api/static/go_wasm/')
         os.system(f'go mod init example/go_modules')
         os.chdir(f'../../')
         if self.lang == 'py':

@@ -4,5 +4,7 @@ __all__ = [
     'cmdline',
     'pwa',
     'website',
-    'script'
+    'script',
+    'api',
+    'mobile'
 ]
