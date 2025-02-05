@@ -146,7 +146,8 @@ response = {'new_msg':pyodide_msg}
   
 '''
 
-    server_content = '''
+    server_content = r'''
+
 
 # Documentation:
 #   https://flask.palletsprojects.com/en/3.0.x/
@@ -160,6 +161,17 @@ from werkzeug.utils import secure_filename
 # import numpy as np
 import json
 import platform
+import screeninfo  # Install with `pip install screeninfo`
+
+def get_screen_size():
+    """Returns screen width and height."""
+    try:
+        screen = screeninfo.get_monitors()[0]  # Get primary monitor
+        return screen.width, screen.height
+    except Exception as e:
+        print("Could not get screen resolution:", e)
+        return 1920, 1080  # Default resolution if detection fails
+    
 
 # WORKSAFE=False
 # try:
@@ -172,18 +184,32 @@ def get_platform_type():
     return system
 
 def run_with_switches(system):
+    """Opens Chrome/Chromium at the center of the screen in incognito mode."""
+    screen_width, screen_height = get_screen_size()
+
+    # Desired window size
+    window_width, window_height = 1024, 768
+
+    # Calculate center position
+    pos_x = (screen_width - window_width) // 2
+    pos_y = (screen_height - window_height) // 2
+
+    # Common arguments
+    common_args = [
+        f"--app=http://127.0.0.1:8001/",
+        "--disable-pinch",
+        "--disable-extensions",
+        "--guest",
+        "--incognito",  # Open in incognito mode
+        f"--window-size={window_width},{window_height}",
+        f"--window-position={pos_x},{pos_y}",
+    ]
     # Check the default browser
     if system == 'Darwin':
         # Path for Google Chrome on macOS
         chrome_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
         if os.path.exists(chrome_path):
-            command = [
-                chrome_path,
-                '--app=http://127.0.0.1:8001/',
-                '--disable-pinch',
-                '--disable-extensions',
-                '--guest'
-            ]
+            command = [chrome_path + common_args]
         print("Running command:", command)
         subprocess.Popen(command)
         return
@@ -191,47 +217,25 @@ def run_with_switches(system):
         # Typical command for launching Google Chrome on Linux
         chrome_path = '/usr/bin/google-chrome'
         if os.path.exists(chrome_path):
-            command = [
-                chrome_path,
-                '--app=http://127.0.0.1:8001/',
-                '--disable-pinch',
-                '--disable-extensions',
-                '--guest'
-            ]
+            command = [chrome_path + common_args]
         else:
             # Fallback to chromium if google-chrome is not installed
             chromium_path = '/usr/bin/chromium-browser'
             if os.path.exists(chromium_path):
-                command = [
-                    chromium_path,
-                    '--app=http://127.0.0.1:8001/',
-                    '--disable-pinch',
-                    '--disable-extensions',
-                    '--guest'
-                ]
+                command = [chrome_path + common_args]
         print("Running command:", command)
         subprocess.Popen(command)
         return
     else:
         if os.path.exists("C:/Program Files/Google/Chrome/Application/chrome.exe"):
-            command = [
-                "C:/Program Files/Google/Chrome/Application/chrome.exe",
-                '--app=http://127.0.0.1:8001/',
-                '--disable-pinch',
-                '--disable-extensions',
-                '--guest'
-            ]
+            chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe"
+            command = [chrome_path] + common_args
             print("Running command:", command)
             subprocess.Popen(command)
             return
         elif os.path.exists("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"):
-            command = [
-                "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
-                '--app=http://127.0.0.1:8001/',
-                '--disable-pinch',
-                '--disable-extensions',
-                '--guest'
-            ]
+            chrome_path = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+            command = [chrome_path] + common_args
             print("Running command:", command)
             subprocess.Popen(command)
             return
@@ -303,7 +307,7 @@ def example_api_endpoint():
     try:
         go_modules = cdll.LoadLibrary(path+'/go_modules/go_modules.so')
     except Exception as e:
-        print(str(e)+'\\n Try running `python ./gupy.py gopherize -t <target_platform> -n <app_name>`')
+        print(str(e)+'\n Try running `python ./gupy.py gopherize -t <target_platform> -n <app_name>`')
         return
 
     # Define the return type of the function
@@ -341,7 +345,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-    '''
+        '''
 
     python_modules_content = '''
 import os
@@ -984,7 +988,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))'''
         ]
         if self.lang == 'go':
             self.index_content = '''
-
  <!-- Documentation:
    https://daisyui.com/
    https://tailwindcss.com/
@@ -1029,7 +1032,7 @@ document.addEventListener('contextmenu', function(event) {
     event.preventDefault();
 });
 </script> -->
-<script src="{{url_for('static', filename='go_wasm/wasm_exec.js')}}"></script>
+<script src="{{ .wasm_exec }}"></script>
 
   <script>
     const { createApp } = Vue
@@ -1099,11 +1102,11 @@ response = {'new_msg':pyodide_msg}
       },
         mounted() {
           const go = new Go();
-          WebAssembly.instantiateStreaming(fetch("{{url_for('static', filename='go_wasm/go_wasm.wasm')}}"), go.importObject).then((result) => {
+          WebAssembly.instantiateStreaming(fetch("{{ .go_wasm_binary}}"), go.importObject).then((result) => {
             go.run(result.instance);
           });
 
-          let worker = new Worker("{{url_for('static', filename='worker.js')}}");
+          let worker = new Worker("{{ .worker_script }}");
           worker.postMessage({ message: '' });
           worker.onmessage = function (message) {
             console.log(message.data)
@@ -1118,51 +1121,160 @@ response = {'new_msg':pyodide_msg}
   </script>
 </html>      
   
+   
+  
 '''
-            self.server_content = '''
+            self.server_content = r'''
+
+
+
+
 package main
 
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
     "fmt"
-    "io/ioutil"
     "os/exec"
+	"os"
+	"os/signal"
+	"syscall"
+	"unsafe"
+	"golang.org/x/sys/windows"
+	"runtime"
 )
 
 func main() {
 	r := gin.Default()
 
-  // Serve static files
-  r.Static("/static", "./static")
+	// Load HTML templates from the "templates" folder
+	r.LoadHTMLGlob("templates/*")
+
+	// Serve static files
+	r.Static("/static", "./static")
 
 	// Routes
 	r.GET("/", index)
+	r.GET("/api/example_api_endpoint", exampleApiEndpoint) // Example API route
+
+	// Graceful Shutdown (Handles CTRL+C)
+	go func() {
+		if err := r.Run(":8080"); err != nil {
+			fmt.Println("Server stopped:", err)
+		}
+	}()
 
 	// Start the server
 	go openChrome("http://127.0.0.1:8080") // Open Chrome with your server URL
-	r.Run(":8080")
+	
+	// Gracefully handle shutdown signals
+	waitForShutdown()
 }
 
+// Serves an HTML template with dynamic data
 func index(c *gin.Context) {
-	// Load the HTML template
-	htmlPath := "./templates/index.html"
-	htmlContent, err := ioutil.ReadFile(htmlPath)
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Failed to load HTML template")
+	c.HTML(http.StatusOK, "index.html", gin.H{
+		"title":   "Welcome to Gupy!",
+		"wasm_exec": "/static/go_wasm/wasm_exec.js",
+		"worker_script": "/static/worker.js",
+		"go_wasm_binary": "/static/go_wasm/go_wasm.wasm",
+	})
+}
+
+// Example API route for a JSON response
+func exampleApiEndpoint(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"result": "success",
+	})
+}
+
+// GetScreenSize retrieves the screen width and height using the Windows API
+func GetScreenSize() (int, int) {
+	var info windows.Rect
+	user32 := syscall.NewLazyDLL("user32.dll")
+	getWindowRect := user32.NewProc("GetClientRect")
+	desktop := user32.NewProc("GetDesktopWindow")
+
+	hwnd, _, _ := desktop.Call()
+	getWindowRect.Call(hwnd, uintptr(unsafe.Pointer(&info)))
+
+	width := int(info.Right - info.Left)
+	height := int(info.Bottom - info.Top)
+	return width, height
+}
+
+// FindBrowserPath checks for Chrome/Chromium on macOS, Linux, and Windows
+func FindBrowserPath() string {
+	browserPaths := []string{}
+
+	switch runtime.GOOS {
+	case "darwin": // macOS
+		browserPaths = []string{
+			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+			"/Applications/Chromium.app/Contents/MacOS/Chromium",
+		}
+	case "linux":
+		browserPaths = []string{
+			"/usr/bin/google-chrome",
+			"/usr/bin/chromium-browser",
+			"/usr/bin/chromium",
+		}
+	case "windows":
+		browserPaths = []string{
+			"C:/Program Files/Google/Chrome/Application/chrome.exe",
+			"C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+			"C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+		}
+	}
+
+	// Check if any of the browsers exist
+	for _, path := range browserPaths {
+		if _, err := os.Stat(path); err == nil {
+			return path // Return the first valid browser path
+		}
+	}
+
+	return "" // Return empty if no browser is found
+}
+
+// Open Chrome/Chromium at the center of the screen in incognito mode
+func openChrome(url string) {
+	browserPath := FindBrowserPath()
+	if browserPath == "" {
+		fmt.Println("No Chromium-based browser found.")
 		return
 	}
 
-	// Render the HTML template
-	c.Data(http.StatusOK, "text/html; charset=utf-8", htmlContent)
-}
+	screenWidth, screenHeight := GetScreenSize()
+	windowWidth, windowHeight := 1024, 768
+	posX := (screenWidth - windowWidth) / 2
+	posY := (screenHeight - windowHeight) / 2
 
-func openChrome(url string) {
-	cmd := exec.Command("C:/Program Files/Google/Chrome/Application/chrome.exe", "--app=" + url, "--disable-pinch", "--disable-extensions", "--guest")
+	// Define browser launch arguments
+	args := []string{
+		"--app=" + url,
+		"--disable-pinch",
+		"--disable-extensions",
+		"--guest",
+		"--incognito",
+		fmt.Sprintf("--window-size=%d,%d", windowWidth, windowHeight),
+		fmt.Sprintf("--window-position=%d,%d", posX, posY),
+	}
+
+	// Launch the browser
+	cmd := exec.Command(browserPath, args...)
 	err := cmd.Start()
 	if err != nil {
-		fmt.Println("Failed to open Chrome:", err)
+		fmt.Println("Failed to open browser:", err)
 	}
+}
+// Gracefully shuts down the server when receiving a termination signal
+func waitForShutdown() {
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	<-stop // Wait for SIGINT (Ctrl+C) or SIGTERM
+	fmt.Println("\nShutting down server gracefully...")
 }
 '''
         elif self.lang == 'py':
