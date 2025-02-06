@@ -118,7 +118,7 @@ var greetCmd = &cobra.Command{
 		if name == "" {
 			name = "Guest"
 		}
-		fmt.Printf("Hello, %s! Welcome to Gupy CLI.\n", name)
+		fmt.Printf("Hello, %s! Welcome to '''+self.name+r''' CLI.\n", name)
 	},
 }
 

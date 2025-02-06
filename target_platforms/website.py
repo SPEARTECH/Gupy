@@ -894,8 +894,9 @@ return event.result;
 
         return secret_key_value
 
-    def __init__(self, name):
+    def __init__(self, name, lang):
         self.name = name
+        self.lang = lang
         self.admin_urls_content = f'''
 """{self.name} URL Configuration
 
@@ -1062,20 +1063,249 @@ function getCSRFTokenFromDOM() {
 }
 
 '''
-        self.folders = [
-          f'website',
-          ]
-        self.files = {
-            f'website/{self.name}/{self.name}_app/templates/index.html': self.index_content,
-            f'website/{self.name}/{self.name}_app/urls.py': self.urls_content,
-            f'website/{self.name}/{self.name}_app/views.py': self.views_content,
-            f'website/{self.name}/{self.name}/urls.py': self.admin_urls_content,
-            f'website/{self.name}/{self.name}_app/static/manifest.json': self.manifest_content,
-            f'website/{self.name}/sw.js': self.sw_content,
-            f'website/{self.name}/{self.name}_app/static/worker.js': self.worker_content,
-            f'website/{self.name}/{self.name}_app/static/go_wasm/go_wasm.go': self.go_wasm_content,
-            f'website/{self.name}/{self.name}_app/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
+        if self.lang == 'py':
+          self.folders = [
+            f'website',
+            ]
+          self.files = {
+              f'website/{self.name}/{self.name}_app/templates/index.html': self.index_content,
+              f'website/{self.name}/{self.name}_app/urls.py': self.urls_content,
+              f'website/{self.name}/{self.name}_app/views.py': self.views_content,
+              f'website/{self.name}/{self.name}/urls.py': self.admin_urls_content,
+              f'website/{self.name}/{self.name}_app/static/manifest.json': self.manifest_content,
+              f'website/{self.name}/sw.js': self.sw_content,
+              f'website/{self.name}/{self.name}_app/static/worker.js': self.worker_content,
+              f'website/{self.name}/{self.name}_app/static/go_wasm/go_wasm.go': self.go_wasm_content,
+              f'website/{self.name}/{self.name}_app/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
+              }
+        else:
+            self.views_content = r'''
+package main
+
+import (
+	"fmt"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+)
+
+func main() {
+	r := gin.Default()
+
+	// Enable CORS Middleware
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000", "http://127.0.0.1:5500"}, // Allow frontend domains
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowCredentials: true, // Allows sending cookies & auth headers
+		MaxAge:           12 * time.Hour, // Cache preflight requests for 12 hours
+	}))
+
+	// Load HTML templates
+	r.LoadHTMLGlob("templates/*")
+
+	// Serve static files
+	r.Static("/static", "./static")
+
+	// Routes
+	r.GET("/", index)
+	r.GET("/api/example_api_endpoint", exampleApiEndpoint) // Example API route
+
+	// Start the server
+	fmt.Println("Gupy server running at http://127.0.0.1:8080")
+	if err := r.Run(":8080"); err != nil {
+		fmt.Println("Server stopped:", err)
+	}
+
+	// Gracefully handle shutdown signals
+	waitForShutdown()
+}
+
+// Serves an HTML template with dynamic data
+func index(c *gin.Context) {
+	c.HTML(http.StatusOK, "index.html", gin.H{
+		"title":          "Welcome to Gupy!",
+		"wasm_exec":      "/static/go_wasm/wasm_exec.js",
+		"worker_script":  "/static/worker.js",
+		"go_wasm_binary": "/static/go_wasm/go_wasm.wasm",
+	})
+}
+
+// Example API route for a JSON response
+func exampleApiEndpoint(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"result": "success",
+	})
+}
+
+// Gracefully shuts down the server when receiving a termination signal
+func waitForShutdown() {
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	<-stop // Wait for SIGINT (Ctrl+C) or SIGTERM
+	fmt.Println("\nShutting down server gracefully...")
+}
+
+
+'''
+            self.index_content = r'''
+
+ <!-- Documentation:
+   https://daisyui.com/
+   https://tailwindcss.com/
+   https://www.highcharts.com/
+   https://vuejs.org/
+   https://pyodide.org/en/stable/
+   https://www.papaparse.com/
+   https://danfo.jsdata.org/
+   https://axios-http.com/docs/intro -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gupy App</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/boost.js"></script>
+  <script src="https://code.highcharts.com/modules/exporting.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+  <link rel="icon" href="/static/gupy_logo.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  </head>
+<body>
+  <div id="app" style="text-align: center;">
+    <center>
+      <div class="h-full">
+        <img class="mt-4 mask mask-squircle h-96 hover:-translate-y-2 ease-in-out transition" src="/static/gupy_logo.png" />
+        <br>
+        <button class="btn bg-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/50 text-base-100">[[ message ]] </button>
+      </div>
+    </center>
+</body>
+<!-- <script>
+  // Disable right-clicking
+document.addEventListener('contextmenu', function(event) {
+    event.preventDefault();
+});
+</script> -->
+<script src="{{ .wasm_exec }}"></script>
+
+  <script>
+    const { createApp } = Vue
+    
+    createApp({
+      delimiters : ['[[', ']]'],
+        data(){
+          return {
+            message: 'Welcome to Gupy!',
+            pyodide_msg: 'This is from Pyodide!',
+            data: {},
+          }
+        },
+        methods: {
+
+        },
+        watch: {
+
+        },
+        created(){
+            // Make a request for a user with a given ID
+            axios.get('/api/example_api_endpoint')
+            .then(function (response) {
+                // handle success
+                console.log(response);
+                this.data = JSON.parse(JSON.stringify(response['data']))
+                console.log(this.data)
+            })
+            .catch(function (error) {
+                // handle error
+                console.log(error);
+
+          try {
+            // use pyodide instead of api example
+            async function main(){
+              const pyodide = await loadPyodide();
+              pyodide.registerJsModule("mymodule", {
+                pyodide_msg: this.pyodide_msg,
+              })
+              await pyodide.loadPackage("numpy")
+              const result = await pyodide.runPython(`
+#import variables
+import mymodule
+
+# use variable
+pyodide_msg = mymodule.pyodide_msg
+
+# change variable
+pyodide_msg = 'This is the changed pyodide message!'
+
+# output response
+response = {'new_msg':pyodide_msg}
+`)
+              return JSON.parse(response)
+          }
+            response = main()
+            console.log(response.new_msg)
+          } catch (error) {
+            console.log('An error occurred: ', error);
+          }
+
+        })
+        .finally(function () {
+          // always executed
+        });
+
+      },
+        mounted() {
+          const go = new Go();
+          WebAssembly.instantiateStreaming(fetch("{{ .go_wasm_binary}}"), go.importObject).then((result) => {
+            go.run(result.instance);
+          });
+
+          let worker = new Worker("{{ .worker_script }}");
+          worker.postMessage({ message: '' });
+          worker.onmessage = function (message) {
+            console.log(message.data)
+          }
+
+        },
+        computed:{
+
+        }
+
+    }).mount('#app')
+  </script>
+</html>      
+  
+   
+  
+
+'''
+            self.files = {
+              f'website/templates/index.html': self.index_content,
+              f'website/sw.js': self.sw_content,
+              f'website/static/worker.js': self.worker_content,
+              f'website/static/go_wasm/go_wasm.go': self.go_wasm_content,
+              f'website/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
+              f'website/main.go': self.views_content,
             }
+            self.folders = [
+              f'website',
+              f'website/templates',
+              f'website/static',
+              f'website/static/go_wasm',
+              ]
+
 
     def create(self):
       # detect os and make folder
@@ -1113,109 +1343,129 @@ function getCSRFTokenFromDOM() {
                   click.echo(f'{Fore.RED}Aborting app platform creation.{Style.RESET_ALL}')
                   return
 
+      if self.lang == 'py':
+          for folder in self.folders:
+              os.mkdir(folder)
+              print(f'created "{folder}" folder.')
+          print('starting django project...')
+          os.system('echo changing directory...')
+          os.chdir(f'website/') #go into newly created folder
+          # os.system('pwd')
+          try:
+            os.system(f'django-admin startproject {self.name}')
+          except Exception as e:
+            click.echo(str(e)+f'\n{Fore.RED}Failure to run django-admin; try installing django with `python -m pip install django`{Style.RESET_ALL}')
+            return
+          print('creating django app...')
+          # print(os.getcwd())
+          os.chdir(self.name)
+          os.system(f'{cmd} manage.py startapp {self.name}_app')
+          os.mkdir(f'{self.name}_app/templates')
+          os.mkdir(f'{self.name}_app/python_modules')
+          f = open(f'{self.name}_app/python_modules/python_modules.py', 'x')
+          f.write(self.python_modules_content)
+          print(f'created "{self.name}_app/python_modules/python_modules.py" file.')
+          f.close()
+          os.mkdir(f'{self.name}_app/go_modules')
+          f = open(f'{self.name}_app/go_modules/go_modules.go', 'x')
+          f.write(self.go_modules_content)
+          print(f'created "{self.name}_app/go_modules/go_modules.go" file.')
+          f.close()    
+          os.chdir(f'{self.name}_app/go_modules/')
+          os.system(f'go mod init example/go_modules')
+          os.chdir('../')
+          os.mkdir(f'static')
+          import shutil
+          os.mkdir(f'static/css')
+          os.chdir('../../../')
+          # Get the directory of the current script
+          current_directory = os.path.dirname(os.path.abspath(__file__))
 
-      for folder in self.folders:
-          os.mkdir(folder)
-          print(f'created "{folder}" folder.')
-      print('starting django project...')
-      os.system('echo changing directory...')
-      os.chdir(f'website/') #go into newly created folder
-      # os.system('pwd')
-      try:
-        os.system(f'django-admin startproject {self.name}')
-      except Exception as e:
-        click.echo(str(e)+f'\n{Fore.RED}Failure to run django-admin; try installing django with `python -m pip install django`{Style.RESET_ALL}')
-        return
-      print('creating django app...')
-      # print(os.getcwd())
-      os.chdir(self.name)
-      os.system(f'{cmd} manage.py startapp {self.name}_app')
-      os.mkdir(f'{self.name}_app/templates')
-      os.mkdir(f'{self.name}_app/python_modules')
-      f = open(f'{self.name}_app/python_modules/python_modules.py', 'x')
-      f.write(self.python_modules_content)
-      print(f'created "{self.name}_app/python_modules/python_modules.py" file.')
-      f.close()
-      os.mkdir(f'{self.name}_app/go_modules')
-      f = open(f'{self.name}_app/go_modules/go_modules.go', 'x')
-      f.write(self.go_modules_content)
-      print(f'created "{self.name}_app/go_modules/go_modules.go" file.')
-      f.close()    
-      os.chdir(f'{self.name}_app/go_modules/')
-      os.system(f'go mod init example/go_modules')
-      os.chdir('../')
-      os.mkdir(f'static')
-      import shutil
-      os.mkdir(f'static/css')
-      os.chdir('../../../')
-      # Get the directory of the current script
-      current_directory = os.path.dirname(os.path.abspath(__file__))
+          # Construct the path to the target file
+          requirements_directory = os.path.join(os.path.dirname(current_directory), 'requirements.txt')       
+          
+          shutil.copy(requirements_directory, f'website/requirements.txt')
 
-      # Construct the path to the target file
-      requirements_directory = os.path.join(os.path.dirname(current_directory), 'requirements.txt')       
-      
-      shutil.copy(requirements_directory, f'website/requirements.txt')
+          logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
+          
+          shutil.copy(logo_directory, f'website/{self.name}/{self.name}_app/static/gupy_logo.png')
 
-      logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
-      
-      shutil.copy(logo_directory, f'website/{self.name}/{self.name}_app/static/gupy_logo.png')
+          # add npm install, init, tailwindcss install, init, daisyui install, tailwind config generation (with daisy theme)
+          os.mkdir(f'website/{self.name}/{self.name}_app/static/go_wasm')
+          for file in self.files:
+              with open(file, 'w') as f:
+                f.write(self.files.get(file))
+                print(f'created "{file}" file.')
+        #   with open(f'views.py','w') as f:
+        #     f.write(self.server_content)
+          os.chdir(f'website/{self.name}/{self.name}_app/static/go_wasm/')
+          os.system(f'go mod init example/go_wasm')
+          os.chdir('../../../')
+          os.chdir(f'{self.name}/')
+        #   print(os.getcwd())
+          settings_file_path = f'settings.py'  
+          print(settings_file_path)
+          # Add to lists
+          self.add_entry_to_list(settings_file_path, 'ALLOWED_HOSTS', ['127.0.0.1'])
+          self.add_entry_to_list(settings_file_path, 'INSTALLED_APPS', [
+              'corsheaders', #newly added
+              'rest_framework', #newly added
+              'rest_framework.authtoken', #newly added
+          ])
+          self.add_entry_to_list(settings_file_path, 'MIDDLEWARE', [
+              'corsheaders.middleware.CorsMiddleware', #newly added
+          ])  
+          # Add new setting
+          self.add_new_setting(settings_file_path, 'CORS_ALLOWED_ORIGINS', [
+              "http://127.0.0.1:8001",
+          ])
+          self.add_new_setting(settings_file_path, 'INSTALLED_APPS', [
+            # Application definition
+            f'{self.name}_app',
+            'corsheaders', #newly added
+            'rest_framework', #newly added
+            'rest_framework.authtoken', #newly added
+            'django.contrib.admin',
+            'django.contrib.auth',
+            'django.contrib.contenttypes',
+            'django.contrib.sessions',
+            'django.contrib.messages',
+            'django.contrib.staticfiles',
+          ])
 
-      # add npm install, init, tailwindcss install, init, daisyui install, tailwind config generation (with daisy theme)
-      os.mkdir(f'website/{self.name}/{self.name}_app/static/go_wasm')
-      for file in self.files:
-          with open(file, 'w') as f:
-            f.write(self.files.get(file))
-            print(f'created "{file}" file.')
-    #   with open(f'views.py','w') as f:
-    #     f.write(self.server_content)
-      os.chdir(f'website/{self.name}/{self.name}_app/static/go_wasm/')
-      os.system(f'go mod init example/go_wasm')
-      os.chdir('../../../')
-      os.chdir(f'{self.name}/')
-    #   print(os.getcwd())
-      settings_file_path = f'settings.py'  
-      print(settings_file_path)
-      # Add to lists
-      self.add_entry_to_list(settings_file_path, 'ALLOWED_HOSTS', ['127.0.0.1'])
-      self.add_entry_to_list(settings_file_path, 'INSTALLED_APPS', [
-          'corsheaders', #newly added
-          'rest_framework', #newly added
-          'rest_framework.authtoken', #newly added
-      ])
-      self.add_entry_to_list(settings_file_path, 'MIDDLEWARE', [
-          'corsheaders.middleware.CorsMiddleware', #newly added
-      ])  
-      # Add new setting
-      self.add_new_setting(settings_file_path, 'CORS_ALLOWED_ORIGINS', [
-          "http://127.0.0.1:8001",
-      ])
-      self.add_new_setting(settings_file_path, 'INSTALLED_APPS', [
-        # Application definition
-        f'{self.name}_app',
-        'corsheaders', #newly added
-        'rest_framework', #newly added
-        'rest_framework.authtoken', #newly added
-        'django.contrib.admin',
-        'django.contrib.auth',
-        'django.contrib.contenttypes',
-        'django.contrib.sessions',
-        'django.contrib.messages',
-        'django.contrib.staticfiles',
-      ])
+          os.chdir(f'../')
+          secret_key_file_path = 'secret_key.py'
+          # Extract the SECRET_KEY and replace it in settings.py
+          secret_key_value = self.extract_and_replace_secret_key(f'{self.name}/{settings_file_path}')
+          # Create the secret_key.py file with the extracted SECRET_KEY value
 
-      os.chdir(f'../')
-      secret_key_file_path = 'secret_key.py'
-      # Extract the SECRET_KEY and replace it in settings.py
-      secret_key_value = self.extract_and_replace_secret_key(f'{self.name}/{settings_file_path}')
-      # Create the secret_key.py file with the extracted SECRET_KEY value
+          self.create_secret_key_file(secret_key_file_path, secret_key_value)
+          os.chdir(f'../../')
+          # print(os.getcwd())
+          self.cythonize()
+          self.gopherize()
+          self.assemble()
+      else:
+          for folder in self.folders:
+              os.mkdir(folder)
+              print(f'created "{folder}" folder.')
+          for file in self.files:
+              with open(file, 'w') as f:
+                f.write(self.files.get(file))
+                print(f'created "{file}" file.')
 
-      self.create_secret_key_file(secret_key_file_path, secret_key_value)
-      os.chdir(f'../../')
-      # print(os.getcwd())
-      self.cythonize()
-      self.gopherize()
-      self.assemble()
+          # Get the directory of the current script
+          current_directory = os.path.dirname(os.path.abspath(__file__))
+          logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
+          shutil.copy(logo_directory, f'website/static/gupy_logo.png')
 
+          os.chdir(f'website/static/go_wasm/')
+          os.system(f'go mod init example/go_wasm')
+          os.chdir('../../')
+          os.system(f'go mod init {self.name}')
+          os.system('go get github.com/gin-contrib/cors')
+          os.chdir('../')
+          self.assemble()
 
     def run(self):
         if os.path.exists(f'{self.name}/manage.py'):
@@ -1229,10 +1479,9 @@ function getCSRFTokenFromDOM() {
             else:
                 cmd = 'python'
             os.system(f'{cmd} {self.name}/manage.py runserver')
-        # else:
-        #     os.chdir(f'gupy_apps/{name}/desktop/dev')
-        #     os.system(f'go mod tidy')
-        #     os.system(f'go run server.go')
+        else:
+            os.system(f'go mod tidy')
+            os.system(f'go run main.go')
 
 
     # def compile(self,name):
@@ -1303,32 +1552,56 @@ setup(
                 print(f'Building {file} file...')
                 os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
             os.chdir('../../../../')
-        print(os.getcwd())
+        # print(os.getcwd())
 
     def assemble(self):
         # print(os.getcwd())
-        os.chdir(f'website/{self.name}/{self.name}_app/static/go_wasm')
-        os.system(f'go mod tidy')
-        def build_wasm(filename):
-          # Set the environment variables
-          env = os.environ.copy()
-          env['GOOS'] = 'js'
-          env['GOARCH'] = 'wasm'
-          
-          # Command to execute
-          command = f'go build -o {os.path.splitext(filename)[0]}.wasm'
-          
-          # Execute the command
-          result = subprocess.run(command, shell=True, env=env)
-          
-          # Check if the command was successful
-          if result.returncode == 0:
-              click.echo(f"{Fore.GREEN}Build successful.{Style.RESET_ALL}")
-          else:
-              click.echo(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
-        files = [f for f in glob.glob('*.go')]
-        for filename in files:
-          build_wasm(filename)
-        os.chdir('../../../../../')
-
+        if self.lang == 'py':
+            os.chdir(f'website/{self.name}/{self.name}_app/static/go_wasm')
+            os.system(f'go mod tidy')
+            def build_wasm(filename):
+              # Set the environment variables
+              env = os.environ.copy()
+              env['GOOS'] = 'js'
+              env['GOARCH'] = 'wasm'
+              
+              # Command to execute
+              command = f'go build -o {os.path.splitext(filename)[0]}.wasm'
+              
+              # Execute the command
+              result = subprocess.run(command, shell=True, env=env)
+              
+              # Check if the command was successful
+              if result.returncode == 0:
+                  click.echo(f"{Fore.GREEN}Build successful.{Style.RESET_ALL}")
+              else:
+                  click.echo(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
+            files = [f for f in glob.glob('*.go')]
+            for filename in files:
+              build_wasm(filename)
+            os.chdir('../../../../../')
+        else:
+            os.chdir(f'website/static/go_wasm')
+            os.system(f'go mod tidy')
+            def build_wasm(filename):
+              # Set the environment variables
+              env = os.environ.copy()
+              env['GOOS'] = 'js'
+              env['GOARCH'] = 'wasm'
+              
+              # Command to execute
+              command = f'go build -o {os.path.splitext(filename)[0]}.wasm'
+              
+              # Execute the command
+              result = subprocess.run(command, shell=True, env=env)
+              
+              # Check if the command was successful
+              if result.returncode == 0:
+                  click.echo(f"{Fore.GREEN}Build successful.{Style.RESET_ALL}")
+              else:
+                  click.echo(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
+            files = [f for f in glob.glob('*.go')]
+            for filename in files:
+              build_wasm(filename)
+            os.chdir('../../../')
         # add assembly of cython modules

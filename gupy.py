@@ -126,16 +126,14 @@ def create(name,target_platform, language):
     elif '.' in NAME:
         click.echo(f'{Fore.RED}Error: Invalid character of "." in app name. Rename your app to '+ NAME.replace('.','_') +f'.{Style.RESET_ALL}')
         return
-    if not LANG and 'pwa' not in target_platform and 'website' not in target_platform and 'mobile' not in target_platform:
-        click.echo(f"{Fore.RED}Error: Option '-l/--language' is required for ['desktop', 'cli', 'api', 'script'] targets.{Style.RESET_ALL}")
+    if not LANG and 'pwa' not in target_platform and 'mobile' not in target_platform:
+        click.echo(f"{Fore.RED}Error: Option '-l/--language' is required for ['desktop', 'website', 'cli', 'api', 'script'] targets.{Style.RESET_ALL}")
         return
     elif LANG and LANG != 'py' and LANG != 'go':
         click.echo(f'{Fore.RED}Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang){Style.RESET_ALL}')
         return
     elif not LANG and (target_platform == ('pwa',) or target_platform == ('mobile',) or target_platform == ('pwa','mobile',)):
         LANG = 'js'
-    elif not LANG and target_platform == ('website',):
-        LANG = 'py'
 
     dir_list = os.getcwd().split(delim)
     if NAME in dir_list or NAME in os.listdir('.'):
@@ -169,10 +167,10 @@ Confirm?
         pwa.Pwa(NAME).create()
 
     if 'website' in TARGETS: #create files/folder for django project if applicable
-        if LANG == 'go':
-            click.echo(f'{Fore.RED}Go Website feature is not yet available...{Style.RESET_ALL}')
-            return
-        website.Website(NAME).create()
+        # if LANG == 'go':
+        #     click.echo(f'{Fore.RED}Go Website feature is not yet available...{Style.RESET_ALL}')
+        #     return
+        website.Website(NAME,LANG).create()
 
     if 'cli' in TARGETS: #create files/folder structure for cli app if applicable
         # if LANG == 'go':
@@ -229,7 +227,7 @@ def run():
             TARGET='website'
             change_dir(dir_list,TARGET)
             NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
-            app_obj = website.Website(NAME)
+            app_obj = website.Website(NAME,LANG)
             app_obj.run()
         elif 'cli' in dir_list:
             TARGET='cli'
@@ -299,10 +297,10 @@ def cythonize(file):
         delim = '\\'
     files = [f for f in os.listdir('.') if os.path.isfile(f)]
     if '-' in os.getcwd().split(delim)[-1]:
-        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('-','_') +'.')
+        click.echo(f'{Fore.RED}Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('-','_') +f'.{Style.RESET_ALL}')
         return
     elif '.' in os.getcwd().split(delim)[-1]:
-        print('Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('.','_') +'.')
+        click.echo(f'{Fore.RED}Error: Invalid character of "-" in current folder name. Rename this folder to '+ os.getcwd().split(delim)[-1].replace('.','_') +f'.{Style.RESET_ALL}')
         return
 
     for item in file:
