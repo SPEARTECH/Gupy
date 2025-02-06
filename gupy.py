@@ -175,9 +175,9 @@ Confirm?
         website.Website(NAME).create()
 
     if 'cli' in TARGETS: #create files/folder structure for cli app if applicable
-        if LANG == 'go':
-            click.echo(f'{Fore.RED}Go CLI feature is not yet available...{Style.RESET_ALL}')
-            return
+        # if LANG == 'go':
+        #     click.echo(f'{Fore.RED}Go CLI feature is not yet available...{Style.RESET_ALL}')
+        #     return
         cmdline.CLI(NAME,LANG).create()
 
     if 'script' in TARGETS: #create files/folder structure for script app if applicable
