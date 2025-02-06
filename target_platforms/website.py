@@ -41,7 +41,7 @@ class Website(base.Base):
   <script src="https://code.highcharts.com/modules/exporting.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
-  <link rel="icon" href="./gupy_logo.png" type="image/png">
+  <link rel="icon" href="{% static 'gupy_logo.png' %}" type="image/png">
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   </head>
 <body>
