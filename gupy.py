@@ -567,12 +567,12 @@ authors = [
 description = "A small example package"
 readme = "README.md"
 requires-python = ">=3.11"
-classifiers = [
-"Programming Language    Python    3",
-"License    OSI Approved    MIT License",
-"Operating System    OS Independent",
+classifiers = ['''+r'''
+"Programming Language :: Python :: 3",
+"License :: OSI Approved :: MIT License",
+"Operating System :: OS Independent",
 ]
-
+'''+'''
 # Add your dependencies here
 dependencies = [
 '''+ str(requirements_string) +f'''

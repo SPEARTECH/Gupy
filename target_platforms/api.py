@@ -1,5 +1,60 @@
 from . import base
 import os
+FAST_API_content = '''
+
+from fastapi import FastAPI
+
+app = FastAPI()
+
+@app.get("/")
+def read_root():
+    return {"message": "FastAPI is running!"}
+
+@app.get("/items/{item_id}")
+def read_item(item_id: int):
+    return {"item_id": item_id, "name": f"Item {item_id}"}
+
+def main():
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+if __name__ == "__main__":
+    main()
+
+    '''
+
+FIBER_content = '''
+package main
+
+import (
+	"log"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+func main() {
+	app := fiber.New()
+
+	// Root endpoint
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"message": "Fiber API is running!"})
+	})
+
+	// Example endpoint with dynamic parameter
+	app.Get("/items/:id", func(c *fiber.Ctx) error {
+		id := c.Params("id")
+		return c.JSON(fiber.Map{"item_id": id, "name": "Sample Item"})
+	})
+
+	// Start server
+	port := ":3000"
+	log.Printf("Server running on http://localhost%s", port)
+	log.Fatal(app.Listen(port))
+}
+
+'''
+
+from . import base
+import os
 import platform
 import glob
 import subprocess
@@ -55,10 +110,10 @@ document.addEventListener('contextmenu', function(event) {
     event.preventDefault();
 });
 </script> -->
-<script src="{{url_for('static', filename='go_wasm/wasm_exec.js')}}"></script>
 
-  <script>
+  <script type="module">
     const { createApp } = Vue
+     import { loadGoWasm } from '{{url_for('static', filename='go_wasm.js')}}';
     
     createApp({
       delimiters : ['[[', ']]'],
@@ -123,11 +178,13 @@ response = {'new_msg':pyodide_msg}
         });
 
       },
-        mounted() {
-          const go = new Go();
-          WebAssembly.instantiateStreaming(fetch("{{url_for('static', filename='go_wasm/go_wasm.wasm')}}"), go.importObject).then((result) => {
-            go.run(result.instance);
-          });
+        async mounted() {
+          try {
+            const goExports = await loadGoWasm();
+            console.log("Go WebAssembly ran add(5,7) and returned:" + goExports.add(5, 7));
+          } catch (error) {
+            console.error("Error loading Go WASM:", error);
+          }
 
           let worker = new Worker("{{url_for('static', filename='worker.js')}}");
           worker.postMessage({ message: '' });
@@ -146,47 +203,156 @@ response = {'new_msg':pyodide_msg}
   
 '''
 
-    server_content = '''
+    server_content = r'''
 
-from fastapi import FastAPI
 
-app = FastAPI()
+# Documentation:
+#   https://flask.palletsprojects.com/en/3.0.x/
 
-@app.get("/")
-def read_root():
-    return {"message": "FastAPI is running!"}
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int):
-    return {"item_id": item_id, "name": f"Item {item_id}"}
-
-def main():
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-if __name__ == "__main__":
-    main()
-
-    '''
-
-    python_modules_content = '''
+import subprocess
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 import os
-from ctypes import cdll, c_char_p
+import sys
+from flask import Flask, render_template, render_template_string, request, jsonify, send_file, make_response
+from werkzeug.utils import secure_filename
+# import numpy as np
+import json
+import platform
+import screeninfo  # Install with `pip install screeninfo`
+import webbrowser
 
-def main():
+def get_screen_size():
+    """Returns screen width and height."""
+    try:
+        screen = screeninfo.get_monitors()[0]  # Get primary monitor
+        return screen.width, screen.height
+    except Exception as e:
+        print("Could not get screen resolution:", e)
+        return 1920, 1080  # Default resolution if detection fails
+    
+
+# WORKSAFE=False
+# try:
+#     from gevent.pywsgi import WSGIServer
+# except Exception as e:
+#     print(e)
+#     WORKSAFE=True
+def get_platform_type():
+    system = platform.system()
+    return system
+
+def run_with_switches(system):
+    webbrowser.open_new_tab('http://127.0.0.1:8001')
+
+def stop_previous_flask_server():
+    try:
+        # Read the PID from the file
+        with open(f'{os.path.expanduser("~")}/flask_server.pid', 'r') as f:
+            pid = int(f.read().strip())
+
+        # # Check if the Flask server process is still running
+        # while True:
+        #     if not os.path.exists(f'/proc/{pid}'):
+        #         break  # Exit the loop if the process has exited
+        #     time.sleep(1)  # Sleep for a short duration before checking again
+
+        # Terminate the Flask server process
+        command = f'taskkill /F /PID {pid}'
+        subprocess.run(command, shell=True, check=True)
+        print("Previous Flask server process terminated.")
+    except Exception as e:
+        print(f"Error stopping previous Flask server: {e}")
+
+app = Flask(__name__)
+
+
+# getting the name of the directory
+# where the this file is present.
+path = os.path.dirname(os.path.realpath(__file__))
+
+
+# Routes
+@app.route('/')
+def index():
+    # html = """
+   
+    # """
+
+    # file_path = f'{os.path.dirname(os.path.realpath(__file__))}/templates/index.html'
+
+    # with open(file_path, 'r') as file:
+    #     html = ''
+    #     for line in file:
+    #         html += line
+            
+    #     return render_template_string(html)
+        # return render('index.html')
+        return render_template('index.html')
+
+@app.route('/api/example_api_endpoint', methods=['GET'])
+def example_api_endpoint():
+    # Get the data from the request
+    # data = request.json.get('data') # for POST requests with data
+
+    #read from python/cython module
+    from python_modules import python_modules
+
+    py_message = python_modules.main()
+    
+    #read from go module
+    from ctypes import cdll, c_char_p
+
     path = os.path.dirname(os.path.realpath(__file__))
 
     # Load the shared library
     try:
-        go_modules = cdll.LoadLibrary(path+'/../go_modules/go_modules.so')
+        go_modules = cdll.LoadLibrary(path+'/go_modules/go_modules.so')
     except Exception as e:
-        print(str(e)+'\\n Try running `python ./gupy.py gopherize -t <target_platform> -n <app_name>`')
+        print(str(e)+'\n Try running `python ./gupy.py gopherize -t <target_platform> -n <app_name>`')
         return
 
     # Define the return type of the function
     go_modules.go_module.restype = c_char_p
+    
+    go_message = go_modules.go_module().decode('utf-8')
 
-    # Call the Go function and decode the returned bytes to a string
-    result = go_modules.go_module().decode('utf-8')
+    data = {'Python Module Message':py_message,'Go Module Message':go_message}
+
+    # Perform data processing
+
+    # Return the modified data as JSON
+    return jsonify({'result': data})
+
+def main():
+    stop_previous_flask_server()
+
+    pid_file = f'{os.path.expanduser("~")}/flask_server.pid'
+    with open(pid_file, 'w') as f:
+        f.write(str(os.getpid()))  # Write the PID to the file
+
+    # ADD SPLASH SCREEN?
+
+    # Get current system type
+    system = get_platform_type()
+
+    # Run Apped Chrome Window
+    run_with_switches(system)
+
+    # if WORKSAFE == False:
+    #     http_server = WSGIServer(("127.0.0.1", 8000), app)
+    #     http_server.serve_forever()
+    # else:
+    app.run(debug=True, threaded=True, port=8001, use_reloader=False)
+
+if __name__ == '__main__':
+    main()
+        '''
+
+    python_modules_content = '''
+import os
+
+def main():
+    result = 'Welcome to Gupy!'
 
     return result
 
@@ -227,13 +393,36 @@ onmessage = function(message){
     '''
 
 
-    go_wasm_content = '''
+    go_wasm_content = r'''
+// go_wasm/go_wasm.go
 package main
 
-import "fmt"
+import (
+	"syscall/js"
+	"fmt"
+)
+
+// add is a function that adds two integers passed from JavaScript.
+func add(this js.Value, args []js.Value) interface{} {
+	// Convert JS values to Go ints.
+	a := args[0].Int()
+	b := args[1].Int()
+	sum := a + b
+	fmt.Printf("Adding %d and %d to get %d\n", a, b, sum)
+	return sum
+}
 
 func main() {
-	fmt.Println("Hello, from Go WebAssembly!")
+	fmt.Println("Go WebAssembly loaded and exposing functions.")
+
+	// Register the add function on the global object.
+	js.Global().Set("add", js.FuncOf(add))
+	
+	// Optionally, register more functions similarly:
+	// js.Global().Set("multiply", js.FuncOf(multiply))
+
+	// Prevent the Go program from exiting.
+	select {}
 }
     '''
 
@@ -819,11 +1008,49 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))'''
           f'api/templates',
           f'api/static',
           f'api/static/go_wasm',
-          # f'{self.name}/desktop/dev/templates/python_wasm',
+          # f'{self.name}/api/dev/templates/python_wasm',
         ]
+        self.go_wasm_js_content = '''
+// go_wasm.js
+// This function initializes the Go WASM module and returns an object with exported functions.
+export async function loadGoWasm() {
+  // Dynamically import wasm_exec.js. (Make sure it’s included in your package.)
+  await import('./go_wasm/wasm_exec.js');
+
+  // Create a new Go instance.
+  const go = new Go();
+
+  // Construct an absolute URL for the WASM file relative to this module.
+  const wasmURL = new URL('./go_wasm/go_wasm.wasm', import.meta.url);
+
+  // Use instantiateStreaming with a fallback to ArrayBuffer.
+  let result;
+  try {
+    result = await WebAssembly.instantiateStreaming(fetch(wasmURL), go.importObject);
+  } catch (streamingError) {
+    console.warn("instantiateStreaming failed, falling back:", streamingError);
+    const response = await fetch(wasmURL);
+    const buffer = await response.arrayBuffer();
+    result = await WebAssembly.instantiate(buffer, go.importObject);
+  }
+
+  // Run the Go WebAssembly module. Note that go.run is asynchronous,
+  // but it blocks further execution until the Go code stops.
+  // In our case, the Go code never exits (because of select{}), but that’s fine.
+  go.run(result.instance);
+
+  // At this point, the Go code has registered its functions on the global object.
+  // Return an object with references to the exported functions.
+  return {
+    add: globalThis.add
+    // Add other exported functions here if needed.
+  };
+}
+
+'''
+
         if self.lang == 'go':
             self.index_content = '''
-
  <!-- Documentation:
    https://daisyui.com/
    https://tailwindcss.com/
@@ -868,10 +1095,10 @@ document.addEventListener('contextmenu', function(event) {
     event.preventDefault();
 });
 </script> -->
-<script src="{{url_for('static', filename='go_wasm/wasm_exec.js')}}"></script>
 
-  <script>
+  <script type="module">
     const { createApp } = Vue
+     import { loadGoWasm } from '{{ .go_wasm_js }}';
     
     createApp({
       delimiters : ['[[', ']]'],
@@ -936,13 +1163,15 @@ response = {'new_msg':pyodide_msg}
         });
 
       },
-        mounted() {
-          const go = new Go();
-          WebAssembly.instantiateStreaming(fetch("{{url_for('static', filename='go_wasm/go_wasm.wasm')}}"), go.importObject).then((result) => {
-            go.run(result.instance);
-          });
+        async mounted() {
+          try {
+            const goExports = await loadGoWasm();
+            console.log("Go WebAssembly ran add(5,7) and returned:" + goExports.add(5, 7));
+          } catch (error) {
+            console.error("Error loading Go WASM:", error);
+          }
 
-          let worker = new Worker("{{url_for('static', filename='worker.js')}}");
+          let worker = new Worker("{{ .worker_script }}");
           worker.postMessage({ message: '' });
           worker.onmessage = function (message) {
             console.log(message.data)
@@ -957,34 +1186,154 @@ response = {'new_msg':pyodide_msg}
   </script>
 </html>      
   
+   
+  
 '''
-            self.server_content = '''
+            self.server_content = r'''
+
+
+
+
 package main
 
 import (
-	"log"
-
-	"github.com/gofiber/fiber/v2"
+	"github.com/gin-gonic/gin"
+	"net/http"
+    "fmt"
+    "os/exec"
+	"os"
+	"os/signal"
+	"syscall"
+	"unsafe"
+	"golang.org/x/sys/windows"
+	"runtime"
 )
 
-func main() {
-	app := fiber.New()
+func main() {    
+	r := gin.Default()
 
-	// Root endpoint
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{"message": "Fiber API is running!"})
+	// Load HTML templates from the "templates" folder
+	r.LoadHTMLGlob("templates/*")
+
+	// Serve static files
+	r.Static("/static", "./static")
+
+	// Routes
+	r.GET("/", index)
+	r.GET("/api/example_api_endpoint", exampleApiEndpoint) // Example API route
+
+	// Graceful Shutdown (Handles CTRL+C)
+	go func() {
+		if err := r.Run(":8080"); err != nil {
+			fmt.Println("Server stopped:", err)
+		}
+	}()
+
+	// Start the server
+	go openChrome("http://127.0.0.1:8080") // Open Chrome with your server URL
+	
+	// Gracefully handle shutdown signals
+	waitForShutdown()
+}
+
+// Serves an HTML template with dynamic data
+func index(c *gin.Context) {
+	c.HTML(http.StatusOK, "index.html", gin.H{
+		"title":   "Welcome to Gupy!",
+		"go_wasm_js": "/static/go_wasm.js",
+		"worker_script": "/static/worker.js",
+		"go_wasm_binary": "/static/go_wasm/go_wasm.wasm",
 	})
+}
 
-	// Example endpoint with dynamic parameter
-	app.Get("/items/:id", func(c *fiber.Ctx) error {
-		id := c.Params("id")
-		return c.JSON(fiber.Map{"item_id": id, "name": "Sample Item"})
+// Example API route for a JSON response
+func exampleApiEndpoint(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"result": "success",
 	})
+}
 
-	// Start server
-	port := ":3000"
-	log.Printf("Server running on http://localhost%s", port)
-	log.Fatal(app.Listen(port))
+// GetScreenSize retrieves the screen width and height using the Windows API
+func GetScreenSize() (int, int) {
+	var info windows.Rect
+	user32 := syscall.NewLazyDLL("user32.dll")
+	getWindowRect := user32.NewProc("GetClientRect")
+	desktop := user32.NewProc("GetDesktopWindow")
+
+	hwnd, _, _ := desktop.Call()
+	getWindowRect.Call(hwnd, uintptr(unsafe.Pointer(&info)))
+
+	width := int(info.Right - info.Left)
+	height := int(info.Bottom - info.Top)
+	return width, height
+}
+
+// FindBrowserPath checks for Chrome/Chromium on macOS, Linux, and Windows
+func FindBrowserPath() string {
+	browserPaths := []string{}
+
+	switch runtime.GOOS {
+	case "darwin": // macOS
+		browserPaths = []string{
+			"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+			"/Applications/Chromium.app/Contents/MacOS/Chromium",
+		}
+	case "linux":
+		browserPaths = []string{
+			"/usr/bin/google-chrome",
+			"/usr/bin/chromium-browser",
+			"/usr/bin/chromium",
+		}
+	case "windows":
+		browserPaths = []string{
+			"C:/Program Files/Google/Chrome/Application/chrome.exe",
+			"C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+			"C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+		}
+	}
+
+	// Check if any of the browsers exist
+	for _, path := range browserPaths {
+		if _, err := os.Stat(path); err == nil {
+			return path // Return the first valid browser path
+		}
+	}
+
+	return "" // Return empty if no browser is found
+}
+
+// Open Chrome/Chromium at the center of the screen in incognito mode
+func openChrome(url string) {
+	browserPath := FindBrowserPath()
+	if browserPath == "" {
+		fmt.Println("No Chromium-based browser found.")
+		return
+	}
+
+	screenWidth, screenHeight := GetScreenSize()
+	windowWidth, windowHeight := 1024, 768
+	posX := (screenWidth - windowWidth) / 2
+	posY := (screenHeight - windowHeight) / 2
+
+	// Define browser launch arguments
+	args := []string{
+		"--app=" + url,
+	}
+
+	// Launch the browser
+	cmd := exec.Command(browserPath, args...)
+	err := cmd.Start()
+	if err != nil {
+		fmt.Println("Failed to open browser:", err)
+	}
+}
+// Gracefully shuts down the server when receiving a termination signal
+func waitForShutdown() {
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	<-stop // Wait for SIGINT (Ctrl+C) or SIGTERM
+	fmt.Println("\nShutting down server gracefully...")
 }
 '''
         elif self.lang == 'py':
@@ -1002,6 +1351,7 @@ if __name__ == "__main__":
             f'api/templates/index.html': self.index_content,
             f'api/static/go_wasm/go_wasm.go': self.go_wasm_content,
             f'api/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
+            f'api/static/go_wasm.js': self.go_wasm_js_content,
             f'api/static/worker.js': self.worker_content,
             }
 
@@ -1066,7 +1416,7 @@ if __name__ == "__main__":
             os.chdir(f'../../')
         else:
             os.system(f'go mod init example/{self.name}')
-            os.system(f'go get -u github.com/gofiber/fiber/v2')
+            os.system(f'go get github.com/gin-gonic/gin')
             # os.system(f'go mod tidy')
             os.chdir(f'../')
         # system = platform.system()
@@ -1113,7 +1463,7 @@ if __name__ == "__main__":
 
             os.system(f'{cmd} server.py')
         elif os.path.exists(f'main.go'):
-            # os.chdir(f'desktop')
+            # os.chdir(f'api')
             os.system(f'go mod tidy')
             os.system(f'go run main.go')
         else:

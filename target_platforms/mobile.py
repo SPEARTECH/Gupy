@@ -76,9 +76,9 @@ document.addEventListener('contextmenu', function(event) {
     event.preventDefault();
 });
 </script> -->
-<script src="go_wasm/wasm_exec.js"></script>
-  <script>
+  <script type="module">
     const { createApp } = Vue
+     import { loadGoWasm } from './go_wasm.js';
     
     createApp({
       delimiters : ['[[', ']]'],
@@ -157,11 +157,13 @@ response = {'new_msg':pyodide_msg}
         });
 
       },
-        mounted() {
-          const go = new Go();
-          WebAssembly.instantiateStreaming(fetch("go_wasm/go_wasm.wasm"), go.importObject).then((result) => {
-            go.run(result.instance);
-          });
+        async mounted() {
+          try {
+            const goExports = await loadGoWasm();
+            console.log("Go WebAssembly ran add(5,7) and returned:" + goExports.add(5, 7));
+          } catch (error) {
+            console.error("Error loading Go WASM:", error);
+          }
 
           let worker = new Worker('worker.js');
           worker.postMessage({ message: '' });
@@ -190,13 +192,36 @@ onmessage = function(message){
 
 '''
 
-    go_wasm_content = '''
+    go_wasm_content = r'''
+// go_wasm/go_wasm.go
 package main
 
-import "fmt"
+import (
+	"syscall/js"
+	"fmt"
+)
+
+// add is a function that adds two integers passed from JavaScript.
+func add(this js.Value, args []js.Value) interface{} {
+	// Convert JS values to Go ints.
+	a := args[0].Int()
+	b := args[1].Int()
+	sum := a + b
+	fmt.Printf("Adding %d and %d to get %d\n", a, b, sum)
+	return sum
+}
 
 func main() {
-	fmt.Println("Hello, from Go WebAssembly!")
+	fmt.Println("Go WebAssembly loaded and exposing functions.")
+
+	// Register the add function on the global object.
+	js.Global().Set("add", js.FuncOf(add))
+	
+	// Optionally, register more functions similarly:
+	// js.Global().Set("multiply", js.FuncOf(multiply))
+
+	// Prevent the Go program from exiting.
+	select {}
 }
 '''
 
@@ -787,6 +812,45 @@ return event.result;
 }
 '''
 
+        self.go_wasm_js_content = '''
+// index.mjs
+// This function initializes the Go WASM module and returns an object with exported functions.
+export async function loadGoWasm() {
+  // Dynamically import wasm_exec.js. (Make sure it’s included in your package.)
+  await import('./go_wasm/wasm_exec.js');
+
+  // Create a new Go instance.
+  const go = new Go();
+
+  // Construct an absolute URL for the WASM file relative to this module.
+  const wasmURL = new URL('./go_wasm/go_wasm.wasm', import.meta.url);
+
+  // Use instantiateStreaming with a fallback to ArrayBuffer.
+  let result;
+  try {
+    result = await WebAssembly.instantiateStreaming(fetch(wasmURL), go.importObject);
+  } catch (streamingError) {
+    console.warn("instantiateStreaming failed, falling back:", streamingError);
+    const response = await fetch(wasmURL);
+    const buffer = await response.arrayBuffer();
+    result = await WebAssembly.instantiate(buffer, go.importObject);
+  }
+
+  // Run the Go WebAssembly module. Note that go.run is asynchronous,
+  // but it blocks further execution until the Go code stops.
+  // In our case, the Go code never exits (because of select{}), but that’s fine.
+  go.run(result.instance);
+
+  // At this point, the Go code has registered its functions on the global object.
+  // Return an object with references to the exported functions.
+  return {
+    add: globalThis.add
+    // Add other exported functions here if needed.
+  };
+}
+
+'''
+
         self.folders = [
             f'mobile',
             f'mobile/go_wasm',
@@ -795,6 +859,7 @@ return event.result;
             f'mobile/index.html': self.index_content,
             f'mobile/manifest.js': self.manifest_content,
             f'mobile/worker.js': self.worker_content,
+            f'pwa/go_wasm.js': self.go_wasm_js_content,
             f'mobile/go_wasm/go_wasm.go': self.go_wasm_content,
             f'mobile/go_wasm/wasm_exec.js': self.wasm_exec_content,
             }
@@ -892,10 +957,9 @@ return event.result;
             delim = '/'
         else:
             delim = '\\'
-        os.chdir(f'pwa')
+        os.chdir(f'mobile')
         # assign current python executable to use
         cmd = sys.executable.split(delim)[-1]
-
         os.system(f'{cmd} -m http.server')
 
       # def cythonize(self, name):
