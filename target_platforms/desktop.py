@@ -1197,6 +1197,8 @@ response = {'new_msg':pyodide_msg}
 
 package main
 
+import "C"
+
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -1209,6 +1211,11 @@ import (
 	"golang.org/x/sys/windows"
 	"runtime"
 )
+
+//export StartServer
+func StartServer(){
+  main()
+}
 
 func main() {    
 	r := gin.Default()

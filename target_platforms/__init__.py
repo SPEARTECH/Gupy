@@ -6,5 +6,6 @@ __all__ = [
     'website',
     'script',
     'api',
-    'mobile'
+    'mobile',
+    'etl'
 ]
