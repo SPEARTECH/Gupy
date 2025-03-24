@@ -595,7 +595,9 @@ include = ["*"]
 
 [tool.hatch.build.targets.wheel]
 include = ["*"]
-
+'''
+        if TARGET != 'script':
+                toml_content += f'''
 # Define entry points for CLI
 [project.scripts]
 '''+f'''{NAME} = "{NAME}.__main__:main"'''

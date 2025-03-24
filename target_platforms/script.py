@@ -15,25 +15,19 @@ if __name__ == '__main__':
     main()
     
 '''
-    init_content = '''
-import sys
-import os
-# Add the parent directory of 'target_platforms' to the sys.path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))'''
 
     def __init__(self, name, lang=''):
         self.name = name
         self.lang = lang
+        self.init_content = f'''
+import sys
+import os
+# Add the parent directory of 'target_platforms' to the sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-        self.main_content = f'''
-from {self.name} import {self.name}
-
-def main():
-    {self.name}.main()
-
-if __name__ == "__main__":
-    main()
+from .{self.name} import *
 '''
+
 
         self.folders = [
           f'script',
@@ -43,7 +37,6 @@ if __name__ == "__main__":
         if self.lang == 'py':
             self.files = {
                 f'script/__init__.py': self.init_content,
-                f'script/__main__.py': self.main_content,
                 f'script/{self.name}.py': self.script_content,
                 }
         else:
