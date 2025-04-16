@@ -9,6 +9,7 @@ import subprocess
 import shutil
 import glob
 from colorama import Fore, Style
+import py7zr
 
 NAME=''
 TARGETS=[]
@@ -59,7 +60,7 @@ def cli():
     version = '.'.join(sys.version.split(' ')[0].split('.')[:2])
     if float(version) < 3.0:
         raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
-    click.echo("Gupy! v0.3.7")
+    click.echo("Gupy! v0.3.9")
     go,gcc,cgo = check_status()
     if go == 'True':
         click.echo(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
@@ -677,11 +678,9 @@ def distribute(version):
 
         if system == 'Darwin':
             system = 'darwin'
-            folder = 'mac'
             delim = '/'
         elif system == 'Linux':
             system = 'linux'
-            folder = 'linux'
             delim = '/'
         else:
             system = 'win'
@@ -711,7 +710,7 @@ def distribute(version):
 
         # creating project folder if doesnt already exist
         os.makedirs('dist', exist_ok=True)
-        os.chdir(NAME)
+        os.chdir('dist')
 
         # creating version folder is doesnt already exist
         os.makedirs(f"{NAME}{VERSION}", exist_ok=True)
@@ -722,16 +721,18 @@ def distribute(version):
         os.makedirs(f"{NAME}{VERSION}", exist_ok=True)
         os.chdir('../')
 
-        # Get the path to the current gupy.py file
-        gupy_file_path = os.path.abspath(__file__)
+        # Get the directory path to the current gupy.py file without the filename
+        gupy_file_path = os.path.dirname(os.path.abspath(__file__))
         
         # get python location and executable
         if system in ['linux', 'darwin']:
             python_loc = gupy_file_path + '/python'
-            python_executable = 'unix/bin/python3.12'
+            python_folder = 'unix/bin'
+            python_executable = 'python3.12'
         else:
             python_loc = gupy_file_path + '\\python'
-            python_executable =  'windows\\python.exe'
+            python_folder = 'windows'
+            python_executable =  'python.exe'
 
         # python_version = "".join(sys.version.split(' ')[0].split('.')[0:2]) 
         # print(os.getcwd())
@@ -741,16 +742,28 @@ def distribute(version):
             full_file_name = os.path.join(os.getcwd(), file_name)
             if os.path.isfile(full_file_name):
                 shutil.copy(full_file_name, f"dist/{NAME}{VERSION}")
-            elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist':
+            elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv':
                 shutil.copytree(full_file_name, f"dist/{NAME}{VERSION}/{file_name}", dirs_exist_ok=True)
             print('Copied '+file_name+' to '+f"dist/{NAME}{VERSION}/{file_name}"+'...')
         # package latest python if not selected - make python folder with windows/mac/linux
         os.makedirs(f"dist/{NAME}{VERSION}/python", exist_ok=True)
         print('Copying python folder...')
-        shutil.copytree(python_loc, f"dist/{NAME}{VERSION}/python", dirs_exist_ok=True)
+        archive_path = python_loc + delim + 'python.7z'
+        with py7zr.SevenZipFile(archive_path, mode='r') as archive:
+            archive.extractall(path=f"dist/{NAME}{VERSION}/python")
+        # shutil.copytree(python_loc, f"dist/{NAME}{VERSION}/python", dirs_exist_ok=True)
         
         print('Copied python folder...')
         os.chdir(f'dist/{NAME}{VERSION}')
+
+
+        command = f".{delim}python{delim}{python_folder}{delim}{python_executable} python{delim}{python_folder}{delim}get-pip.py"
+        # Run the command
+        result = subprocess.run(command, shell=True, check=True)
+
+        command = f".{delim}python{delim}{python_folder}{delim}{python_executable} -m pip install --upgrade pip"
+        # Run the command
+        result = subprocess.run(command, shell=True, check=True)
 
         # install requirements with new python location if it exists
         if os.path.exists('requirements.txt'):
@@ -762,7 +775,7 @@ def distribute(version):
 
             with open('requirements.txt', 'r', encoding=encoding) as f:
                 if len(f.readlines()) > 0:
-                    command = f".{delim}python{delim}{python_executable} -m pip install -r requirements.txt"
+                    command = f".{delim}python{delim}{python_folder}{delim}{python_executable} -m pip install -r requirements.txt"
 
                     # Run the command
                     result = subprocess.run(command, shell=True, check=True)
@@ -897,7 +910,7 @@ if [ "$OS" = "Linux" ]; then
 Name='''+NAME+r'''
 Comment=Run '''+NAME+r'''
 Exec=sudo ./python/bin/python3.12 $CURRENT_DIR/run.py
-Icon=$CURRENT_DIR/static/'''+png+r'''
+Icon=$CURRENT_DIR/'''+png+r'''
 Terminal=false
 Type=Application
 Categories=Utility;
@@ -1044,13 +1057,13 @@ echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desk
 echo desktopShortcut.TargetPath = "python/windows/python.exe" >> CreateShortcut.vbs
 echo desktopShortcut.Arguments = "run.py" >> CreateShortcut.vbs
 echo desktopShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
-echo desktopShortcut.IconLocation = "%~dp0static\\'''+ ico +r'''" >> CreateShortcut.vbs
+echo desktopShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
 echo desktopShortcut.Save >> CreateShortcut.vbs
 echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
 echo dirShortcut.TargetPath = "python/windows/python.exe" >> CreateShortcut.vbs
 echo dirShortcut.Arguments = "run.py" >> CreateShortcut.vbs
 echo dirShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
-echo dirShortcut.IconLocation = "%~dp0static\\'''+ ico +r'''" >> CreateShortcut.vbs
+echo dirShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
 echo dirShortcut.Save >> CreateShortcut.vbs
 
 :: Run the VBScript to create the shortcuts, then clean up

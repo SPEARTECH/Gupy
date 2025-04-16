@@ -1447,9 +1447,21 @@ if __name__ == "__main__":
 
         if self.lang == 'py':
             # Construct the path to the target file
-            requirements_directory = os.path.join(os.path.dirname(current_directory), 'requirements.txt')       
+            # requirements_directory = os.path.join(os.path.dirname(current_directory), 'requirements.txt')       
             
-            shutil.copy(requirements_directory, f'desktop/requirements.txt')
+            # shutil.copy(requirements_directory, f'desktop/requirements.txt')
+            with open('desktop/requirements.txt', 'w') as f:
+                f.write('''
+blinker==1.9.0
+click==8.1.8
+colorama==0.4.6
+Flask==3.1.0
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.2
+screeninfo==0.8.1
+Werkzeug==3.1.3
+''')
 
         logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
         
