@@ -59,7 +59,7 @@ def cli():
     version = '.'.join(sys.version.split(' ')[0].split('.')[:2])
     if float(version) < 3.0:
         raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
-    click.echo("Gupy! v0.3.3")
+    click.echo("Gupy! v0.3.7")
     go,gcc,cgo = check_status()
     if go == 'True':
         click.echo(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
@@ -715,8 +715,8 @@ def distribute(version):
 
         # creating version folder is doesnt already exist
         os.makedirs(VERSION, exist_ok=True)
-        shutil.rmtree(VERSION)
-        os.makedirs(VERSION, exist_ok=True)
+        # shutil.rmtree(f"{VERSION}{delim}{folder}")
+        # os.makedirs(VERSION, exist_ok=True)
         os.chdir(VERSION)
 
         os.makedirs(folder, exist_ok=True)
@@ -730,10 +730,18 @@ def distribute(version):
         elif folder == 'windows':
             comp_file_ext = 'pyd'
 
-        # get python location
-        python_loc = os.path.dirname(sys.executable)
-        python_executable = sys.executable.split(delim)[-1]
-        python_version = "".join(sys.version.split(' ')[0].split('.')[0:2]) 
+        # get python location and executable based on whether we're in a virtualenv
+        if sys.prefix != sys.base_prefix:
+            # Running inside a virtual environment.
+            python_loc = sys.prefix  # venv root folder
+            if system in ['Linux', 'darwin']:
+                python_executable = os.path.join('bin', 'python')
+            else:
+                python_executable = os.path.join('Scripts', 'python.exe')
+        else:
+            python_loc = os.path.dirname(sys.executable)
+            python_executable = sys.executable.split(delim)[-1]
+        # python_version = "".join(sys.version.split(' ')[0].split('.')[0:2]) 
         # print(os.getcwd())
         # moves files and folders - only checks the cythonized files in root directory.
         files = os.listdir(os.getcwd())
@@ -751,17 +759,22 @@ def distribute(version):
         os.makedirs(f"{NAME}/{VERSION}/{folder}/python", exist_ok=True)
         print('Copying python folder...')
         shutil.copytree(python_loc, f"{NAME}/{VERSION}/{folder}/python", dirs_exist_ok=True)
+        
         print('Copied python folder...')
         os.chdir(f'{NAME}/{VERSION}/{folder}')
 
         # install requirements with new python location if it exists
         if os.path.exists('requirements.txt'):
-            with open('requirements.txt') as f:
+                # Read as binary to detect encoding
+            with open('requirements.txt', 'rb') as f:
+                raw_data = f.read(10000)  # Read first 10KB
+            detected = chardet.detect(raw_data)
+            encoding = detected.get('encoding', 'utf-8')
+
+            with open('requirements.txt', 'r', encoding=encoding) as f:
                 if len(f.readlines()) > 0:
-                    if folder == 'windows' or folder == 'mac':
-                        command = f".\\python\\{python_executable} -m pip install -r requirements.txt"
-                    else:
-                        command = f"./python/lib/{python_executable} -m pip install -r requirements.txt"
+                    command = f".{delim}python{delim}{python_executable} -m pip install -r requirements.txt"
+
                     # Run the command
                     result = subprocess.run(command, shell=True, check=True)
                     # Check if the command was successful
