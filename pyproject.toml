@@ -5,13 +5,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gupy-framework"
-version = "0.3.7"
+version = "0.4.4"
 authors = [
 { name="Speartech", email="Tyler@Speartech.org" },
 ]
 description = "Gupy! Simplifying Cross-Platform development with Go, Vue, and Python"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = "==3.12.10"
 classifiers = [
 "Programming Language :: Python :: 3",
 "License :: OSI Approved :: MIT License",
@@ -73,8 +73,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/pypa/sampleproject"
-Issues = "https://github.com/pypa/sampleproject/issues"
+Homepage = "https://github.com/speartech/gupy"
+Issues = "https://github.com/speartech/gupy/issues"
 
 
 # Specify the directory where your Python package code is located

@@ -9,6 +9,7 @@ import subprocess
 import shutil
 import glob
 from colorama import Fore, Style
+import py7zr
 
 NAME=''
 TARGETS=[]
@@ -59,7 +60,7 @@ def cli():
     version = '.'.join(sys.version.split(' ')[0].split('.')[:2])
     if float(version) < 3.0:
         raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
-    click.echo("Gupy! v0.3.7")
+    click.echo("Gupy! v0.4.4")
     go,gcc,cgo = check_status()
     if go == 'True':
         click.echo(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
@@ -670,18 +671,16 @@ SOFTWARE.
     help='Desired version for distribution (ie. -v 1.0.0).'
     )
 def distribute(version):
-    VERSION = version.replace('.','_')
+    VERSION = 'v'+version.replace('.','').replace('-','').replace('_','')
     try:
         # detect os and make folder
         system = platform.system()
 
         if system == 'Darwin':
             system = 'darwin'
-            folder = 'mac'
             delim = '/'
         elif system == 'Linux':
             system = 'linux'
-            folder = 'linux'
             delim = '/'
         else:
             system = 'win'
@@ -699,7 +698,8 @@ def distribute(version):
         if 'desktop' in dir_list:
             TARGET='desktop'
             change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split(delim)[-1]
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+
         # perhaps run logic for .pyd/.so files, moving all that are to be deployed...? mobile to apk?
         elif 'pwa' in dir_list or 'website' in dir_list or 'api' in dir_list or 'mobile' in dir_list or 'cli' in dir_list or 'script' in dir_list or 'etl' in dir_list:
             print('Error: --distribute is only available for desktop projects.')
@@ -709,38 +709,31 @@ def distribute(version):
             return
 
         # creating project folder if doesnt already exist
-        NAME = 'dist_'+NAME.replace(' ','_')
-        os.makedirs(NAME, exist_ok=True)
-        os.chdir(NAME)
+        os.makedirs('dist', exist_ok=True)
+        os.chdir('dist')
 
         # creating version folder is doesnt already exist
-        os.makedirs(VERSION, exist_ok=True)
+        os.makedirs(f"{NAME}{VERSION}", exist_ok=True)
         # shutil.rmtree(f"{VERSION}{delim}{folder}")
         # os.makedirs(VERSION, exist_ok=True)
-        os.chdir(VERSION)
 
-        os.makedirs(folder, exist_ok=True)
-        shutil.rmtree(folder)
-        os.makedirs(folder, exist_ok=True)
-        os.chdir('../../')
+        shutil.rmtree(f"{NAME}{VERSION}")
+        os.makedirs(f"{NAME}{VERSION}", exist_ok=True)
+        os.chdir('../')
 
-        # move files+folders into project folder if just created
-        if folder == 'linux' or folder == 'mac':
-            comp_file_ext = 'so'
-        elif folder == 'windows':
-            comp_file_ext = 'pyd'
-
-        # get python location and executable based on whether we're in a virtualenv
-        if sys.prefix != sys.base_prefix:
-            # Running inside a virtual environment.
-            python_loc = sys.prefix  # venv root folder
-            if system in ['Linux', 'darwin']:
-                python_executable = os.path.join('bin', 'python')
-            else:
-                python_executable = os.path.join('Scripts', 'python.exe')
+        # Get the directory path to the current gupy.py file without the filename
+        gupy_file_path = os.path.dirname(os.path.abspath(__file__))
+        
+        # get python location and executable
+        if system in ['linux', 'darwin']:
+            python_loc = gupy_file_path + '/python'
+            python_folder = 'unix/bin'
+            python_executable = 'python3.12'
         else:
-            python_loc = os.path.dirname(sys.executable)
-            python_executable = sys.executable.split(delim)[-1]
+            python_loc = gupy_file_path + '\\python'
+            python_folder = 'windows'
+            python_executable =  'python.exe'
+
         # python_version = "".join(sys.version.split(' ')[0].split('.')[0:2]) 
         # print(os.getcwd())
         # moves files and folders - only checks the cythonized files in root directory.
@@ -748,20 +741,29 @@ def distribute(version):
         for file_name in files:
             full_file_name = os.path.join(os.getcwd(), file_name)
             if os.path.isfile(full_file_name):
-                if comp_file_ext in file_name.split('.')[-1] and system in file_name:
-                    shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
-                elif file_name.split('.')[-1] != 'pyd' and file_name.split('.')[-1] != 'so':
-                    shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
-            elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist':
-                shutil.copytree(full_file_name, f"{NAME}/{VERSION}/{folder}/{file_name}", dirs_exist_ok=True)
-            print('Copied '+file_name+' to '+f"{NAME}/{VERSION}/{folder}/{file_name}"+'...')
+                shutil.copy(full_file_name, f"dist/{NAME}{VERSION}")
+            elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv':
+                shutil.copytree(full_file_name, f"dist/{NAME}{VERSION}/{file_name}", dirs_exist_ok=True)
+            print('Copied '+file_name+' to '+f"dist/{NAME}{VERSION}/{file_name}"+'...')
         # package latest python if not selected - make python folder with windows/mac/linux
-        os.makedirs(f"{NAME}/{VERSION}/{folder}/python", exist_ok=True)
+        os.makedirs(f"dist/{NAME}{VERSION}/python", exist_ok=True)
         print('Copying python folder...')
-        shutil.copytree(python_loc, f"{NAME}/{VERSION}/{folder}/python", dirs_exist_ok=True)
+        archive_path = gupy_file_path + delim + 'python.7z'
+        with py7zr.SevenZipFile(archive_path, mode='r') as archive:
+            archive.extractall(path=f"dist/{NAME}{VERSION}")
+        # shutil.copytree(python_loc, f"dist/{NAME}{VERSION}/python", dirs_exist_ok=True)
         
         print('Copied python folder...')
-        os.chdir(f'{NAME}/{VERSION}/{folder}')
+        os.chdir(f'dist/{NAME}{VERSION}')
+
+
+        command = f".{delim}python{delim}{python_folder}{delim}{python_executable} python{delim}{python_folder}{delim}get-pip.py"
+        # Run the command
+        result = subprocess.run(command, shell=True, check=True)
+
+        command = f".{delim}python{delim}{python_folder}{delim}{python_executable} -m pip install --upgrade pip"
+        # Run the command
+        result = subprocess.run(command, shell=True, check=True)
 
         # install requirements with new python location if it exists
         if os.path.exists('requirements.txt'):
@@ -773,7 +775,7 @@ def distribute(version):
 
             with open('requirements.txt', 'r', encoding=encoding) as f:
                 if len(f.readlines()) > 0:
-                    command = f".{delim}python{delim}{python_executable} -m pip install -r requirements.txt"
+                    command = f".{delim}python{delim}{python_folder}{delim}{python_executable} -m pip install -r requirements.txt"
 
                     # Run the command
                     result = subprocess.run(command, shell=True, check=True)
@@ -782,606 +784,310 @@ def distribute(version):
                         print("Requirements installed successfully.")
                     else:
                         print("Failed to install requirements.txt - ensure it exists.")
-        os.chdir(f'../../..')
 
-        def get_goroot():
-            # Run 'go env GOROOT' command and capture the output
-            result = subprocess.run(["go", "env", "GOROOT"], capture_output=True, text=True)
-            if result.returncode == 0:
-                return result.stdout.strip()  # Remove any surrounding whitespace/newlines
-            else:
-                raise Exception("Failed to get GOROOT: " + result.stderr)
-
-        # copy go folder contents into go/ folder
-        def get_golang_install_location():
-            goroot = get_goroot()
-
-            if goroot:
-                return goroot
-            else:
-                return "GOROOT environment variable is not set."
-
-        golang_location = get_golang_install_location()
-        print(f"Golang is installed at: {golang_location}")
-
-        os.makedirs(f"{NAME}/{VERSION}/{folder}/go", exist_ok=True)
-        shutil.copytree(golang_location, f"{NAME}/{VERSION}/{folder}/go", dirs_exist_ok=True)
-        print('Copied go folder...')
-        # create run.go and go.mod for starting entry script for current os
-        os.chdir(f"{NAME}/{VERSION}/{folder}")
         # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
         # Use glob to find all .ico files in the folder
         ico_files = glob.glob(os.path.join('static', '*.ico'))
         ico = ico_files[0]
 
+        png_files = glob.glob(os.path.join('static', '*.png'))
+        png = png_files[0]
+
+        print("Please enter Github information for the app where your release package will be uploaded...")
+        REPO_OWNER = input(f'Enter the Github repository owner: ')
+        REPO_NAME = input("Enter the Github repository name: ")
+
         # create install.bat/sh for compiling run.go
-        NAME = NAME.replace('dist_', '')
-        if os.path.exists(f'server.py'):
-            # make go mod file if python project (already exists for go projects)
-            if system == 'win':
-                subprocess.run(f'.\\go\\bin\\go.exe mod init example.com/{NAME}', shell=True, check=True)
-            else:
-                subprocess.run(f'./go/bin/go mod init example.com/{NAME}', shell=True, check=True)
-            if folder == 'linux':
-                run_py_content = r'''
+        run_py_content = r'''
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import server
 
 server.main()
                 '''
-                run_go_content = r'''
-package main
-
-import (
-    "fmt"
-    "os"
-    "path/filepath"
-	"os/exec"
-)
-
-func main() {
-
-    // Run the Python script
-    runPythonScript()
-}
-
-// Runs the Python script 'run.py'
-func runPythonScript() {
-    currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-    if err != nil {
-        fmt.Println("Error getting current directory:", err)
-        return
-    }
-
-    pythonExe := filepath.Join(currentDir, "python", "lib", "'''+ python_executable +r'''") 
-    scriptPath := filepath.Join(currentDir, "run.py")
-
-    fmt.Printf("Current directory is: %s\n", currentDir)
-    fmt.Printf("Running Python script %s...\n", scriptPath)
-
-    cmd := exec.Command(pythonExe, scriptPath)
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-
-    err = cmd.Run()
-    if err != nil {
-        fmt.Println("Error running Python script:", err)
-    }
-}'''        
-                install_script_content = r'''
+        bash_install_script_content = r'''
 #!/bin/bash
+# filepath: /Users/tylerretzlaff/Desktop/Projects/SCOPS2_LAN/install.sh
 
-# Navigate to the script's directory
-cd "$(dirname "$0")"
-sudo chmod -R 755 .
+# Set repository owner and name
+REPO_OWNER="'''+REPO_OWNER+r'''"
+REPO_NAME="'''+REPO_NAME+r'''"
 
-echo "Adding go to PATH..."
-export PATH=$PATH:/usr/local/go/bin
-echo "Compiling run.go..."
-./go/bin/go build run.go
+# GitHub API URL to fetch the latest release
+API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
 
-if [ $? -ne 0 ]; then
-    echo "Go build failed. Exiting..."
+# Use curl to fetch the latest release data and jq to parse JSON
+DOWNLOAD_URL=$(curl -s "$API_URL" | jq -r '.assets[0].browser_download_url')
+LATEST_RELEASE=$(curl -s "$API_URL" | jq -r '.assets[0].name')
+
+# Check if download URL is found
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo "No download URL found. Exiting."
     exit 1
 fi
 
-echo "Creating application shortcut..."
-# Define paths for the icon and the target executable
-ICON_PATH="$PWD/static/'''+ ico +r'''"
-TARGET_PATH="$PWD/run"
-
-# Create the .desktop shortcut for the desktop
-DESKTOP_SHORTCUT="$HOME/Desktop/'''+NAME+r'''.desktop"
-cat > "$DESKTOP_SHORTCUT" <<EOL
-[Desktop Entry]
-Version=1.0
-Name='''+NAME+r'''
-Comment='''+NAME+r''' Application
-Exec=$TARGET_PATH
-Icon=$ICON_PATH
-Terminal=false
-Type=Application
-Categories=Application;
-EOL
-
-# Make the desktop shortcut executable
-chmod +x "$DESKTOP_SHORTCUT"
-
-# Create the .desktop shortcut in the application directory
-DIR_SHORTCUT="$TARGET_PATH.desktop"
-cat > "$DIR_SHORTCUT" <<EOL
-[Desktop Entry]
-Version=1.0
-Name='''+NAME+r'''
-Comment='''+NAME+r''' Application
-Exec=$TARGET_PATH
-Icon=$ICON_PATH
-Terminal=false
-Type=Application
-Categories=Application;
-EOL
-
-# Make the directory shortcut executable
-chmod +x "$DIR_SHORTCUT"
-
-echo "Shortcuts created successfully!"
-'''
-                with open('install.sh', 'w') as f:
-                    f.write(install_script_content)
-                with open('run.go', 'w') as f:
-                    f.write(run_go_content)
-                with open('run.py', 'w') as f:
-                    f.write(run_py_content)
-            elif folder == 'mac':
-                run_py_content = r'''
-import server
-
-server.main()
-                '''
-                run_go_content = r'''
-package main
-
-import (
-    "fmt"
-    "os"
-    "path/filepath"
-	"os/exec"
-)
-
-func main() {
-
-    // Run the Python script
-    runPythonScript()
-}
-
-// Runs the Python script 'run.py'
-func runPythonScript() {
-    currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-    if err != nil {
-        fmt.Println("Error getting current directory:", err)
-        return
-    }
-
-    pythonExe := filepath.Join(currentDir, "python", "'''+ python_executable +r'''") 
-    scriptPath := filepath.Join(currentDir, "run.py")
-
-    fmt.Printf("Current directory is: %s\n", currentDir)
-    fmt.Printf("Running Python script %s...\n", scriptPath)
-
-    cmd := exec.Command(pythonExe, scriptPath)
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-
-    err = cmd.Run()
-    if err != nil {
-        fmt.Println("Error running Python script:", err)
-    }
-}'''        
-                install_script_content = r'''
-#!/bin/bash
-
-# Navigate to the script's directory
-cd "$(dirname "$0")"
-cd ..
-sudo chmod -R 755 mac
-cd mac
-
-echo "Adding go to PATH..."
-export PATH=$PATH:/usr/local/go/bin
-
-echo "Compiling run.go..."
-go/bin/go build run.go
-
-if [ $? -ne 0 ]; then
-    echo "Go build failed. Exiting..."
-    exit 1
+# Read the current release file name from the 'release' file
+if [ -f release ]; then
+    CURRENT_RELEASE=$(cat release)
+else
+    CURRENT_RELEASE="NONE"
 fi
 
-# need to add desktop shortcut functionality to mac install script - 10-26-24
+# Print the current and latest release names
+echo "CURRENT_RELEASE: $CURRENT_RELEASE"
+echo "LATEST_RELEASE: $LATEST_RELEASE"
 
-'''
-                with open('install.sh', 'w') as f:
-                    f.write(install_script_content)
-                with open('run.go', 'w') as f:
-                    f.write(run_go_content)        
-                with open('run.py', 'w') as f:
-                    f.write(run_py_content)
-            else:
-                run_py_content = r'''
-import server
+# Compare the current release with the latest release
+if [ "$CURRENT_RELEASE" == "$LATEST_RELEASE" ]; then
+    echo "Current release is up to date."
+else
+    # Delete all files and folders except install.sh
+    echo "Deleting old files and folders (except install.sh)..."
+    find . -type f ! -name "install.sh" -exec rm -f {} +
+    find . -type d ! -name "." -exec rm -rf {} +
+    echo "Old files and folders deleted."
 
-server.main()
-                '''
-                run_go_content = r'''
-package main
+    # Echo the download URL (for verification)
+    echo "Download URL: $DOWNLOAD_URL"
 
-import (
-    "fmt"
-    "os"
-    "path/filepath"
-	"os/exec"
-)
+    # Download the zip file using curl
+    echo "Downloading latest release..."
+    curl -L "$DOWNLOAD_URL" -o "$LATEST_RELEASE"
 
-func main() {
+    # Unzip the file into the current directory
+    echo "Extracting the archive..."
+    unzip -o "$LATEST_RELEASE" -d ./
 
-    // Run the Python script
-    runPythonScript()
-}
+    # Detect if the unzip created a new folder (dynamically)
+    EXTRACTED_FOLDER=$(find . -maxdepth 1 -type d ! -name "." ! -name ".*" | head -n 1)
+    if [ -n "$EXTRACTED_FOLDER" ] && [ "$EXTRACTED_FOLDER" != "." ]; then
+        echo "Detected folder: $EXTRACTED_FOLDER"
+        echo "Moving contents of $EXTRACTED_FOLDER to current directory..."
+        mv "$EXTRACTED_FOLDER"/* ./
+        rm -rf "$EXTRACTED_FOLDER"
+    else
+        echo "No separate directory detected; extraction complete."
+    fi
 
-// Runs the Python script 'run.py'
-func runPythonScript() {
-    currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-    if err != nil {
-        fmt.Println("Error getting current directory:", err)
-        return
-    }
+    # Cleanup - remove downloaded zip file
+    echo "Cleanup done. Removing downloaded zip file..."
+    rm "$LATEST_RELEASE"
 
-    pythonExe := filepath.Join(currentDir, "python", "'''+ python_executable +r'''") 
-    scriptPath := filepath.Join(currentDir, "run.py")
+    # Update the 'release' file with the new release name
+    echo "$LATEST_RELEASE" > release
 
-    fmt.Printf("Current directory is: %s\n", currentDir)
-    fmt.Printf("Running Python script %s...\n", scriptPath)
-
-    cmd := exec.Command(pythonExe, scriptPath)
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-
-    err = cmd.Run()
-    if err != nil {
-        fmt.Println("Error running Python script:", err)
-    }
-}'''
-                install_script_content = r'''
-cd /d "%~dp0"
-
-%~dp0go/bin/go.exe build run.go
-
-if %errorlevel% neq 0 (
-    echo Go build failed. Exiting...
-    exit /b 1
-)
-echo Creating application shortcut...
-REM Create a VBScript to make a desktop shortcut with an icon
-echo Set objShell = CreateObject("WScript.Shell") > CreateShortcut.vbs
-echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desktop") ^& "\\'''+NAME+r'''.lnk") >> CreateShortcut.vbs
-echo desktopShortcut.WorkingDirectory = "'''+os.getcwd()+r'''" >> CreateShortcut.vbs
-echo desktopShortcut.TargetPath = "%cd%\run.exe" >> CreateShortcut.vbs
-echo desktopShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
-echo desktopShortcut.Save >> CreateShortcut.vbs
-
-REM Create a shortcut in the same directory as run.exe
-echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+NAME+r'''.lnk") >> CreateShortcut.vbs
-echo desktopShortcut.WorkingDirectory = "'''+os.getcwd()+r'''" >> CreateShortcut.vbs
-echo dirShortcut.TargetPath = "%cd%\run.exe" >> CreateShortcut.vbs
-echo dirShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
-echo dirShortcut.Save >> CreateShortcut.vbs
-
-REM Run the VBScript to create the shortcuts
-cscript CreateShortcut.vbs
-
-REM Clean up the VBScript file
-del CreateShortcut.vbs
-
-echo Shortcuts created successfully!
-pause
-'''
-                with open('install.bat', 'w') as f:
-                    f.write(install_script_content)
-                with open('run.go', 'w') as f:
-                    f.write(run_go_content)
-                with open('run.py', 'w') as f:
-                    f.write(run_py_content)
-        elif os.path.exists('main.go'):
-            if folder == 'linux':
-                os.system(f'./go/bin/go build -o main.so -buildmode=c-shared main.go ')
-                run_py_content = r'''
-import ctypes
-
-go_lib = ctypes.CDLL("./main.so")   # Linux/macOS
-
-# Define function argument types
-go_lib.StartServer.argtypes = []
-
-go_lib.StartServer()
-
-                '''
-                run_go_content = r'''
-package main
-
-import (
-    "fmt"
-    "os"
-    "path/filepath"
-	"os/exec"
-)
-
-func main() {
-
-    // Run the Python script
-    runPythonScript()
-}
-
-// Runs the Python script 'run.py'
-func runPythonScript() {
-    currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-    if err != nil {
-        fmt.Println("Error getting current directory:", err)
-        return
-    }
-
-    pythonExe := filepath.Join(currentDir, "python", "lib", "'''+ python_executable +r'''") 
-    scriptPath := filepath.Join(currentDir, "run.py")
-
-    fmt.Printf("Current directory is: %s\n", currentDir)
-    fmt.Printf("Running Python script %s...\n", scriptPath)
-
-    cmd := exec.Command(pythonExe, scriptPath)
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-
-    err = cmd.Run()
-    if err != nil {
-        fmt.Println("Error running Python script:", err)
-    }
-}'''        
-                install_script_content = r'''
-#!/bin/bash
-
-# Navigate to the script's directory
-cd "$(dirname "$0")"
-sudo chmod -R 755 .
-
-echo "Adding go to PATH..."
-export PATH=$PATH:/usr/local/go/bin
-echo "Compiling run.go..."
-./go/bin/go build run.go
-
-if [ $? -ne 0 ]; then
-    echo "Go build failed. Exiting..."
-    exit 1
+    echo "Your folder has been updated."
+    sleep 3
 fi
 
-echo "Creating application shortcut..."
-# Define paths for the icon and the target executable
-ICON_PATH="$PWD/static/'''+ ico +r'''"
-TARGET_PATH="$PWD/run"
-
-# Create the .desktop shortcut for the desktop
-DESKTOP_SHORTCUT="$HOME/Desktop/'''+NAME+r'''.desktop"
-cat > "$DESKTOP_SHORTCUT" <<EOL
-[Desktop Entry]
-Version=1.0
-Name='''+NAME+r'''
-Comment='''+NAME+r''' Application
-Exec=$TARGET_PATH
-Icon=$ICON_PATH
-Terminal=false
-Type=Application
-Categories=Application;
-EOL
-
-# Make the desktop shortcut executable
-chmod +x "$DESKTOP_SHORTCUT"
-
-# Create the .desktop shortcut in the application directory
-DIR_SHORTCUT="$TARGET_PATH.desktop"
-cat > "$DIR_SHORTCUT" <<EOL
-[Desktop Entry]
-Version=1.0
-Name='''+NAME+r'''
-Comment='''+NAME+r''' Application
-Exec=$TARGET_PATH
-Icon=$ICON_PATH
-Terminal=false
-Type=Application
-Categories=Application;
-EOL
-
-# Make the directory shortcut executable
-chmod +x "$DIR_SHORTCUT"
-
-echo "Shortcuts created successfully!"
-'''
-                with open('install.sh', 'w') as f:
-                    f.write(install_script_content)
-                with open('run.go', 'w') as f:
-                    f.write(run_go_content)
-                with open('run.py', 'w') as f:
-                    f.write(run_py_content)
-
-            elif folder == 'mac':
-                os.system(f'go/bin/go build -o main.so -buildmode=c-shared main.go ')
-                run_py_content = r'''
-import ctypes
-
-go_lib = ctypes.CDLL("./main.so")   # Linux/macOS
-
-# Define function argument types
-go_lib.StartServer.argtypes = []
-
-go_lib.StartServer()
-
-                '''
-                run_go_content = r'''
-package main
-
-import (
-    "fmt"
-    "os"
-    "path/filepath"
-	"os/exec"
-)
-
-func main() {
-
-    // Run the Python script
-    runPythonScript()
-}
-
-// Runs the Python script 'run.py'
-func runPythonScript() {
-    currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-    if err != nil {
-        fmt.Println("Error getting current directory:", err)
-        return
-    }
-
-    pythonExe := filepath.Join(currentDir, "python", "lib", "'''+ python_executable +r'''") 
-    scriptPath := filepath.Join(currentDir, "run.py")
-
-    fmt.Printf("Current directory is: %s\n", currentDir)
-    fmt.Printf("Running Python script %s...\n", scriptPath)
-
-    cmd := exec.Command(pythonExe, scriptPath)
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-
-    err = cmd.Run()
-    if err != nil {
-        fmt.Println("Error running Python script:", err)
-    }
-}'''        
-                install_script_content = r'''
-#!/bin/bash
-
-# Navigate to the script's directory
+# Set the working directory to the script's directory
 cd "$(dirname "$0")"
-cd ..
-sudo chmod -R 755 mac
-cd mac
+echo "Current directory is: $(pwd)"
 
-echo "Adding go to PATH..."
-export PATH=$PATH:/usr/local/go/bin
 
-echo "Compiling run.go..."
-go/bin/go build run.go
 
-if [ $? -ne 0 ]; then
-    echo "Go build failed. Exiting..."
-    exit 1
+# -- Install requirements.txt using Python --
+if [ -f "requirements.txt" ]; then
+    echo "Installing requirements from requirements.txt..."
+    sudo ./python/bin/python3.12 -m pip install -r requirements.txt
+    if [ $? -ne 0 ]; then
+        echo "Failed to install requirements. Aborting."
+        exit 1
+    else
+        echo "Requirements installed successfully."
+    fi
+else
+    echo "requirements.txt not found."
 fi
 
-# need to add desktop shortcut functionality to mac install script - 10-26-24
+# Determine the OS
+OS=$(uname)
+CURRENT_DIR=$(pwd)
 
+if [ "$OS" = "Linux" ]; then
+    DESKTOP_FILE="$HOME/Desktop/'''+NAME+r'''.desktop"
+    echo "Creating Linux desktop shortcut at $DESKTOP_FILE"
+    cat <<EOF > "$DESKTOP_FILE"
+[Desktop Entry]
+Name='''+NAME+r'''
+Comment=Run '''+NAME+r'''
+Exec=sudo ./python/bin/python3.12 $CURRENT_DIR/run.py
+Icon=$CURRENT_DIR/'''+png+r'''
+Terminal=false
+Type=Application
+Categories=Utility;
+EOF
+    chmod +x "$DESKTOP_FILE"
+
+elif [ "$OS" = "Darwin" ]; then
+    # macOS: create a minimal AppleScript-based app that launches run.py
+    APP_PATH="$HOME/Desktop/'''+NAME+r'''.app"
+    echo "Creating macOS desktop shortcut at $APP_PATH"
+    mkdir -p "$APP_PATH/Contents/MacOS"
+    cat <<EOF > "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
+#!/bin/bash
+# Change directory to the folder containing run.py
+cd "$CURRENT_DIR"
+sudo ./python/bin/python3.12 run.py &
+EOF
+    chmod +x "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
+    # Create a minimal Info.plist file
+    mkdir -p "$APP_PATH/Contents"
+    cat <<EOF > "$APP_PATH/Contents/Info.plist"
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+      <key>CFBundleExecutable</key>
+      <string>'''+NAME+r'''</string>
+      <key>CFBundleIdentifier</key>
+      <string>com.example.'''+NAME+r'''</string>
+      <key>CFBundleName</key>
+      <string>'''+NAME+r'''</string>
+      <key>CFBundleVersion</key>
+      <string>1.0</string>
+  </dict>
+</plist>
+EOF
+else
+    echo "Unsupported OS: $OS. Please create a desktop shortcut manually."
+fi
+
+echo "Launching run.py..."
+sudo ./python/bin/python3.12 run.py &
 '''
-                with open('install.sh', 'w') as f:
-                    f.write(install_script_content)
-                with open('run.go', 'w') as f:
-                    f.write(run_go_content)        
-                with open('run.py', 'w') as f:
-                    f.write(run_py_content)
-            else:
-                os.system(f'{os.getcwd()}/go/bin/go.exe build -o main.so -buildmode=c-shared main.go ')
-                run_py_content = r'''
-import ctypes
 
-go_lib = ctypes.CDLL("./main.so")   # Linux/macOS
+        bat_install_script_content = r'''
+@echo off
+setlocal enabledelayedexpansion
 
-# Define function argument types
-go_lib.StartServer.argtypes = []
+:: Set repository owner and name
+set REPO_OWNER="'''+REPO_OWNER+r'''"
+set REPO_NAME="'''+REPO_NAME+r'''"
 
-go_lib.StartServer()
+:: GitHub API URL to fetch the latest release
+set API_URL=https://api.github.com/repos/%REPO_OWNER%/%REPO_NAME%/releases/latest
 
-                '''
-                run_go_content = r'''
-package main
+:: Use PowerShell to fetch the latest release data and parse JSON to get the download URL and file name
+for /f "delims=" %%i in ('powershell -Command "try { (Invoke-RestMethod -Uri '%API_URL%' -ErrorAction Stop).assets[0].browser_download_url } catch { Write-Output $_.Exception.Message; exit }"') do set DOWNLOAD_URL=%%i
+for /f "delims=" %%j in ('powershell -Command "try { (Invoke-RestMethod -Uri '%API_URL%' -ErrorAction Stop).assets[0].name } catch { Write-Output $_.Exception.Message; exit }"') do set LATEST_RELEASE=%%j
 
-import (
-    "fmt"
-    "os"
-    "path/filepath"
-	"os/exec"
-)
-
-func main() {
-
-    // Run the Python script
-    runPythonScript()
-}
-
-// Runs the Python script 'run.py'
-func runPythonScript() {
-    currentDir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-    if err != nil {
-        fmt.Println("Error getting current directory:", err)
-        return
-    }
-
-    pythonExe := filepath.Join(currentDir, "python", "'''+ python_executable +r'''") 
-    scriptPath := filepath.Join(currentDir, "run.py")
-
-    fmt.Printf("Current directory is: %s\n", currentDir)
-    fmt.Printf("Running Python script %s...\n", scriptPath)
-
-    cmd := exec.Command(pythonExe, scriptPath)
-    cmd.Stdout = os.Stdout
-    cmd.Stderr = os.Stderr
-
-    err = cmd.Run()
-    if err != nil {
-        fmt.Println("Error running Python script:", err)
-    }
-}'''        
-                install_script_content = r'''
-cd /d "%~dp0"
-
-%~dp0go/bin/go.exe build run.go
-
-if %errorlevel% neq 0 (
-    echo Go build failed. Exiting...
+:: Check if download URL is found
+if not defined DOWNLOAD_URL (
+    echo No download URL found. Exiting.
     exit /b 1
 )
 
-echo Creating application shortcut...
-REM Create a VBScript to make a desktop shortcut with an icon
+:: Read the current release file name from the 'release' file
+if exist release (
+    set /p CURRENT_RELEASE=<release
+) else (
+    set CURRENT_RELEASE=NONE
+)
+
+:: Print the current and latest release names
+echo CURRENT_RELEASE: "%CURRENT_RELEASE%"
+echo LATEST_RELEASE: "%LATEST_RELEASE%"
+
+:: Compare the current release with the latest release
+if "!CURRENT_RELEASE!" == "!LATEST_RELEASE!" (
+    echo Current release is up to date.
+) else (
+    :: Delete all files in the folder except install.bat
+    echo Deleting old files except install.bat...
+    for %%f in (*) do (
+        if /I not "%%f"=="install.bat" (
+            del /q "%%f"
+        )
+    )
+    echo Old files deleted.
+
+    :: Delete all folders in the current directory
+    echo Deleting old folders...
+    for /d %%d in (*) do (
+        rd /s /q "%%d"
+    )
+    for /d %%d in (*) do (
+        rd /s /q "%%d"
+    )
+    echo Old files and folders deleted.
+    
+    :: Echo the download URL (for verification)
+    echo Download URL: !DOWNLOAD_URL!
+
+    :: Download the zip file using PowerShell
+    echo Downloading latest release...
+    powershell -Command "Invoke-WebRequest -Uri '!DOWNLOAD_URL!' -OutFile '!LATEST_RELEASE!'"
+    
+    :: Unzip the file into the current directory
+    echo Extracting the archive...
+    powershell -Command "Expand-Archive -Path '!LATEST_RELEASE!' -DestinationPath '.' -Force"
+    
+    :: (Optional) If the archive extracts into a folder, move its contents to the current directory.
+    :: You can add folder detection code here if desired.
+    
+    :: Cleanup - remove downloaded zip file
+    echo Cleanup done. Removing downloaded zip file...
+    del !LATEST_RELEASE!
+    
+    :: Update the 'release' file with the new release name
+    echo !LATEST_RELEASE!>release
+    
+    echo Your folder has been updated.
+    timeout /t 3 /nobreak >nul
+)
+
+
+:: Install requirements if available
+if exist requirements.txt (
+    echo Installing requirements from requirements.txt...
+    %~dp0python/windows/python.exe -m pip install -r requirements.txt
+    if %errorlevel% neq 0 (
+        echo Failed to install requirements. Aborting.
+        pause
+        exit /b 1
+    )
+    echo Requirements installed successfully.
+) else (
+    echo requirements.txt not found.
+)
+
+:: Create VBScript to make a desktop shortcut to run "python run.py"
+echo Creating desktop shortcut...
 echo Set objShell = CreateObject("WScript.Shell") > CreateShortcut.vbs
-echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desktop") ^& "\\'''+NAME+r'''.lnk") >> CreateShortcut.vbs
-echo desktopShortcut.WorkingDirectory = "'''+os.getcwd()+r'''" >> CreateShortcut.vbs
-echo desktopShortcut.TargetPath = "%cd%\run.exe" >> CreateShortcut.vbs
+echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desktop") ^& "\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
+echo desktopShortcut.TargetPath = "%~dp0python/windows/python.exe" >> CreateShortcut.vbs
+echo desktopShortcut.Arguments = "run.py" >> CreateShortcut.vbs
+echo desktopShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
 echo desktopShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
 echo desktopShortcut.Save >> CreateShortcut.vbs
-
-REM Create a shortcut in the same directory as run.exe
-echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+NAME+r'''.lnk") >> CreateShortcut.vbs
-echo desktopShortcut.WorkingDirectory = "'''+os.getcwd()+r'''" >> CreateShortcut.vbs
-echo dirShortcut.TargetPath = "%cd%\run.exe" >> CreateShortcut.vbs
+echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
+echo dirShortcut.TargetPath = "%~dp0python/windows/python.exe" >> CreateShortcut.vbs
+echo dirShortcut.Arguments = "run.py" >> CreateShortcut.vbs
+echo dirShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
 echo dirShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
 echo dirShortcut.Save >> CreateShortcut.vbs
 
-REM Run the VBScript to create the shortcuts
-cscript CreateShortcut.vbs
-
-REM Clean up the VBScript file
+:: Run the VBScript to create the shortcuts, then clean up
+cscript //nologo CreateShortcut.vbs
 del CreateShortcut.vbs
 
 echo Shortcuts created successfully!
-pause
-'''     
-                with open('install.bat', 'w') as f:
-                    f.write(install_script_content)
-                with open('run.go', 'w') as f:
-                    f.write(run_go_content)
-                with open('run.py', 'w') as f:
-                    f.write(run_py_content)
+pause'''
+
+        with open('run.py', 'w') as f:
+            f.write(run_py_content)
+        # Write install.sh with LF encoding for Unix-based systems
+        with open('install.sh', 'w', newline='\n') as f:
+            f.write(bash_install_script_content)
+
+        # Write install.bat with CRLF encoding for Windows
+        with open('install.bat', 'w', newline='\r\n') as f:
+            f.write(bat_install_script_content)
+        with open('release', 'w') as f:
+            f.write(f'{NAME}_{VERSION}.zip')
+        print(f'Files created successfully... now compress the folder into a zip file and upload it to github releases (matching the zip filename in the release file; {NAME}_{VERSION}.zip).')
 
     except Exception as e:
         print('Error: '+str(e))
