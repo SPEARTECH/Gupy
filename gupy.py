@@ -60,7 +60,7 @@ def cli():
     version = '.'.join(sys.version.split(' ')[0].split('.')[:2])
     if float(version) < 3.0:
         raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
-    click.echo("Gupy! v0.3.9")
+    click.echo("Gupy! v0.4.4")
     go,gcc,cgo = check_status()
     if go == 'True':
         click.echo(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
@@ -748,9 +748,9 @@ def distribute(version):
         # package latest python if not selected - make python folder with windows/mac/linux
         os.makedirs(f"dist/{NAME}{VERSION}/python", exist_ok=True)
         print('Copying python folder...')
-        archive_path = python_loc + delim + 'python.7z'
+        archive_path = gupy_file_path + delim + 'python.7z'
         with py7zr.SevenZipFile(archive_path, mode='r') as archive:
-            archive.extractall(path=f"dist/{NAME}{VERSION}/python")
+            archive.extractall(path=f"dist/{NAME}{VERSION}")
         # shutil.copytree(python_loc, f"dist/{NAME}{VERSION}/python", dirs_exist_ok=True)
         
         print('Copied python folder...')
@@ -799,6 +799,9 @@ def distribute(version):
 
         # create install.bat/sh for compiling run.go
         run_py_content = r'''
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import server
 
 server.main()
@@ -1039,7 +1042,7 @@ if "!CURRENT_RELEASE!" == "!LATEST_RELEASE!" (
 :: Install requirements if available
 if exist requirements.txt (
     echo Installing requirements from requirements.txt...
-    ./python/windows/python.exe -m pip install -r requirements.txt
+    %~dp0python/windows/python.exe -m pip install -r requirements.txt
     if %errorlevel% neq 0 (
         echo Failed to install requirements. Aborting.
         pause
@@ -1054,13 +1057,13 @@ if exist requirements.txt (
 echo Creating desktop shortcut...
 echo Set objShell = CreateObject("WScript.Shell") > CreateShortcut.vbs
 echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desktop") ^& "\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
-echo desktopShortcut.TargetPath = "python/windows/python.exe" >> CreateShortcut.vbs
+echo desktopShortcut.TargetPath = "%~dp0python/windows/python.exe" >> CreateShortcut.vbs
 echo desktopShortcut.Arguments = "run.py" >> CreateShortcut.vbs
 echo desktopShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
 echo desktopShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
 echo desktopShortcut.Save >> CreateShortcut.vbs
 echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
-echo dirShortcut.TargetPath = "python/windows/python.exe" >> CreateShortcut.vbs
+echo dirShortcut.TargetPath = "%~dp0python/windows/python.exe" >> CreateShortcut.vbs
 echo dirShortcut.Arguments = "run.py" >> CreateShortcut.vbs
 echo dirShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
 echo dirShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
