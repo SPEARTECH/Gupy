@@ -975,18 +975,18 @@ export async function loadGoWasm() {
         # build_wasm()
         # os.system(f"$env:GOOS='js'; $env:GOARCH='wasm'; go build -o main.wasm")
         # Function to get the GOROOT environment variable using the 'go env' command
-        def get_goroot():
-            # Run 'go env GOROOT' command and capture the output
-            result = subprocess.run(["go", "env", "GOROOT"], capture_output=True, text=True)
-            if result.returncode == 0:
-                return result.stdout.strip()  # Remove any surrounding whitespace/newlines
-            else:
-                raise Exception("Failed to get GOROOT: " + result.stderr)
-        goroot = get_goroot()
-        # Construct the path to wasm_exec.js
-        wasm_exec_path = goroot + "/misc/wasm/wasm_exec.js"
-        # Copy wasm_exec.js to the current directory
-        shutil.copy(wasm_exec_path, '.')
+        # def get_goroot():
+        #     # Run 'go env GOROOT' command and capture the output
+        #     result = subprocess.run(["go", "env", "GOROOT"], capture_output=True, text=True)
+        #     if result.returncode == 0:
+        #         return result.stdout.strip()  # Remove any surrounding whitespace/newlines
+        #     else:
+        #         raise Exception("Failed to get GOROOT: " + result.stderr)
+        # goroot = get_goroot()
+        # # Construct the path to wasm_exec.js
+        # wasm_exec_path = goroot + "/misc/wasm/wasm_exec.js"
+        # # Copy wasm_exec.js to the current directory
+        # shutil.copy(wasm_exec_path, '.')
         # shutil.copy("$(go env GOROOT)/misc/wasm/wasm_exec.js", '.')
         os.chdir(f'../../')
         self.assemble()
@@ -1036,4 +1036,145 @@ export async function loadGoWasm() {
 
         # add assembly of cython modules
 
-    
+    def distribute(self, NAME, VERSION):
+        try:
+
+            # creating project folder if doesnt already exist
+            os.makedirs('dist', exist_ok=True)
+            os.chdir('dist')
+
+            # creating version folder is doesnt already exist
+            os.makedirs(f"{NAME}{VERSION}", exist_ok=True)
+            # shutil.rmtree(f"{VERSION}{delim}{folder}")
+            # os.makedirs(VERSION, exist_ok=True)
+
+            shutil.rmtree(f"{NAME}{VERSION}")
+            os.makedirs(f"{NAME}{VERSION}", exist_ok=True)
+            os.chdir('../')
+
+            # Get the directory path to the current gupy.py file without the filename
+            gupy_file_path = os.path.dirname(os.path.abspath(__file__))
+
+            # python_version = "".join(sys.version.split(' ')[0].split('.')[0:2]) 
+            # print(os.getcwd())
+            # moves files and folders - only checks the cythonized files in root directory.
+            files = os.listdir(os.getcwd())
+            for file_name in files:
+                full_file_name = os.path.join(os.getcwd(), file_name)
+                if os.path.isfile(full_file_name):
+                    shutil.copy(full_file_name, f"dist/{NAME}{VERSION}")
+                elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv':
+                    shutil.copytree(full_file_name, f"dist/{NAME}{VERSION}/{file_name}", dirs_exist_ok=True)
+                print('Copied '+file_name+' to '+f"dist/{NAME}{VERSION}/{file_name}"+'...')
+
+            os.chdir(f'dist/{NAME}{VERSION}')
+
+
+            # Use glob to find all .ico files in the folder
+            ico_files = glob.glob(os.path.join('static', '*.ico'))
+            ico = ico_files[0]
+
+            png_files = glob.glob(os.path.join('static', '*.png'))
+            png = png_files[0].replace('\\','/') # changing to forward slashes for mac/linux compatibility
+
+            print("Please enter Github information for the app where your release package will be uploaded...")
+            REPO_OWNER = input(f'Enter the Github repository owner: ')
+            REPO_NAME = input("Enter the Github repository name: ")
+
+            bash_install_script_content = r'''
+#!/bin/bash
+
+
+# Set the working directory to the script's directory
+cd "$(dirname "$0")"
+echo "Current directory is: $(pwd)"
+
+# Determine the OS and current directory
+OS=$(uname)
+CURRENT_DIR=$(pwd)
+
+# 
+PORT=${1:-8080}
+DOCROOT=${2:-.}
+
+echo "Serving $DOCROOT on http://localhost:$PORT/"
+
+while true; do
+  # read one HTTP request
+  request=$(nc -l -p "$PORT" -q 1)
+  # pull out the path (e.g. GET /foo.html HTTP/1.1 → /foo.html)
+  path=$(printf '%s\n' "$request" | head -n1 | cut -d' ' -f2)
+  [[ "$path" == "/" ]] && path="templates/index.html"
+
+  file="$DOCROOT$path"
+  if [[ -f "$file" ]]; then
+    mime=$(file --brief --mime-type "$file")
+    {
+      printf 'HTTP/1.1 200 OK\r\nContent-Type: %s\r\n\r\n' "$mime"
+      cat "$file"
+    } | nc -l -p "$PORT" -q 1
+  else
+    printf 'HTTP/1.1 404 Not Found\r\n\r\n' | nc -l -p "$PORT" -q 1
+  fi
+done
+    '''
+
+
+
+
+
+            bat_install_script_content = r'''
+@echo off
+setlocal enabledelayedexpansion
+
+
+param(
+  [int]$Port = 8080,
+  [string]$Root = (Get-Location)
+)
+# create & start listener
+$listener = [System.Net.HttpListener]::new()
+$listener.Prefixes.Add("http://*:$Port/")
+$listener.Start()
+Write-Host "Serving $Root on http://localhost:$Port/ (Ctrl+C to stop)"
+
+while ($listener.IsListening) {
+  $ctx = $listener.GetContext()
+  $req = $ctx.Request
+  $res = $ctx.Response
+
+  # map URL → file
+  $rel = $req.Url.AbsolutePath.TrimStart('/')
+  $path = if ($rel) { Join-Path $Root $rel } else { Join-Path $Root 'templates/index.html' }
+
+  if (Test-Path $path) {
+    $bytes = [System.IO.File]::ReadAllBytes($path)
+    # use IIS mime‐map if available, else default to octet-stream
+    $res.ContentType = ([System.Web.MimeMapping]::GetMimeMapping($path) -or 'application/octet-stream')
+    $res.StatusCode = 200
+    $res.OutputStream.Write($bytes, 0, $bytes.Length)
+  } else {
+    $res.StatusCode = 404
+  }
+  $res.Close()
+}
+
+pause
+'''
+
+            # Write run.sh with LF encoding for Unix-based systems
+            with open('run.sh', 'w', newline='\n') as f:
+                f.write(bash_install_script_content)
+
+            # Write run.bat with CRLF encoding for Windows
+            with open('run.bat', 'w', newline='\r\n') as f:
+                f.write(bat_install_script_content)
+            with open('release', 'w') as f:
+                f.write(f'{NAME}_{VERSION}.zip')
+
+            print(f'Files created successfully... \nNow compress the folder into a zip file and upload it to github releases (matching the zip filename in the release file; {NAME}_{VERSION}.zip). \nOptionally, you may install Inno Setup to create an installer with the {NAME}_{VERSION}_Setup.iss file.')
+
+
+        except Exception as e:
+            print('Error: '+str(e))
+            return

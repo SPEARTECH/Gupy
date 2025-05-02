@@ -1,7 +1,7 @@
 # Gupy!
 
-<!-- <img src="https://github.com/SPEARTECH/Gupy/blob/main/gupy_logo.png" alt="Welcome to Gupy :)" width="50%"> -->
-![](https://github.com/SPEARTECH/Gupy/blob/main/gupy_logo.png)
+<img src="https://github.com/SPEARTECH/Gupy/blob/main/gupy_logo.png" alt="Welcome to Gupy! :)" width="50%">
+<!-- ![](https://github.com/SPEARTECH/Gupy/blob/main/gupy_logo.png) -->
 
 Gupy is a CLI tool for generating templates of cross-platform applications based on Go, Vue, and Python!
 

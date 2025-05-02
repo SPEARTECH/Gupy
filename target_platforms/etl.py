@@ -128,7 +128,8 @@ func main(){
         else:
             click.echo(f'{Fore.RED}No entry file found of "{self.name}.py" or "main.go"{Style.RESET_ALL}')
         
-
-
+    def distribute(self, system, folder, VERSION):
+        # create stackscript code
+        pass
 
 

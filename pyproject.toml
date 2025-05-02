@@ -5,13 +5,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "gupy-framework"
-version = "0.4.4"
+version = "0.4.9"
 authors = [
 { name="Speartech", email="Tyler@Speartech.org" },
 ]
 description = "Gupy! Simplifying Cross-Platform development with Go, Vue, and Python"
 readme = "README.md"
-requires-python = "==3.12.10"
+requires-python = ">=3.12"
 classifiers = [
 "Programming Language :: Python :: 3",
 "License :: OSI Approved :: MIT License",

@@ -9,7 +9,6 @@ import subprocess
 import shutil
 import glob
 from colorama import Fore, Style
-import py7zr
 
 NAME=''
 TARGETS=[]
@@ -60,7 +59,7 @@ def cli():
     version = '.'.join(sys.version.split(' ')[0].split('.')[:2])
     if float(version) < 3.0:
         raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
-    click.echo("Gupy! v0.4.4")
+    click.echo("Gupy! v0.5.2")
     go,gcc,cgo = check_status()
     if go == 'True':
         click.echo(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
@@ -672,426 +671,71 @@ SOFTWARE.
     )
 def distribute(version):
     VERSION = 'v'+version.replace('.','').replace('-','').replace('_','')
-    try:
-        # detect os and make folder
-        system = platform.system()
+    # detect os and make folder
+    system = platform.system()
 
-        if system == 'Darwin':
-            system = 'darwin'
-            delim = '/'
-        elif system == 'Linux':
-            system = 'linux'
-            delim = '/'
-        else:
-            system = 'win'
-            folder = 'windows'
-            delim = '\\'
-
-
-        dir_list = os.getcwd().split(delim)
-        def change_dir(dir_list,target):
-            index = dir_list.index(target)
-            chdir_num = len(dir_list) - (index +1)
-            if not chdir_num == 0:
-                os.chdir('../'*chdir_num)
-        # detect the platform in the current directory or parent directories and then change directory to its root for operation
-        if 'desktop' in dir_list:
-            TARGET='desktop'
-            change_dir(dir_list,TARGET)
-            NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
-
-        # perhaps run logic for .pyd/.so files, moving all that are to be deployed...? mobile to apk?
-        elif 'pwa' in dir_list or 'website' in dir_list or 'api' in dir_list or 'mobile' in dir_list or 'cli' in dir_list or 'script' in dir_list or 'etl' in dir_list:
-            print('Error: --distribute is only available for desktop projects.')
-            return
-        else:
-            print(f'Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).')
-            return
-
-        # creating project folder if doesnt already exist
-        os.makedirs('dist', exist_ok=True)
-        os.chdir('dist')
-
-        # creating version folder is doesnt already exist
-        os.makedirs(f"{NAME}{VERSION}", exist_ok=True)
-        # shutil.rmtree(f"{VERSION}{delim}{folder}")
-        # os.makedirs(VERSION, exist_ok=True)
-
-        shutil.rmtree(f"{NAME}{VERSION}")
-        os.makedirs(f"{NAME}{VERSION}", exist_ok=True)
-        os.chdir('../')
-
-        # Get the directory path to the current gupy.py file without the filename
-        gupy_file_path = os.path.dirname(os.path.abspath(__file__))
-        
-        # get python location and executable
-        if system in ['linux', 'darwin']:
-            python_loc = gupy_file_path + '/python'
-            python_folder = 'unix/bin'
-            python_executable = 'python3.12'
-        else:
-            python_loc = gupy_file_path + '\\python'
-            python_folder = 'windows'
-            python_executable =  'python.exe'
-
-        # python_version = "".join(sys.version.split(' ')[0].split('.')[0:2]) 
-        # print(os.getcwd())
-        # moves files and folders - only checks the cythonized files in root directory.
-        files = os.listdir(os.getcwd())
-        for file_name in files:
-            full_file_name = os.path.join(os.getcwd(), file_name)
-            if os.path.isfile(full_file_name):
-                shutil.copy(full_file_name, f"dist/{NAME}{VERSION}")
-            elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv':
-                shutil.copytree(full_file_name, f"dist/{NAME}{VERSION}/{file_name}", dirs_exist_ok=True)
-            print('Copied '+file_name+' to '+f"dist/{NAME}{VERSION}/{file_name}"+'...')
-        # package latest python if not selected - make python folder with windows/mac/linux
-        os.makedirs(f"dist/{NAME}{VERSION}/python", exist_ok=True)
-        print('Copying python folder...')
-        archive_path = gupy_file_path + delim + 'python.7z'
-        with py7zr.SevenZipFile(archive_path, mode='r') as archive:
-            archive.extractall(path=f"dist/{NAME}{VERSION}")
-        # shutil.copytree(python_loc, f"dist/{NAME}{VERSION}/python", dirs_exist_ok=True)
-        
-        print('Copied python folder...')
-        os.chdir(f'dist/{NAME}{VERSION}')
+    if system == 'Darwin':
+        system = 'darwin'
+        delim = '/'
+    elif system == 'Linux':
+        system = 'linux'
+        delim = '/'
+    else:
+        system = 'win'
+        folder = 'windows'
+        delim = '\\'
 
 
-        command = f".{delim}python{delim}{python_folder}{delim}{python_executable} python{delim}{python_folder}{delim}get-pip.py"
-        # Run the command
-        result = subprocess.run(command, shell=True, check=True)
-
-        command = f".{delim}python{delim}{python_folder}{delim}{python_executable} -m pip install --upgrade pip"
-        # Run the command
-        result = subprocess.run(command, shell=True, check=True)
-
-        # install requirements with new python location if it exists
-        if os.path.exists('requirements.txt'):
-                # Read as binary to detect encoding
-            with open('requirements.txt', 'rb') as f:
-                raw_data = f.read(10000)  # Read first 10KB
-            detected = chardet.detect(raw_data)
-            encoding = detected.get('encoding', 'utf-8')
-
-            with open('requirements.txt', 'r', encoding=encoding) as f:
-                if len(f.readlines()) > 0:
-                    command = f".{delim}python{delim}{python_folder}{delim}{python_executable} -m pip install -r requirements.txt"
-
-                    # Run the command
-                    result = subprocess.run(command, shell=True, check=True)
-                    # Check if the command was successful
-                    if result.returncode == 0:
-                        print("Requirements installed successfully.")
-                    else:
-                        print("Failed to install requirements.txt - ensure it exists.")
-
-        # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
-        # Use glob to find all .ico files in the folder
-        ico_files = glob.glob(os.path.join('static', '*.ico'))
-        ico = ico_files[0]
-
-        png_files = glob.glob(os.path.join('static', '*.png'))
-        png = png_files[0]
-
-        print("Please enter Github information for the app where your release package will be uploaded...")
-        REPO_OWNER = input(f'Enter the Github repository owner: ')
-        REPO_NAME = input("Enter the Github repository name: ")
-
-        # create install.bat/sh for compiling run.go
-        run_py_content = r'''
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-import server
-
-server.main()
-                '''
-        bash_install_script_content = r'''
-#!/bin/bash
-# filepath: /Users/tylerretzlaff/Desktop/Projects/SCOPS2_LAN/install.sh
-
-# Set repository owner and name
-REPO_OWNER="'''+REPO_OWNER+r'''"
-REPO_NAME="'''+REPO_NAME+r'''"
-
-# GitHub API URL to fetch the latest release
-API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
-
-# Use curl to fetch the latest release data and jq to parse JSON
-DOWNLOAD_URL=$(curl -s "$API_URL" | jq -r '.assets[0].browser_download_url')
-LATEST_RELEASE=$(curl -s "$API_URL" | jq -r '.assets[0].name')
-
-# Check if download URL is found
-if [ -z "$DOWNLOAD_URL" ]; then
-    echo "No download URL found. Exiting."
-    exit 1
-fi
-
-# Read the current release file name from the 'release' file
-if [ -f release ]; then
-    CURRENT_RELEASE=$(cat release)
-else
-    CURRENT_RELEASE="NONE"
-fi
-
-# Print the current and latest release names
-echo "CURRENT_RELEASE: $CURRENT_RELEASE"
-echo "LATEST_RELEASE: $LATEST_RELEASE"
-
-# Compare the current release with the latest release
-if [ "$CURRENT_RELEASE" == "$LATEST_RELEASE" ]; then
-    echo "Current release is up to date."
-else
-    # Delete all files and folders except install.sh
-    echo "Deleting old files and folders (except install.sh)..."
-    find . -type f ! -name "install.sh" -exec rm -f {} +
-    find . -type d ! -name "." -exec rm -rf {} +
-    echo "Old files and folders deleted."
-
-    # Echo the download URL (for verification)
-    echo "Download URL: $DOWNLOAD_URL"
-
-    # Download the zip file using curl
-    echo "Downloading latest release..."
-    curl -L "$DOWNLOAD_URL" -o "$LATEST_RELEASE"
-
-    # Unzip the file into the current directory
-    echo "Extracting the archive..."
-    unzip -o "$LATEST_RELEASE" -d ./
-
-    # Detect if the unzip created a new folder (dynamically)
-    EXTRACTED_FOLDER=$(find . -maxdepth 1 -type d ! -name "." ! -name ".*" | head -n 1)
-    if [ -n "$EXTRACTED_FOLDER" ] && [ "$EXTRACTED_FOLDER" != "." ]; then
-        echo "Detected folder: $EXTRACTED_FOLDER"
-        echo "Moving contents of $EXTRACTED_FOLDER to current directory..."
-        mv "$EXTRACTED_FOLDER"/* ./
-        rm -rf "$EXTRACTED_FOLDER"
-    else
-        echo "No separate directory detected; extraction complete."
-    fi
-
-    # Cleanup - remove downloaded zip file
-    echo "Cleanup done. Removing downloaded zip file..."
-    rm "$LATEST_RELEASE"
-
-    # Update the 'release' file with the new release name
-    echo "$LATEST_RELEASE" > release
-
-    echo "Your folder has been updated."
-    sleep 3
-fi
-
-# Set the working directory to the script's directory
-cd "$(dirname "$0")"
-echo "Current directory is: $(pwd)"
-
-
-
-# -- Install requirements.txt using Python --
-if [ -f "requirements.txt" ]; then
-    echo "Installing requirements from requirements.txt..."
-    sudo ./python/bin/python3.12 -m pip install -r requirements.txt
-    if [ $? -ne 0 ]; then
-        echo "Failed to install requirements. Aborting."
-        exit 1
-    else
-        echo "Requirements installed successfully."
-    fi
-else
-    echo "requirements.txt not found."
-fi
-
-# Determine the OS
-OS=$(uname)
-CURRENT_DIR=$(pwd)
-
-if [ "$OS" = "Linux" ]; then
-    DESKTOP_FILE="$HOME/Desktop/'''+NAME+r'''.desktop"
-    echo "Creating Linux desktop shortcut at $DESKTOP_FILE"
-    cat <<EOF > "$DESKTOP_FILE"
-[Desktop Entry]
-Name='''+NAME+r'''
-Comment=Run '''+NAME+r'''
-Exec=sudo ./python/bin/python3.12 $CURRENT_DIR/run.py
-Icon=$CURRENT_DIR/'''+png+r'''
-Terminal=false
-Type=Application
-Categories=Utility;
-EOF
-    chmod +x "$DESKTOP_FILE"
-
-elif [ "$OS" = "Darwin" ]; then
-    # macOS: create a minimal AppleScript-based app that launches run.py
-    APP_PATH="$HOME/Desktop/'''+NAME+r'''.app"
-    echo "Creating macOS desktop shortcut at $APP_PATH"
-    mkdir -p "$APP_PATH/Contents/MacOS"
-    cat <<EOF > "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
-#!/bin/bash
-# Change directory to the folder containing run.py
-cd "$CURRENT_DIR"
-sudo ./python/bin/python3.12 run.py &
-EOF
-    chmod +x "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
-    # Create a minimal Info.plist file
-    mkdir -p "$APP_PATH/Contents"
-    cat <<EOF > "$APP_PATH/Contents/Info.plist"
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-  <dict>
-      <key>CFBundleExecutable</key>
-      <string>'''+NAME+r'''</string>
-      <key>CFBundleIdentifier</key>
-      <string>com.example.'''+NAME+r'''</string>
-      <key>CFBundleName</key>
-      <string>'''+NAME+r'''</string>
-      <key>CFBundleVersion</key>
-      <string>1.0</string>
-  </dict>
-</plist>
-EOF
-else
-    echo "Unsupported OS: $OS. Please create a desktop shortcut manually."
-fi
-
-echo "Launching run.py..."
-sudo ./python/bin/python3.12 run.py &
-'''
-
-        bat_install_script_content = r'''
-@echo off
-setlocal enabledelayedexpansion
-
-:: Set repository owner and name
-set REPO_OWNER="'''+REPO_OWNER+r'''"
-set REPO_NAME="'''+REPO_NAME+r'''"
-
-:: GitHub API URL to fetch the latest release
-set API_URL=https://api.github.com/repos/%REPO_OWNER%/%REPO_NAME%/releases/latest
-
-:: Use PowerShell to fetch the latest release data and parse JSON to get the download URL and file name
-for /f "delims=" %%i in ('powershell -Command "try { (Invoke-RestMethod -Uri '%API_URL%' -ErrorAction Stop).assets[0].browser_download_url } catch { Write-Output $_.Exception.Message; exit }"') do set DOWNLOAD_URL=%%i
-for /f "delims=" %%j in ('powershell -Command "try { (Invoke-RestMethod -Uri '%API_URL%' -ErrorAction Stop).assets[0].name } catch { Write-Output $_.Exception.Message; exit }"') do set LATEST_RELEASE=%%j
-
-:: Check if download URL is found
-if not defined DOWNLOAD_URL (
-    echo No download URL found. Exiting.
-    exit /b 1
-)
-
-:: Read the current release file name from the 'release' file
-if exist release (
-    set /p CURRENT_RELEASE=<release
-) else (
-    set CURRENT_RELEASE=NONE
-)
-
-:: Print the current and latest release names
-echo CURRENT_RELEASE: "%CURRENT_RELEASE%"
-echo LATEST_RELEASE: "%LATEST_RELEASE%"
-
-:: Compare the current release with the latest release
-if "!CURRENT_RELEASE!" == "!LATEST_RELEASE!" (
-    echo Current release is up to date.
-) else (
-    :: Delete all files in the folder except install.bat
-    echo Deleting old files except install.bat...
-    for %%f in (*) do (
-        if /I not "%%f"=="install.bat" (
-            del /q "%%f"
-        )
-    )
-    echo Old files deleted.
-
-    :: Delete all folders in the current directory
-    echo Deleting old folders...
-    for /d %%d in (*) do (
-        rd /s /q "%%d"
-    )
-    for /d %%d in (*) do (
-        rd /s /q "%%d"
-    )
-    echo Old files and folders deleted.
-    
-    :: Echo the download URL (for verification)
-    echo Download URL: !DOWNLOAD_URL!
-
-    :: Download the zip file using PowerShell
-    echo Downloading latest release...
-    powershell -Command "Invoke-WebRequest -Uri '!DOWNLOAD_URL!' -OutFile '!LATEST_RELEASE!'"
-    
-    :: Unzip the file into the current directory
-    echo Extracting the archive...
-    powershell -Command "Expand-Archive -Path '!LATEST_RELEASE!' -DestinationPath '.' -Force"
-    
-    :: (Optional) If the archive extracts into a folder, move its contents to the current directory.
-    :: You can add folder detection code here if desired.
-    
-    :: Cleanup - remove downloaded zip file
-    echo Cleanup done. Removing downloaded zip file...
-    del !LATEST_RELEASE!
-    
-    :: Update the 'release' file with the new release name
-    echo !LATEST_RELEASE!>release
-    
-    echo Your folder has been updated.
-    timeout /t 3 /nobreak >nul
-)
-
-
-:: Install requirements if available
-if exist requirements.txt (
-    echo Installing requirements from requirements.txt...
-    %~dp0python/windows/python.exe -m pip install -r requirements.txt
-    if %errorlevel% neq 0 (
-        echo Failed to install requirements. Aborting.
-        pause
-        exit /b 1
-    )
-    echo Requirements installed successfully.
-) else (
-    echo requirements.txt not found.
-)
-
-:: Create VBScript to make a desktop shortcut to run "python run.py"
-echo Creating desktop shortcut...
-echo Set objShell = CreateObject("WScript.Shell") > CreateShortcut.vbs
-echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desktop") ^& "\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
-echo desktopShortcut.TargetPath = "%~dp0python/windows/python.exe" >> CreateShortcut.vbs
-echo desktopShortcut.Arguments = "run.py" >> CreateShortcut.vbs
-echo desktopShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
-echo desktopShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
-echo desktopShortcut.Save >> CreateShortcut.vbs
-echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
-echo dirShortcut.TargetPath = "%~dp0python/windows/python.exe" >> CreateShortcut.vbs
-echo dirShortcut.Arguments = "run.py" >> CreateShortcut.vbs
-echo dirShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
-echo dirShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
-echo dirShortcut.Save >> CreateShortcut.vbs
-
-:: Run the VBScript to create the shortcuts, then clean up
-cscript //nologo CreateShortcut.vbs
-del CreateShortcut.vbs
-
-echo Shortcuts created successfully!
-pause'''
-
-        with open('run.py', 'w') as f:
-            f.write(run_py_content)
-        # Write install.sh with LF encoding for Unix-based systems
-        with open('install.sh', 'w', newline='\n') as f:
-            f.write(bash_install_script_content)
-
-        # Write install.bat with CRLF encoding for Windows
-        with open('install.bat', 'w', newline='\r\n') as f:
-            f.write(bat_install_script_content)
-        with open('release', 'w') as f:
-            f.write(f'{NAME}_{VERSION}.zip')
-        print(f'Files created successfully... now compress the folder into a zip file and upload it to github releases (matching the zip filename in the release file; {NAME}_{VERSION}.zip).')
-
-    except Exception as e:
-        print('Error: '+str(e))
+    dir_list = os.getcwd().split(delim)
+    def change_dir(dir_list,target):
+        index = dir_list.index(target)
+        chdir_num = len(dir_list) - (index +1)
+        if not chdir_num == 0:
+            os.chdir('../'*chdir_num)
+    # detect the platform in the current directory or parent directories and then change directory to its root for operation
+    if 'desktop' in dir_list:
+        TARGET='desktop'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+        desktop.Desktop(NAME).distribute(system,folder,delim,NAME,VERSION)
+    elif 'pwa' in dir_list:
+        TARGET='pwa'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+        pwa.Pwa(NAME).distribute(NAME,VERSION)
+    elif 'script' in dir_list:
+        TARGET='script'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+        script.Script(NAME).distribute(system,folder,delim,NAME,VERSION)
+    elif 'cli' in dir_list:
+        TARGET='cli'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+        cmdline.CLI(NAME).distribute(system,folder,delim,NAME,VERSION)
+    # perhaps run logic for .pyd/.so files, moving all that are to be deployed...? mobile to apk?
+    elif 'website' in dir_list:
+        TARGET='website'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+        website.Website(NAME).distribute(system,folder,delim,NAME,VERSION)
+    elif 'api' in dir_list:
+        TARGET='api'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+        api.Api(NAME).distribute(system,folder,delim,NAME,VERSION)
+    elif 'etl' in dir_list:
+        TARGET='etl'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+        etl.Etl(NAME).distribute(system,folder,delim,NAME,VERSION)
+    elif 'mobile' in dir_list:
+        click.echo(f'{Fore.RED}Error: "distribute" not available for mobile projects.{Style.RESET_ALL}')
         return
+    else:
+        click.echo(f'{Fore.RED}Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).{Style.RESET_ALL}')
+        return
+
 
 # @click.command()
 # @click.option(

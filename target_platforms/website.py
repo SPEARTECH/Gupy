@@ -1672,3 +1672,7 @@ setup(
               build_wasm(filename)
             os.chdir('../../../')
         # add assembly of cython modules
+
+    def distribute(self, system, folder, VERSION):
+        # create stackscript code
+        pass
