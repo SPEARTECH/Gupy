@@ -59,7 +59,7 @@ def cli():
     version = '.'.join(sys.version.split(' ')[0].split('.')[:2])
     if float(version) < 3.0:
         raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
-    click.echo("Gupy! v0.5.2")
+    click.echo("Gupy! v0.5.3")
     go,gcc,cgo = check_status()
     if go == 'True':
         click.echo(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
@@ -519,6 +519,15 @@ def package():
         else:
             click.echo(f'{Fore.RED}Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).{Style.RESET_ALL}')
             return
+        print("Please enter Github information for the app where your release package will be uploaded...")
+        AUTHOR = input("Enter the developer name (default=Example Author): ")
+        if AUTHOR == '':
+            AUTHOR = 'Example Author'
+        if AUTHOR_EMAIL == '':
+            AUTHOR_EMAIL = 'author@example.com'
+        AUTHOR_EMAIL = input("Enter the developer contact email (default=author@example.com): ")
+        REPO_OWNER = input(f'Enter the Github repository owner: ')
+        REPO_NAME = input("Enter the Github repository name: ")
 
         # creating project folder if doesnt already exist
         os.makedirs(NAME, exist_ok=True)
@@ -568,7 +577,7 @@ build-backend = "hatchling.build"
 name = "'''+NAME+'''"
 version = "0.0.1"
 authors = [
-{ name="Example Author", email="author@example.com" },
+{ name="'''+AUTHOR+'''", email="'''+AUTHOR_EMAIL+'''" },
 ]
 description = "A small example package"
 readme = "README.md"
@@ -585,8 +594,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/pypa/sampleproject"
-Issues = "https://github.com/pypa/sampleproject/issues"
+Homepage = "https://github.com/'''+REPO_OWNER+'''/'''+REPO_NAME+'''"
+Issues = "https://github.com/'''+REPO_OWNER+'''/'''+REPO_NAME+'''/issues"
 
 
 # Specify the directory where your Python package code is located

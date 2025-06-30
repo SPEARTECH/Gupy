@@ -7,6 +7,8 @@ import glob
 import sys
 import click
 from colorama import Fore, Style
+import webbrowser
+
 
 class Pwa(base.Base):
     index_content = '''
@@ -1000,14 +1002,15 @@ export async function loadGoWasm() {
             delim = '/'
         else:
             delim = '\\'
-        os.chdir(f'pwa')
         # assign current python executable to use
         cmd = sys.executable.split(delim)[-1]
-        os.system(f'{cmd} -m http.server')
+        # Open the URL in the default web browser
+        webbrowser.open("http://127.0.0.1:8000")
+        os.system(f'{cmd} -m http.server -b 127.0.0.1 8000')
 
       # def cythonize(self, name):
       #   pass
-
+ 
     def assemble(self):
         # detect if currently in go_wasm, otherwise, cd to go_wasm to run cmds
         os.chdir(f'pwa/go_wasm')
@@ -1052,8 +1055,8 @@ export async function loadGoWasm() {
             os.makedirs(f"{NAME}{VERSION}", exist_ok=True)
             os.chdir('../')
 
-            # Get the directory path to the current gupy.py file without the filename
-            gupy_file_path = os.path.dirname(os.path.abspath(__file__))
+            # # Get the directory path to the current gupy.py file without the filename
+            # gupy_file_path = os.path.dirname(os.path.abspath(__file__))
 
             # python_version = "".join(sys.version.split(' ')[0].split('.')[0:2]) 
             # print(os.getcwd())
@@ -1069,105 +1072,125 @@ export async function loadGoWasm() {
 
             os.chdir(f'dist/{NAME}{VERSION}')
 
+            bash_install_script_content = r'''#!/bin/bash
 
-            # Use glob to find all .ico files in the folder
-            ico_files = glob.glob(os.path.join('static', '*.ico'))
-            ico = ico_files[0]
-
-            png_files = glob.glob(os.path.join('static', '*.png'))
-            png = png_files[0].replace('\\','/') # changing to forward slashes for mac/linux compatibility
-
-            print("Please enter Github information for the app where your release package will be uploaded...")
-            REPO_OWNER = input(f'Enter the Github repository owner: ')
-            REPO_NAME = input("Enter the Github repository name: ")
-
-            bash_install_script_content = r'''
-#!/bin/bash
-
-
-# Set the working directory to the script's directory
+# change to script’s directory
 cd "$(dirname "$0")"
-echo "Current directory is: $(pwd)"
 
-# Determine the OS and current directory
-OS=$(uname)
-CURRENT_DIR=$(pwd)
+# open default browser
+case "$(uname)" in
+  Darwin*)
+    open "http://localhost:${1:-8080}"
+    ;;
+  *)
+    xdg-open "http://localhost:${1:-8080}" >/dev/null 2>&1
+    ;;
+esac
 
-# 
+# serve files
 PORT=${1:-8080}
 DOCROOT=${2:-.}
-
 echo "Serving $DOCROOT on http://localhost:$PORT/"
 
 while true; do
   # read one HTTP request
   request=$(nc -l -p "$PORT" -q 1)
-  # pull out the path (e.g. GET /foo.html HTTP/1.1 → /foo.html)
   path=$(printf '%s\n' "$request" | head -n1 | cut -d' ' -f2)
-  [[ "$path" == "/" ]] && path="templates/index.html"
+  [[ "$path" == "/" ]] && path="index.html"
 
-  file="$DOCROOT$path"
+  file="$DOCROOT/$path"
   if [[ -f "$file" ]]; then
     mime=$(file --brief --mime-type "$file")
     {
-      printf 'HTTP/1.1 200 OK\r\nContent-Type: %s\r\n\r\n' "$mime"
+      printf 'HTTP/1.1 200 OK\r\n'
+      printf 'Content-Type: %s\r\n' "$mime"
+      printf 'Service-Worker-Allowed: /\r\n'
+      printf '\r\n'
       cat "$file"
     } | nc -l -p "$PORT" -q 1
   else
-    printf 'HTTP/1.1 404 Not Found\r\n\r\n' | nc -l -p "$PORT" -q 1
-  fi
+    printf 'HTTP/1.1 404 Not Found\r\n\r\n'
+  fi | nc -l -p "$PORT" -q 1
 done
-    '''
+'''
 
 
+            import base64
 
+            # … inside Pwa.distribute() just before writing run.bat …
 
-
-            bat_install_script_content = r'''
-@echo off
-setlocal enabledelayedexpansion
-
-
-param(
+            # 1) your raw PowerShell listener script
+            ps = r"""param(
   [int]$Port = 8080,
   [string]$Root = (Get-Location)
 )
-# create & start listener
+
+# minimal MIME map, now including wasm
+$mimes = @{
+  '.html' = 'text/html'
+  '.htm'  = 'text/html'
+  '.js'   = 'text/javascript'
+  '.css'  = 'text/css'
+  '.json' = 'application/json'
+  '.png'  = 'image/png'
+  '.jpg'  = 'image/jpeg'
+  '.jpeg' = 'image/jpeg'
+  '.gif'  = 'image/gif'
+  '.svg'  = 'image/svg+xml'
+  '.wasm' = 'application/wasm'
+}
+
 $listener = [System.Net.HttpListener]::new()
-$listener.Prefixes.Add("http://*:$Port/")
+$listener.Prefixes.Add("http://localhost:$Port/")
 $listener.Start()
 Write-Host "Serving $Root on http://localhost:$Port/ (Ctrl+C to stop)"
 
 while ($listener.IsListening) {
-  $ctx = $listener.GetContext()
-  $req = $ctx.Request
-  $res = $ctx.Response
+  $ctx   = $listener.GetContext()
+  $rel   = $ctx.Request.Url.AbsolutePath.TrimStart('/')
+  if ($rel -eq '') { $rel = 'index.html' }
+  $file  = Join-Path $Root $rel
 
-  # map URL → file
-  $rel = $req.Url.AbsolutePath.TrimStart('/')
-  $path = if ($rel) { Join-Path $Root $rel } else { Join-Path $Root 'templates/index.html' }
+  if (Test-Path $file) {
+    $bytes = [IO.File]::ReadAllBytes($file)
+    $ext   = [IO.Path]::GetExtension($file).ToLower()
+    $type  = $mimes[$ext]
+    if (-not $type) { $type = 'application/octet-stream' }
 
-  if (Test-Path $path) {
-    $bytes = [System.IO.File]::ReadAllBytes($path)
-    # use IIS mime‐map if available, else default to octet-stream
-    $res.ContentType = ([System.Web.MimeMapping]::GetMimeMapping($path) -or 'application/octet-stream')
-    $res.StatusCode = 200
-    $res.OutputStream.Write($bytes, 0, $bytes.Length)
+    $ctx.Response.ContentType = $type
+    # allow ServiceWorker scope
+    $ctx.Response.AddHeader("Service-Worker-Allowed","/")
+    $ctx.Response.StatusCode  = 200
+    $ctx.Response.OutputStream.Write($bytes, 0, $bytes.Length)
   } else {
-    $res.StatusCode = 404
+    $ctx.Response.StatusCode = 404
   }
-  $res.Close()
+  $ctx.Response.Close()
 }
 
 pause
+"""
+
+            # 2) Base64-encode it as UTF-16LE (what PowerShell expects)
+            b64 = base64.b64encode(ps.encode('utf-16le')).decode('ascii')
+
+
+            bat_install_script_content = f'''
+@echo off
+rem — open default browser at localhost:8080 —
+start "" "http://localhost:8080"
+
+rem — one‐line launch of your listener —
+powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand {b64}
+
 '''
 
             # Write run.sh with LF encoding for Unix-based systems
-            with open('run.sh', 'w', newline='\n') as f:
+            with open('run.sh', 'w', encoding='utf-8', newline='\n') as f:
                 f.write(bash_install_script_content)
 
             # Write run.bat with CRLF encoding for Windows
-            with open('run.bat', 'w', newline='\r\n') as f:
+            with open('run.bat', 'w', encoding='utf-8', newline='\r\n') as f:
                 f.write(bat_install_script_content)
             with open('release', 'w') as f:
                 f.write(f'{NAME}_{VERSION}.zip')

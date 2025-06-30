@@ -11,6 +11,8 @@ import click
 class Desktop(base.Base):
     index_content = '''
 
+
+
  <!-- Documentation:
    https://daisyui.com/
    https://tailwindcss.com/
@@ -56,9 +58,24 @@ document.addEventListener('contextmenu', function(event) {
 });
 </script>
 <script>
-  // open the watchdog WS
-  const ws = new WebSocket('ws://127.0.0.1:8765/');
-  window.addEventListener('beforeunload', () => ws.close());
+  // Delay connection slightly to ensure the WS server is up
+  setTimeout(() => {
+    const host = location.hostname;
+    const ws = new WebSocket(`ws://${host}:8765/`);
+    ws.onopen = () => console.log("WS connected");
+    ws.onclose = () => console.log("WS closed");
+    ws.onerror = (e) => console.error("WS error", e);
+    window.addEventListener('beforeunload', () => {
+      if (ws.readyState === WebSocket.OPEN) ws.close();
+    });
+  }, 500); // 500ms delay; adjust as needed
+
+</script>
+<script>
+  // When the user is leaving, use sendBeacon to notify the server to shut down.
+  window.addEventListener('beforeunload', () => {
+    navigator.sendBeacon('/shutdown');
+  });
 </script>
   <script type="module">
     const { createApp } = Vue
@@ -150,6 +167,13 @@ response = {'new_msg':pyodide_msg}
   </script>
 </html>      
   
+
+    
+
+
+
+    
+  
 '''
 
     server_content = r'''
@@ -219,50 +243,47 @@ def get_platform_type():
     system = platform.system()
     return system
 
-def run_with_switches(system):
-    """Opens Chrome/Chromium at the center of the screen in incognito mode."""
+def run_with_switches(system, url):
+    """Opens a Chromium-based browser at the center of the screen in incognito mode, with broad compatibility."""
+    import shutil
+
     screen_width, screen_height = get_screen_size()
-
-    # Desired window size
     window_width, window_height = 1024, 768
-
-    # Calculate center position
     pos_x = (screen_width - window_width) // 2
     pos_y = (screen_height - window_height) // 2
 
-    # Common arguments
     common_args = [
-        f"--app=http://127.0.0.1:8001/",
+        f"--app={url}",
         "--disable-pinch",
         "--disable-extensions",
         "--guest",
-        "--incognito",  # Open in incognito mode
+        "--incognito",
         f"--window-size={window_width},{window_height}",
         f"--window-position={pos_x},{pos_y}",
     ]
-    # Check the default browser
+
+    # List of possible browser executables for each platform
+    browser_candidates = []
     if system == 'Darwin':
-        # Path for Google Chrome on macOS
-        chrome_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-        if os.path.exists(chrome_path):
-            command = [chrome_path + common_args]
-        print("Running command:", command)
-        subprocess.Popen(command)
-        return
+        browser_candidates = [
+            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+            '/Applications/Chromium.app/Contents/MacOS/Chromium',
+            '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+            shutil.which('google-chrome'),
+            shutil.which('chromium'),
+            shutil.which('chromium-browser'),
+            shutil.which('brave-browser'),
+        ]
     elif system == 'Linux':
-        # Typical command for launching Google Chrome on Linux
-        chrome_path = '/usr/bin/google-chrome'
-        if os.path.exists(chrome_path):
-            command = [chrome_path + common_args]
-        else:
-            # Fallback to chromium if google-chrome is not installed
-            chromium_path = '/usr/bin/chromium-browser'
-            if os.path.exists(chromium_path):
-                command = [chrome_path + common_args]
-        print("Running command:", command)
-        subprocess.Popen(command)
-        return
+        browser_candidates = [
+            shutil.which('google-chrome'),
+            shutil.which('chromium'),
+            shutil.which('chromium-browser'),
+            shutil.which('brave-browser'),
+            shutil.which('microsoft-edge'),
+        ]
     else:
+        # Windows handled as before
         if os.path.exists("C:/Program Files/Google/Chrome/Application/chrome.exe"):
             chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe"
             command = [chrome_path] + common_args
@@ -275,8 +296,29 @@ def run_with_switches(system):
             print("Running command:", command)
             subprocess.Popen(command)
             return
+        print("Chromium-based browser not found or default browser not set.")
 
-    print("Chromium-based browser not found or default browser not set.")
+        # Remove None values from browser_candidates
+        browser_candidates = [b for b in browser_candidates if b]
+    
+    # Try each candidate and run the first one that exists
+    for browser in browser_candidates:
+        if browser and os.path.exists(browser):
+            command = [browser] + common_args
+            print("Running command:", command)
+            subprocess.Popen(command)
+            return
+
+    # Fallback: try to open in default browser (may not support all switches)
+    print("No supported Chromium-based browser found. Falling back to default browser.")
+    import webbrowser
+    try:
+      webbrowser.open(url)
+    except Exception as e:
+      if platform.system() == 'Linux':
+        # For Linux, use xdg-open
+        os.system(f'xdg-open {url}')
+
 
 
 def stop_previous_flask_server():
@@ -1101,6 +1143,155 @@ export async function loadGoWasm() {
 
         if self.lang == 'go':
             self.index_content = '''
+
+ <!-- Documentation:
+   https://daisyui.com/
+   https://tailwindcss.com/
+   https://www.highcharts.com/
+   https://vuejs.org/
+   https://pyodide.org/en/stable/
+   https://www.papaparse.com/
+   https://danfo.jsdata.org/
+   https://axios-http.com/docs/intro -->
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gupy App</title>
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/boost.js"></script>
+  <script src="https://code.highcharts.com/modules/exporting.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+  <link rel="icon" href="/static/gupy_logo.png" type="image/png">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  </head>
+<body>
+  <div id="app" style="text-align: center;">
+    <center>
+      <div class="h-full">
+        <img class="mt-4 mask mask-squircle h-96 hover:-translate-y-2 ease-in-out transition" src="/static/gupy_logo.png" />
+        <br>
+        <button class="btn bg-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/50 text-base-100">[[ message ]] </button>
+      </div>
+    </center>
+</body>
+<script>
+  // Disable right-clicking
+document.addEventListener('contextmenu', function(event) {
+    event.preventDefault();
+});
+</script>
+<script>
+    // Watchdog WS on Go /ws endpoint
+    const ws = new WebSocket(`ws://${location.host}/ws`);
+    window.addEventListener('beforeunload', () => {
+      if (ws.readyState === WebSocket.OPEN) ws.close();
+    });
+</script>
+
+  <script type="module">
+    const { createApp } = Vue
+     import { loadGoWasm } from './static/go_wasm.js';
+    
+    createApp({
+      delimiters : ['[[', ']]'],
+        data(){
+          return {
+            message: 'Welcome to Gupy!',
+            pyodide_msg: 'This is from Pyodide!',
+            data: {},
+          }
+        },
+        methods: {
+
+        },
+        watch: {
+
+        },
+        created(){
+            // Make a request for a user with a given ID
+            axios.get('/api/example_api_endpoint')
+            .then(function (response) {
+                // handle success
+                console.log(response);
+                this.data = JSON.parse(JSON.stringify(response['data']))
+                console.log(this.data)
+            })
+            .catch(function (error) {
+                // handle error
+                console.log(error);
+
+          try {
+            // use pyodide instead of api example
+            async function main(){
+              const pyodide = await loadPyodide();
+              pyodide.registerJsModule("mymodule", {
+                pyodide_msg: this.pyodide_msg,
+              })
+              await pyodide.loadPackage("numpy")
+              const result = await pyodide.runPython(`
+#import variables
+import mymodule
+
+# use variable
+pyodide_msg = mymodule.pyodide_msg
+
+# change variable
+pyodide_msg = 'This is the changed pyodide message!'
+
+# output response
+response = {'new_msg':pyodide_msg}
+`)
+              return JSON.parse(response)
+          }
+            response = main()
+            console.log(response.new_msg)
+          } catch (error) {
+            console.log('An error occurred: ', error);
+          }
+
+        })
+        .finally(function () {
+          // always executed
+        });
+
+      },
+        async mounted() {
+          try {
+            const goExports = await loadGoWasm();
+            console.log("Go WebAssembly ran add(5,7) and returned:" + goExports.add(5, 7));
+          } catch (error) {
+            console.error("Error loading Go WASM:", error);
+          }
+
+          let worker = new Worker("{{ .worker_script }}");
+          worker.postMessage({ message: '' });
+          worker.onmessage = function (message) {
+            console.log(message.data)
+          }
+
+        },
+        computed:{
+
+        }
+
+    }).mount('#app')
+  </script>
+</html>      
+  
+   
+  
+    
+            '''
+
+            self.index_content = '''
  <!-- Documentation:
    https://daisyui.com/
    https://tailwindcss.com/
@@ -1242,6 +1433,44 @@ response = {'new_msg':pyodide_msg}
 '''
             self.server_content = r'''
 
+'''
+        elif self.lang == 'py':
+            self.main_content = f'''
+from {self.name} import server
+
+def main():
+    server.main()
+
+if __name__ == "__main__":
+    main()
+'''
+
+        self.files = {
+            f'desktop/templates/index.html': self.index_content,
+            f'desktop/static/go_wasm/go_wasm.go': self.go_wasm_content,
+            f'desktop/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
+            f'desktop/static/go_wasm.js': self.go_wasm_js_content,
+            f'desktop/static/worker.js': self.worker_content,
+            }
+
+        if self.lang == 'py':
+            self.files[f'desktop/__init__.py'] = self.init_content
+            self.files[f'desktop/__main__.py'] = self.main_content
+            self.files[f'desktop/server.py'] = self.server_content
+            self.folders.append(f'desktop/python_modules')
+            self.files[f'desktop/python_modules/python_modules.py'] = self.python_modules_content
+            self.folders.append(f'desktop/go_modules')
+            self.files[f'desktop/go_modules/go_modules.go'] = self.go_modules_content
+        else:
+            self.files[f'desktop/main.go'] = self.server_content
+
+    def create(self):
+        if 'desktop/main.go' in self.files:
+            print("Please enter Github information for the app where your release package will be uploaded...")
+            REPO_OWNER = input(f'Enter the Github repository owner: ')
+            REPO_NAME = input("Enter the Github repository name: ")
+
+            self.server_content = r'''
 package main
 
 import (
@@ -1264,7 +1493,20 @@ import (
 
 var shutdownCh = make(chan struct{})
 
+var upgrader = websocket.Upgrader{
+    ReadBufferSize:  1024,
+    WriteBufferSize: 1024,
+    CheckOrigin:     func(r *http.Request) bool { return true },
+}
+
 func main() {
+    // Check for updates before starting the server
+	repoOwner := "'''+REPO_OWNER+r'''" // Replace with your GitHub repo owner
+    repoName := "'''+REPO_NAME+r'''"   // Replace with your GitHub repo name
+    if !checkForUpdates(repoOwner, repoName) {
+        return
+    }
+
     srv := &http.Server{
         Addr:    ":8080",
         Handler: routes(),
@@ -1298,6 +1540,79 @@ func main() {
     log.Println("Server stopped gracefully")
 }
 
+func checkForUpdates(repoOwner, repoName string) bool {
+    // Fetch the latest release from GitHub
+    latestRelease, err := fetchLatestRelease(repoOwner, repoName)
+    if err != nil {
+        fmt.Println("Error fetching latest release:", err)
+        return true // Proceed with the current version
+    }
+
+    // Read the current release version from the release file
+    currentRelease, err := readCurrentRelease()
+    if err != nil {
+        fmt.Println("Error reading current release:", err)
+        return true // Proceed with the current version
+    }
+
+    // Compare the versions
+    if latestRelease != currentRelease {
+        fmt.Printf("New release available: %s. Updating...\n", latestRelease)
+
+        // Determine the platform and run the appropriate install script
+        system := runtime.GOOS
+        var installScript string
+        if system == "windows" {
+            installScript = "install.bat"
+        } else {
+            installScript = "install.sh"
+        }
+
+        cmd := exec.Command(installScript)
+        cmd.Stdout = os.Stdout
+        cmd.Stderr = os.Stderr
+        if err := cmd.Run(); err != nil {
+            fmt.Println("Error running install script:", err)
+            return true // Proceed with the current version
+        }
+
+        // Exit after running the installer
+        return false
+    }
+
+    fmt.Println("Current release is up to date.")
+    return true
+}
+
+func fetchLatestRelease(repoOwner, repoName string) (string, error) {
+    apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", repoOwner, repoName)
+    resp, err := http.Get(apiURL)
+    if err != nil {
+        return "", err
+    }
+    defer resp.Body.Close()
+
+    if resp.StatusCode != http.StatusOK {
+        return "", fmt.Errorf("failed to fetch release: %s", resp.Status)
+    }
+
+    var release GitHubRelease
+    if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+        return "", err
+    }
+
+    return release.Name, nil
+}
+
+func readCurrentRelease() (string, error) {
+    releaseFile := filepath.Join(filepath.Dir(os.Args[0]), "release")
+    data, err := ioutil.ReadFile(releaseFile)
+    if err != nil {
+        return "", err
+    }
+    return string(data), nil
+}
+
 func routes() http.Handler {
     mux := http.NewServeMux()
     mux.HandleFunc("/", rootHandler)
@@ -1306,6 +1621,28 @@ func routes() http.Handler {
 }
 
 // copy your wsHandler & rootHandler here...
+func rootHandler(w http.ResponseWriter, r *http.Request) {
+    // serve your SPA entrypoint (adjust path as needed)
+    http.ServeFile(w, r, filepath.Join("templates", "index.html"))
+}
+
+func wsHandler(w http.ResponseWriter, r *http.Request) {
+    conn, err := upgrader.Upgrade(w, r, nil)
+    if err != nil {
+        fmt.Println("WS upgrade failed:", err)
+        return
+    }
+    defer conn.Close()
+
+    // block until client disconnects
+    for {
+        if _, _, err := conn.ReadMessage(); err != nil {
+            // signal main to shutdown
+            close(shutdownCh)
+            return
+        }
+    }
+}
 
 // GetScreenSize retrieves the screen dimensions on Windows
 func GetScreenSize() (int, int) {
@@ -1354,7 +1691,8 @@ func FindBrowserPath() string {
 func openChrome(url string) {
     browser := FindBrowserPath()
     if browser == "" {
-        fmt.Println("No Chromium-based browser found.")
+        fmt.Println("No Chromium-based browser found. Falling back to the default browser.")
+        openDefaultBrowser(url)
         return
     }
 
@@ -1377,38 +1715,28 @@ func openChrome(url string) {
     if err := cmd.Start(); err != nil {
         fmt.Println("failed to launch browser:", err)
     }
-}'''
-        elif self.lang == 'py':
-            self.main_content = f'''
-from {self.name} import server
+}
 
-def main():
-    server.main()
+// openDefaultBrowser opens the URL in the system's default web browser
+func openDefaultBrowser(url string) {
+    var cmd *exec.Cmd
 
-if __name__ == "__main__":
-    main()
+    switch runtime.GOOS {
+    case "windows":
+        cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+    case "darwin":
+        cmd = exec.Command("open", url)
+    default: // Linux and other Unix-like systems
+        cmd = exec.Command("xdg-open", url)
+    }
+
+    if err := cmd.Start(); err != nil {
+        fmt.Println("Failed to open the default browser:", err)
+    }
+}
+
 '''
-
-        self.files = {
-            f'desktop/templates/index.html': self.index_content,
-            f'desktop/static/go_wasm/go_wasm.go': self.go_wasm_content,
-            f'desktop/static/go_wasm/wasm_exec.js': self.wasm_exec_content,
-            f'desktop/static/go_wasm.js': self.go_wasm_js_content,
-            f'desktop/static/worker.js': self.worker_content,
-            }
-
-        if self.lang == 'py':
-            self.files[f'desktop/__init__.py'] = self.init_content
-            self.files[f'desktop/__main__.py'] = self.main_content
-            self.files[f'desktop/server.py'] = self.server_content
-            self.folders.append(f'desktop/python_modules')
-            self.files[f'desktop/python_modules/python_modules.py'] = self.python_modules_content
-            self.folders.append(f'desktop/go_modules')
-            self.files[f'desktop/go_modules/go_modules.go'] = self.go_modules_content
-        else:
             self.files[f'desktop/main.go'] = self.server_content
-
-    def create(self):
         import shutil
         # check if platform project already exists, if so, prompt the user
         if self.folders[0] in os.listdir('.'):
@@ -1444,7 +1772,7 @@ if __name__ == "__main__":
                 return
         
         for file in self.files:
-            f = open(file, 'x')
+            f = open(file, 'x', encoding='utf-8')
             f.write(self.files.get(file))
             print(f'created "{file}" file.')
             f.close()
@@ -1458,7 +1786,9 @@ if __name__ == "__main__":
             os.chdir(f'../../')
         else:
             os.system(f'go mod init example/{self.name}')
-            os.system(f'go get github.com/gin-gonic/gin')
+            os.system(f'go get github.com/gorilla/websocket')
+            os.system(f'go get golang.org/x/sys/windows')
+
             # os.system(f'go mod tidy')
             os.chdir(f'../')
         # system = platform.system()
@@ -1619,7 +1949,7 @@ setup(
 
         # add assembly of cython modules
 
-    def distribute(self, system, folder, VERSION):
+    def distribute(self, system, folder, delim, NAME, VERSION):
         try:
 
             # creating project folder if doesnt already exist
@@ -1627,16 +1957,17 @@ setup(
             os.chdir('dist')
 
             # creating version folder is doesnt already exist
-            os.makedirs(f"{NAME}{VERSION}", exist_ok=True)
+            os.makedirs(f"{NAME}_{VERSION}", exist_ok=True)
             # shutil.rmtree(f"{VERSION}{delim}{folder}")
             # os.makedirs(VERSION, exist_ok=True)
 
-            shutil.rmtree(f"{NAME}{VERSION}")
-            os.makedirs(f"{NAME}{VERSION}", exist_ok=True)
+            shutil.rmtree(f"{NAME}_{VERSION}")
+            os.makedirs(f"{NAME}_{VERSION}", exist_ok=True)
             os.chdir('../')
 
             # Get the directory path to the current gupy.py file without the filename
-            gupy_file_path = os.path.dirname(os.path.abspath(__file__))
+            gupy_file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
             if os.path.exists('server.py'):
                 # get python location and executable
                 if system == 'linux' or system == 'Linux':
@@ -1659,29 +1990,29 @@ setup(
                 for file_name in files:
                     full_file_name = os.path.join(os.getcwd(), file_name)
                     if os.path.isfile(full_file_name):
-                        shutil.copy(full_file_name, f"dist/{NAME}{VERSION}")
+                        shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
                     elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv':
-                        shutil.copytree(full_file_name, f"dist/{NAME}{VERSION}/{file_name}", dirs_exist_ok=True)
-                    print('Copied '+file_name+' to '+f"dist/{NAME}{VERSION}/{file_name}"+'...')
+                        shutil.copytree(full_file_name, f"dist/{NAME}_{VERSION}/{file_name}", dirs_exist_ok=True)
+                    print('Copied '+file_name+' to '+f"dist/{NAME}_{VERSION}/{file_name}"+'...')
                 # package latest python if not selected - make python folder with windows/mac/linux
-                os.makedirs(f"dist/{NAME}{VERSION}/python", exist_ok=True)
+                os.makedirs(f"dist/{NAME}_{VERSION}/python", exist_ok=True)
                 print('Copying python folder...')
 
                 # import gupy_framework_windows_deps 
                 # import gupy_framework_linux_deps
                 # import gupy_framework_macos_deps
-                # gupy_framework_windows_deps.add_deps(f"dist/{NAME}{VERSION}/python")
-                # gupy_framework_linux_deps.add_deps(f"dist/{NAME}{VERSION}/python")
-                # gupy_framework_macos_deps.add_deps(f"dist/{NAME}{VERSION}/python/macos")
+                # gupy_framework_windows_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+                # gupy_framework_linux_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+                # gupy_framework_macos_deps.add_deps(f"dist/{NAME}_{VERSION}/python/macos")
                 # mac_pkg_file = gupy_framework_macos_deps.get_deps()[0]
                 import py7zr
                 archive_path = gupy_file_path + delim + 'python.7z'
                 with py7zr.SevenZipFile(archive_path, mode='r') as archive:
-                    archive.extractall(path=f"dist/{NAME}{VERSION}")
-                # shutil.copytree(python_loc, f"dist/{NAME}{VERSION}/python", dirs_exist_ok=True)
+                    archive.extractall(path=f"dist/{NAME}_{VERSION}")
+                # shutil.copytree(python_loc, f"dist/{NAME}_{VERSION}/python", dirs_exist_ok=True)
                 
                 print('Copied python folder...')
-                os.chdir(f'dist/{NAME}{VERSION}')
+                os.chdir(f'dist/{NAME}_{VERSION}')
 
 
                 # command = f".{delim}python{delim}{python_folder}{delim}{python_executable} python{delim}{python_folder}{delim}get-pip.py"
@@ -1726,12 +2057,66 @@ setup(
 
                 # create install.bat/sh for compiling run.go
                 run_py_content = r'''
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import sys
+import os
+import platform
+import subprocess
+import requests
 
-import server
+def get_latest_release(repo_owner, repo_name):
+    """Fetch the latest release information from GitHub."""
+    api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
+    try:
+        response = requests.get(api_url)
+        response.raise_for_status()
+        return response.json().get("name") + ".zip"  # Get the release name
+    except Exception as e:
+        print(f"Error fetching latest release: {e}")
+        return None
 
-server.main()
+def main():
+    # Add the current directory to sys.path
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+    # Define the repository owner and name
+    REPO_OWNER = "'''+REPO_OWNER+r'''"  # Replace with your GitHub repo owner
+    REPO_NAME = "'''+REPO_NAME+r'''"    # Replace with your GitHub repo name
+
+    # Check the current release version
+    release_file = os.path.join(os.path.dirname(__file__), "release")
+    current_release = None
+    if os.path.exists(release_file):
+        with open(release_file, "r") as f:
+            current_release = f.read().strip()
+
+    # Fetch the latest release version from GitHub
+    latest_release = get_latest_release(REPO_OWNER, REPO_NAME)
+
+    # Compare the current release with the latest release
+    if latest_release and current_release != latest_release:
+        print(f"New release available: {latest_release}. Updating...")
+
+        # Determine the platform and run the appropriate install script
+        system = platform.system()
+        if system == "Windows":
+            install_script = os.path.join(os.path.dirname(__file__), "install.bat")
+            subprocess.run([install_script], shell=True)
+        elif system in ["Linux", "Darwin"]:  # Darwin is macOS
+            install_script = os.path.join(os.path.dirname(__file__), "install.sh")
+            subprocess.run(["bash", install_script])
+        else:
+            print(f"Unsupported platform: {system}")
+            sys.exit(1)
+
+        # Exit the script after running the installer
+        sys.exit(0)
+
+    # If the release is up-to-date, proceed to run the main server
+    import server
+    server.main()
+
+if __name__ == "__main__":
+    main()
                         '''
                 bash_install_script_content = r'''
 #!/bin/bash
@@ -1774,11 +2159,7 @@ echo "LATEST_RELEASE: $LATEST_RELEASE"
 if [ "$CURRENT_RELEASE" == "$LATEST_RELEASE" ]; then
     echo "Current release is up to date."
 else
-    # Delete all files and folders except install.sh
-    echo "Deleting old files and folders (except install.sh)..."
-    find . -type f ! -name "install.sh" -exec rm -f {} +
-    find . -type d ! -name "." -exec rm -rf {} +
-    echo "Old files and folders deleted."
+
 
     # Echo the download URL (for verification)
     echo "Download URL: $DOWNLOAD_URL"
@@ -1824,7 +2205,7 @@ CURRENT_DIR=$(pwd)
 if [ "$OS" = "Darwin" ]; then
     # Set desired Python version and installer file path
     PYTHON_VERSION="3.12.10"
-    PKG_DIR="python/'''+python_folder+r'''"
+    PKG_DIR="python/macos"
     PKG_FILE="python-${PYTHON_VERSION}-macos11.pkg"
     PKG_PATH="$PKG_DIR/$PKG_FILE"
     PKG_URL="https://www.python.org/ftp/python/${PYTHON_VERSION}/$PKG_FILE"
@@ -1869,12 +2250,15 @@ if [ "$OS" = "Darwin" ]; then
     # macOS: create a minimal AppleScript-based app that launches run.py
     APP_PATH="$HOME/Desktop/'''+NAME+r'''.app"
     echo "Creating macOS desktop shortcut at $APP_PATH"
+
     mkdir -p "$APP_PATH/Contents/MacOS"
     cat <<EOF > "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
 #!/bin/bash
 # Change directory to the folder containing run.py
 cd "$CURRENT_DIR"
-python3.12 run.py &
+# Run the Python script using the Python 3.12 interpreter
+python3.12 "$CURRENT_DIR/run.py"
+
 EOF
     chmod +x "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
     # Create a minimal Info.plist file
@@ -1892,10 +2276,12 @@ EOF
     <string>'''+NAME+r'''</string>
     <key>CFBundleVersion</key>
     <string>1.0</string>
+    <key>CFBundleIconFile</key>
+    <string>app_icon.icns</string>
 </dict>
 </plist>
 EOF
-    python3.12 run.py &
+    echo "Application updated. Now launch the app from the desktop shortcut!"
 elif [ "$OS" = "Linux" ]; then
     # On Linux: ensure python3.12 is available
     sudo chmod +x python/linux/bin/python3.12
@@ -1914,21 +2300,402 @@ elif [ "$OS" = "Linux" ]; then
     else
         echo "requirements.txt not found."
     fi
+    PYTHON_CMD="$CURRENT_DIR/python/linux/bin/python3.12"
     DESKTOP_FILE="$HOME/Desktop/'''+NAME+r'''.desktop"
     echo "Creating Linux desktop shortcut at $DESKTOP_FILE"
     cat <<EOF > "$DESKTOP_FILE"
 [Desktop Entry]
 Name='''+NAME+r'''
 Comment=Run '''+NAME+r'''
-Exec=$CURRENT_DIR/python/linux/bin/python3.12 $CURRENT_DIR/run.py
+Exec=$PYTHON_CMD $CURRENT_DIR/run.py
 Icon=$CURRENT_DIR/'''+png+r'''
-Terminal=true
+Terminal=false
 Type=Application
 Categories=Utility;
 EOF
     chmod +x "$DESKTOP_FILE"
-    echo "Launching run.py..."
-    python/linux/bin/python3.12 run.py &
+    echo "Application updated. Now launch the app from the desktop shortcut!" &
+else
+    echo "Unsupported OS: $OS"
+    exit 1
+fi
+        '''
+
+
+
+
+
+                bat_install_script_content = r'''
+@echo off
+setlocal enabledelayedexpansion
+
+:: Set repository owner and name
+set REPO_OWNER="'''+REPO_OWNER+r'''"
+set REPO_NAME="'''+REPO_NAME+r'''"
+
+:: GitHub API URL to fetch the latest release
+set API_URL=https://api.github.com/repos/%REPO_OWNER%/%REPO_NAME%/releases/latest
+
+:: Use PowerShell to fetch the latest release data and parse JSON to get the download URL and file name
+for /f "delims=" %%i in ('powershell -Command "try { (Invoke-RestMethod -Uri '%API_URL%' -ErrorAction Stop).assets[0].browser_download_url } catch { Write-Output $_.Exception.Message; exit }"') do set DOWNLOAD_URL=%%i
+for /f "delims=" %%j in ('powershell -Command "try { (Invoke-RestMethod -Uri '%API_URL%' -ErrorAction Stop).assets[0].name } catch { Write-Output $_.Exception.Message; exit }"') do set LATEST_RELEASE=%%j
+
+:: Check if download URL is found
+if not defined DOWNLOAD_URL (
+    echo No download URL found. Exiting.
+    exit /b 1
+)
+
+:: Read the current release file name from the 'release' file
+if exist release (
+    set /p CURRENT_RELEASE=<release
+) else (
+    set CURRENT_RELEASE=NONE
+)
+
+:: Print the current and latest release names
+echo CURRENT_RELEASE: "%CURRENT_RELEASE%"
+echo LATEST_RELEASE: "%LATEST_RELEASE%"
+
+:: Compare the current release with the latest release
+if "!CURRENT_RELEASE!" == "!LATEST_RELEASE!" (
+    echo Current release is up to date.
+) else (
+
+    
+    :: Echo the download URL (for verification)
+    echo Download URL: !DOWNLOAD_URL!
+
+    :: Download the zip file using PowerShell
+    echo Downloading latest release...
+    powershell -Command "Invoke-WebRequest -Uri '!DOWNLOAD_URL!' -OutFile '!LATEST_RELEASE!'"
+    
+    :: Unzip the file into the current directory
+    echo Extracting the archive...
+    powershell -Command "Expand-Archive -Path '!LATEST_RELEASE!' -DestinationPath '.' -Force"
+    
+    :: (Optional) If the archive extracts into a folder, move its contents to the current directory.
+    :: You can add folder detection code here if desired.
+    
+    :: Cleanup - remove downloaded zip file
+    echo Cleanup done. Removing downloaded zip file...
+    del !LATEST_RELEASE!
+    
+    :: Update the 'release' file with the new release name
+    echo !LATEST_RELEASE!>release
+    
+    echo Your folder has been updated.
+    timeout /t 3 /nobreak >nul
+)
+
+
+:: Install requirements if available
+if exist requirements.txt (
+    echo Installing requirements from requirements.txt...
+    %~dp0python/windows/python.exe -m pip install -r requirements.txt
+    if %errorlevel% neq 0 (
+        echo Failed to install requirements. Aborting.
+        pause
+        exit /b 1
+    )
+    echo Requirements installed successfully.
+) else (
+    echo requirements.txt not found.
+)
+
+:: Create VBScript to make a desktop shortcut to run "python run.py"
+echo Creating desktop shortcut...
+echo Set objShell = CreateObject("WScript.Shell") > CreateShortcut.vbs
+echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desktop") ^& "\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
+echo desktopShortcut.TargetPath = "%~dp0python/windows/pythonw.exe" >> CreateShortcut.vbs
+echo desktopShortcut.Arguments = "run.py" >> CreateShortcut.vbs
+echo desktopShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
+echo desktopShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
+echo desktopShortcut.Save >> CreateShortcut.vbs
+echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
+echo dirShortcut.TargetPath = "%~dp0python/windows/pythonw.exe" >> CreateShortcut.vbs
+echo dirShortcut.Arguments = "run.py" >> CreateShortcut.vbs
+echo dirShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
+echo dirShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
+echo dirShortcut.Save >> CreateShortcut.vbs
+
+:: Run the VBScript to create the shortcuts, then clean up
+cscript //nologo CreateShortcut.vbs
+del CreateShortcut.vbs
+
+echo Application updated. Now launch the app from the desktop shortcut!
+pause
+'''
+
+                iss_contents = r'''
+#define AppName "'''+NAME+r'''"
+#define Version "'''+VERSION+r'''"
+#define Icon "'''+ico+r'''"
+#define Source "'''+os.getcwd()+r'''"
+
+[Setup]
+; Basic installer settings
+AppName={#AppName}
+AppVersion={#Version}
+; Install under %USERPROFILE%\Downloads\AppFolderName
+DefaultDirName={localappdata}\Programs\{#AppName}
+DefaultGroupName={#AppName}
+OutputBaseFilename={#AppName}_Setup
+; Use a custom icon for the setup EXE
+SetupIconFile={#Source}\{#Icon}
+Compression=lzma
+SolidCompression=yes
+ArchitecturesAllowed=x86 x64
+ArchitecturesInstallIn64BitMode=x64
+WizardStyle=modern
+
+[Files]
+; Copy all files from your unpacked release folder
+Source: "{#Source}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
+
+; [Icons]
+; Desktop shortcut
+; Name: "{userdesktop}\{#AppName}.lnk"; \
+    ; Filename: "{app}\python\windows\pythonw.exe"; \
+    ; Parameters: """{app}\run.py"""; \
+    ; WorkingDir: "{app}"; \
+    ; IconFilename: "{app}\static\{#Icon}"; IconIndex: 0
+
+; Shortcut in the application folder
+; Name: "{app}\{#AppName}.lnk"; \
+    ; Filename: "{app}\python\windows\pythonw.exe"; \
+    ; Parameters: """{app}\run.py"""; \
+    ; WorkingDir: "{app}"; \
+    ; IconFilename: "{app}\static\{#Icon}"; IconIndex: 0
+
+;[Run]
+; Optionally launch the app after install
+;Filename: "{app}\python\windows\pythonw.exe"; \
+;    Parameters: """{app}\run.py"""; \
+;    WorkingDir: "{app}"; \
+;    Flags: nowait postinstall skipifsilent
+[Run]
+; Run install.bat after copying files
+Filename: "{app}\install.bat"; \
+Description: "Finalize installation"; \
+WorkingDir: "{app}"; \
+Flags: shellexec postinstall waituntilterminated skipifsilent
+                '''
+                with open('run.py', 'w') as f:
+                    f.write(run_py_content)
+                # Write install.sh with LF encoding for Unix-based systems
+                with open('install.sh', 'w', newline='\n') as f:
+                    f.write(bash_install_script_content)
+
+                # Write install.bat with CRLF encoding for Windows
+                with open('install.bat', 'w', newline='\r\n') as f:
+                    f.write(bat_install_script_content)
+                with open('release', 'w') as f:
+                    f.write(f'{NAME}_{VERSION}.zip')
+                with open(NAME+'_'+VERSION+'_Setup.iss', 'w', newline='\n') as f:
+                    f.write(iss_contents)
+
+                print(f'Files created successfully... \nNow compress the folder into a zip file and upload it to github releases (matching the zip filename in the release file; {NAME}_{VERSION}.zip). \nOptionally, you may install Inno Setup to create an installer with the {NAME}_{VERSION}_Setup.iss file.')
+
+            elif os.path.exists('main.go'):
+                # move files+folders into project folder if just created
+                comp_file_ext = 'so' #go only gopherized file extension - no pyd should be present in go desktop app
+
+                # print(os.getcwd())
+                # moves files and folders - only checks the cythonized files in root directory.
+                files = os.listdir(os.getcwd())
+                for file_name in files:
+                    full_file_name = os.path.join(os.getcwd(), file_name)
+                    if os.path.isfile(full_file_name):
+                        shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
+                    elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv':
+                        shutil.copytree(full_file_name, f"dist/{NAME}_{VERSION}/{file_name}", dirs_exist_ok=True)
+                    print('Copied '+file_name+' to '+f"dist/{NAME}_{VERSION}/{file_name}"+'...')
+
+                def get_goroot():
+                    # Run 'go env GOROOT' command and capture the output
+                    result = subprocess.run(["go", "env", "GOROOT"], capture_output=True, text=True)
+                    if result.returncode == 0:
+                        return result.stdout.strip()  # Remove any surrounding whitespace/newlines
+                    else:
+                        raise Exception("Failed to get GOROOT: " + result.stderr)
+
+                # copy go folder contents into go/ folder
+                def get_golang_install_location():
+                    goroot = get_goroot()
+
+                    if goroot:
+                        return goroot
+                    else:
+                        return "GOROOT environment variable is not set."
+
+                golang_location = get_golang_install_location()
+                print(f"Golang is installed at: {golang_location}")
+
+                os.makedirs(f"dist/{NAME}_{VERSION}/go", exist_ok=True)
+                shutil.copytree(golang_location, f"dist/{NAME}_{VERSION}/go", dirs_exist_ok=True)
+                print('Copied go folder...')
+                # create run.go and go.mod for starting entry script for current os
+                os.chdir(f'dist/{NAME}_{VERSION}')
+                
+
+                # if system == 'win':
+                #     subprocess.run(f'.\\go\\bin\\go.exe mod init example.com/{NAME}', shell=True, check=True)
+                # else:
+                #     subprocess.run(f'./go/bin/go mod init example.com/{NAME}', shell=True, check=True)
+                # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
+                # Use glob to find all .ico files in the folder
+                ico_files = glob.glob(os.path.join('static', '*.ico'))
+                ico = ico_files[0]
+                png_files = glob.glob(os.path.join('static', '*.png'))
+                png = png_files[0].replace('\\','/') # changing to forward slashes for mac/linux compatibility
+
+                print("Please enter Github information for the app where your release package will be uploaded...")
+                REPO_OWNER = input(f'Enter the Github repository owner: ')
+                REPO_NAME = input("Enter the Github repository name: ")
+
+                bash_install_script_content = r'''
+#!/bin/bash
+
+# Set repository owner and name
+REPO_OWNER="'''+REPO_OWNER+r'''"
+REPO_NAME="'''+REPO_NAME+r'''"
+
+# GitHub API URL to fetch the latest release
+API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
+
+# Fetch the JSON from the API
+JSON=$(curl -s "$API_URL")
+
+# Extract the browser_download_url from the first asset
+DOWNLOAD_URL=$(echo "$JSON" | grep -o '"browser_download_url": *"[^"]*"' | head -n 1 | sed 's/"browser_download_url": *"//;s/"//')
+
+# Extract the name from the asset - assuming the second occurrence of "name" is for the asset
+LATEST_RELEASE=$(echo "$JSON" | grep -o '"name": *"[^"]*"' | head -n 2 | tail -n 1 | sed 's/"name": *"//;s/"//')
+
+
+# Check if download URL is found
+if [ -z "$DOWNLOAD_URL" ]; then
+    echo "No download URL found. Exiting."
+    exit 1
+fi
+
+# Read the current release file name from the 'release' file
+if [ -f release ]; then
+    CURRENT_RELEASE=$(cat release)
+else
+    CURRENT_RELEASE="NONE"
+fi
+
+# Print the current and latest release names
+echo "CURRENT_RELEASE: $CURRENT_RELEASE"
+echo "LATEST_RELEASE: $LATEST_RELEASE"
+
+# Compare the current release with the latest release
+if [ "$CURRENT_RELEASE" == "$LATEST_RELEASE" ]; then
+    echo "Current release is up to date."
+else
+
+
+    # Echo the download URL (for verification)
+    echo "Download URL: $DOWNLOAD_URL"
+
+    # Download the zip file using curl
+    echo "Downloading latest release..."
+    curl -L "$DOWNLOAD_URL" -o "$LATEST_RELEASE"
+
+    # Unzip the file into the current directory
+    echo "Extracting the archive..."
+    unzip -o "$LATEST_RELEASE" -d ./
+
+    # Detect if the unzip created a new folder (dynamically)
+    EXTRACTED_FOLDER=$(find . -maxdepth 1 -type d ! -name "." ! -name ".*" | head -n 1)
+    if [ -n "$EXTRACTED_FOLDER" ] && [ "$EXTRACTED_FOLDER" != "." ]; then
+        echo "Detected folder: $EXTRACTED_FOLDER"
+        echo "Moving contents of $EXTRACTED_FOLDER to current directory..."
+        mv "$EXTRACTED_FOLDER"/* ./
+        rm -rf "$EXTRACTED_FOLDER"
+    else
+        echo "No separate directory detected; extraction complete."
+    fi
+
+    # Cleanup - remove downloaded zip file
+    echo "Cleanup done. Removing downloaded zip file..."
+    rm "$LATEST_RELEASE"
+
+    # Update the 'release' file with the new release name
+    echo "$LATEST_RELEASE" > release
+
+    echo "Your folder has been updated."
+    sleep 3
+fi
+
+# Set the working directory to the script's directory
+cd "$(dirname "$0")"
+echo "Current directory is: $(pwd)"
+
+# Determine the OS and current directory
+OS=$(uname)
+CURRENT_DIR=$(pwd)
+
+if [ "$OS" = "Darwin" ]; then
+    # macOS: create a minimal AppleScript-based app that launches run.py
+    APP_PATH="$HOME/Desktop/'''+NAME+r'''.app"
+    echo "Creating macOS desktop shortcut at $APP_PATH"
+    
+    sudo chmod +x go/bin/go
+    echo "Building main.go for macOS..."
+    go/bin/go build main.go 
+    sudo chmod +x main
+    mkdir -p "$APP_PATH/Contents/MacOS"
+    cat <<EOF > "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
+#!/bin/bash
+# Change directory to the folder containing run.py
+cd "$CURRENT_DIR"
+./main
+
+EOF
+    chmod +x "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
+    # Create a minimal Info.plist file
+    mkdir -p "$APP_PATH/Contents"
+    cat <<EOF > "$APP_PATH/Contents/Info.plist"
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>'''+NAME+r'''</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.example.'''+NAME+r'''</string>
+    <key>CFBundleName</key>
+    <string>'''+NAME+r'''</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundleIconFile</key>
+    <string>app_icon.icns</string>
+</dict>
+</plist>
+EOF
+    echo "Application updated. Now launch the app from the desktop shortcut!"
+elif [ "$OS" = "Linux" ]; then
+    echo "Building main.go for Linux..."
+    sudo chmod +x go/bin/go
+    go/bin/go build main.go 
+    sudo chmod +x main
+    DESKTOP_FILE="$HOME/Desktop/'''+NAME+r'''.desktop"
+    echo "Creating Linux desktop shortcut at $DESKTOP_FILE"
+    cat <<EOF > "$DESKTOP_FILE"
+[Desktop Entry]
+Name='''+NAME+r'''
+Comment=Run '''+NAME+r'''
+Exec=$CURRENT_DIR/main
+Icon=$CURRENT_DIR/'''+png+r'''
+Terminal=false
+Type=Application
+Categories=Utility;
+EOF
+    chmod +x "$DESKTOP_FILE"
+    echo "Application updated. Now launch the app from the desktop shortcut!"
 else
     echo "Unsupported OS: $OS"
     exit 1
@@ -2020,424 +2787,7 @@ if "!CURRENT_RELEASE!" == "!LATEST_RELEASE!" (
 )
 
 
-:: Install requirements if available
-if exist requirements.txt (
-    echo Installing requirements from requirements.txt...
-    %~dp0python/windows/python.exe -m pip install -r requirements.txt
-    if %errorlevel% neq 0 (
-        echo Failed to install requirements. Aborting.
-        pause
-        exit /b 1
-    )
-    echo Requirements installed successfully.
-) else (
-    echo requirements.txt not found.
-)
-
 :: Create VBScript to make a desktop shortcut to run "python run.py"
-echo Creating desktop shortcut...
-echo Set objShell = CreateObject("WScript.Shell") > CreateShortcut.vbs
-echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desktop") ^& "\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
-echo desktopShortcut.TargetPath = "%~dp0python/windows/python.exe" >> CreateShortcut.vbs
-echo desktopShortcut.Arguments = "run.py" >> CreateShortcut.vbs
-echo desktopShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
-echo desktopShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
-echo desktopShortcut.Save >> CreateShortcut.vbs
-echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
-echo dirShortcut.TargetPath = "%~dp0python/windows/python.exe" >> CreateShortcut.vbs
-echo dirShortcut.Arguments = "run.py" >> CreateShortcut.vbs
-echo dirShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
-echo dirShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
-echo dirShortcut.Save >> CreateShortcut.vbs
-
-:: Run the VBScript to create the shortcuts, then clean up
-cscript //nologo CreateShortcut.vbs
-del CreateShortcut.vbs
-
-echo Shortcuts created successfully!
-pause
-'''
-
-                iss_contents = r'''
-#define AppName "'''+NAME+r'''"
-#define Version "'''+VERSION+r'''"
-#define Icon "'''+ico+r'''"
-#define Source "'''+os.getcwd()+r'''"
-
-[Setup]
-; Basic installer settings
-AppName={#AppName}
-AppVersion={#Version}
-; Install under %USERPROFILE%\Downloads\AppFolderName
-DefaultDirName={userlocalappdata}\Programs\{#AppName}
-DefaultGroupName={#AppName}
-OutputBaseFilename={#AppName}_Setup
-; Use a custom icon for the setup EXE
-SetupIconFile={#Source}\{#Icon}
-Compression=lzma
-SolidCompression=yes
-ArchitecturesAllowed=x86 x64
-ArchitecturesInstallIn64BitMode=x64
-WizardStyle=modern
-
-[Files]
-; Copy all files from your unpacked release folder
-Source: "{#Source}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
-
-; [Icons]
-; Desktop shortcut
-; Name: "{userdesktop}\{#AppName}.lnk"; \
-    ; Filename: "{app}\python\windows\python.exe"; \
-    ; Parameters: """{app}\run.py"""; \
-    ; WorkingDir: "{app}"; \
-    ; IconFilename: "{app}\static\{#Icon}"; IconIndex: 0
-
-; Shortcut in the application folder
-; Name: "{app}\{#AppName}.lnk"; \
-    ; Filename: "{app}\python\windows\python.exe"; \
-    ; Parameters: """{app}\run.py"""; \
-    ; WorkingDir: "{app}"; \
-    ; IconFilename: "{app}\static\{#Icon}"; IconIndex: 0
-
-;[Run]
-; Optionally launch the app after install
-;Filename: "{app}\python\windows\python.exe"; \
-;    Parameters: """{app}\run.py"""; \
-;    WorkingDir: "{app}"; \
-;    Flags: nowait postinstall skipifsilent
-[Run]
-; Run install.bat after copying files
-Filename: "{app}\install.bat"; \
-Description: "Finalize installation"; \
-WorkingDir: "{app}"; \
-Flags: shellexec postinstall waituntilterminated skipifsilent
-                '''
-                with open('run.py', 'w') as f:
-                    f.write(run_py_content)
-                # Write install.sh with LF encoding for Unix-based systems
-                with open('install.sh', 'w', newline='\n') as f:
-                    f.write(bash_install_script_content)
-
-                # Write install.bat with CRLF encoding for Windows
-                with open('install.bat', 'w', newline='\r\n') as f:
-                    f.write(bat_install_script_content)
-                with open('release', 'w') as f:
-                    f.write(f'{NAME}_{VERSION}.zip')
-                with open(NAME+'_'+VERSION+'_Setup.iss', 'w', newline='\n') as f:
-                    f.write(iss_contents)
-
-                print(f'Files created successfully... \nNow compress the folder into a zip file and upload it to github releases (matching the zip filename in the release file; {NAME}_{VERSION}.zip). \nOptionally, you may install Inno Setup to create an installer with the {NAME}_{VERSION}_Setup.iss file.')
-
-            elif os.path.exists('main.go'):
-                # move files+folders into project folder if just created
-                comp_file_ext = 'so' #go only gopherized file extension - no pyd should be present in go desktop app
-
-                # print(os.getcwd())
-                # moves files and folders - only checks the cythonized files in root directory.
-                files = os.listdir(os.getcwd())
-                for file_name in files:
-                    full_file_name = os.path.join(os.getcwd(), file_name)
-                    if os.path.isfile(full_file_name):
-                        if comp_file_ext in file_name.split('.')[-1] and system in file_name:
-                            shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
-                        elif comp_file_ext in file_name.split('.')[-1] and system in file_name:
-                            shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
-                        elif file_name.split('.')[-1] != 'pyd' and file_name.split('.')[-1] != 'so':
-                            shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
-                    elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist':
-                        shutil.copytree(full_file_name, f"{NAME}/{VERSION}/{folder}/{file_name}", dirs_exist_ok=True)
-                    print('Copied '+file_name+' to '+f"{NAME}/{VERSION}/{folder}/{file_name}"+'...')
-
-                def get_goroot():
-                    # Run 'go env GOROOT' command and capture the output
-                    result = subprocess.run(["go", "env", "GOROOT"], capture_output=True, text=True)
-                    if result.returncode == 0:
-                        return result.stdout.strip()  # Remove any surrounding whitespace/newlines
-                    else:
-                        raise Exception("Failed to get GOROOT: " + result.stderr)
-
-                # copy go folder contents into go/ folder
-                def get_golang_install_location():
-                    goroot = get_goroot()
-
-                    if goroot:
-                        return goroot
-                    else:
-                        return "GOROOT environment variable is not set."
-
-                golang_location = get_golang_install_location()
-                print(f"Golang is installed at: {golang_location}")
-
-                os.makedirs(f"{NAME}/{VERSION}/{folder}/go", exist_ok=True)
-                shutil.copytree(golang_location, f"{NAME}/{VERSION}/{folder}/go", dirs_exist_ok=True)
-                print('Copied go folder...')
-                # create run.go and go.mod for starting entry script for current os
-                os.chdir(f"{NAME}/{VERSION}/{folder}")
-                # if system == 'win':
-                #     subprocess.run(f'.\\go\\bin\\go.exe mod init example.com/{NAME}', shell=True, check=True)
-                # else:
-                #     subprocess.run(f'./go/bin/go mod init example.com/{NAME}', shell=True, check=True)
-                # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
-                # Use glob to find all .ico files in the folder
-                ico_files = glob.glob(os.path.join('static', '*.ico'))
-                ico = ico_files[0]
-
-                # create install.bat/sh for compiling run.go
-                NAME = NAME.replace('dist_', '')
-                if folder == 'linux' or folder == 'mac':
-                    install_script_content = r'''
-#!/bin/bash
-
-# Set repository owner and name
-REPO_OWNER="'''+REPO_OWNER+r'''"
-REPO_NAME="'''+REPO_NAME+r'''"
-
-# GitHub API URL to fetch the latest release
-API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
-
-# Fetch the JSON from the API
-JSON=$(curl -s "$API_URL")
-
-# Extract the browser_download_url from the first asset
-DOWNLOAD_URL=$(echo "$JSON" | grep -o '"browser_download_url": *"[^"]*"' | head -n 1 | sed 's/"browser_download_url": *"//;s/"//')
-
-# Extract the name from the asset - assuming the second occurrence of "name" is for the asset
-LATEST_RELEASE=$(echo "$JSON" | grep -o '"name": *"[^"]*"' | head -n 2 | tail -n 1 | sed 's/"name": *"//;s/"//')
-
-
-# Check if download URL is found
-if [ -z "$DOWNLOAD_URL" ]; then
-    echo "No download URL found. Exiting."
-    exit 1
-fi
-
-# Read the current release file name from the 'release' file
-if [ -f release ]; then
-    CURRENT_RELEASE=$(cat release)
-else
-    CURRENT_RELEASE="NONE"
-fi
-
-# Print the current and latest release names
-echo "CURRENT_RELEASE: $CURRENT_RELEASE"
-echo "LATEST_RELEASE: $LATEST_RELEASE"
-
-# Compare the current release with the latest release
-if [ "$CURRENT_RELEASE" == "$LATEST_RELEASE" ]; then
-    echo "Current release is up to date."
-else
-    # Delete all files and folders except install.sh
-    echo "Deleting old files and folders (except install.sh)..."
-    find . -type f ! -name "install.sh" -exec rm -f {} +
-    find . -type d ! -name "." -exec rm -rf {} +
-    echo "Old files and folders deleted."
-
-    # Echo the download URL (for verification)
-    echo "Download URL: $DOWNLOAD_URL"
-
-    # Download the zip file using curl
-    echo "Downloading latest release..."
-    curl -L "$DOWNLOAD_URL" -o "$LATEST_RELEASE"
-
-    # Unzip the file into the current directory
-    echo "Extracting the archive..."
-    unzip -o "$LATEST_RELEASE" -d ./
-
-    # Detect if the unzip created a new folder (dynamically)
-    EXTRACTED_FOLDER=$(find . -maxdepth 1 -type d ! -name "." ! -name ".*" | head -n 1)
-    if [ -n "$EXTRACTED_FOLDER" ] && [ "$EXTRACTED_FOLDER" != "." ]; then
-        echo "Detected folder: $EXTRACTED_FOLDER"
-        echo "Moving contents of $EXTRACTED_FOLDER to current directory..."
-        mv "$EXTRACTED_FOLDER"/* ./
-        rm -rf "$EXTRACTED_FOLDER"
-    else
-        echo "No separate directory detected; extraction complete."
-    fi
-
-    # Cleanup - remove downloaded zip file
-    echo "Cleanup done. Removing downloaded zip file..."
-    rm "$LATEST_RELEASE"
-
-    # Update the 'release' file with the new release name
-    echo "$LATEST_RELEASE" > release
-
-    echo "Your folder has been updated."
-    sleep 3
-fi
-
-# Set the working directory to the script's directory
-cd "$(dirname "$0")"
-echo "Current directory is: $(pwd)"
-
-# Determine the OS and current directory
-OS=$(uname)
-CURRENT_DIR=$(pwd)
-
-sudo chmod +x ./go/bin/go
-
-echo "Compiling main.go..."
-./go/bin/go build main.go
-
-if [ $? -ne 0 ]; then
-    echo "Go build failed. Exiting..."
-    exit 1
-fi
-
-if [ "$OS" = "Darwin" ]; then
-    # macOS: create a minimal AppleScript-based app that launches run.py
-    APP_PATH="$HOME/Desktop/'''+NAME+r'''.app"
-    echo "Creating macOS desktop shortcut at $APP_PATH"
-    mkdir -p "$APP_PATH/Contents/MacOS"
-    cat <<EOF > "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
-#!/bin/bash
-# Change directory to the folder containing run.py
-cd "$CURRENT_DIR"
-./main &
-
-EOF
-    chmod +x "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
-    # Create a minimal Info.plist file
-    mkdir -p "$APP_PATH/Contents"
-    cat <<EOF > "$APP_PATH/Contents/Info.plist"
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>'''+NAME+r'''</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.example.'''+NAME+r'''</string>
-    <key>CFBundleName</key>
-    <string>'''+NAME+r'''</string>
-    <key>CFBundleVersion</key>
-    <string>1.0</string>
-</dict>
-</plist>
-EOF
-    ./main &
-elif [ "$OS" = "Linux" ]; then
-    DESKTOP_FILE="$HOME/Desktop/'''+NAME+r'''.desktop"
-    echo "Creating Linux desktop shortcut at $DESKTOP_FILE"
-    cat <<EOF > "$DESKTOP_FILE"
-[Desktop Entry]
-Name='''+NAME+r'''
-Comment=Run '''+NAME+r'''
-Exec=$CURRENT_DIR/main
-Icon=$CURRENT_DIR/'''+png+r'''
-Terminal=true
-Type=Application
-Categories=Utility;
-EOF
-    chmod +x "$DESKTOP_FILE"
-    echo "Launching main..."
-    ./main &
-else
-    echo "Unsupported OS: $OS"
-    exit 1
-fi
-
-
-
-'''
-
-                    with open('install.sh', 'w') as f:
-                        f.write(install_script_content)
-
-                else:
-                    install_script_content = r'''
-@echo off
-setlocal enabledelayedexpansion
-
-:: Set repository owner and name
-set REPO_OWNER="'''+REPO_OWNER+r'''"
-set REPO_NAME="'''+REPO_NAME+r'''"
-
-:: GitHub API URL to fetch the latest release
-set API_URL=https://api.github.com/repos/%REPO_OWNER%/%REPO_NAME%/releases/latest
-
-:: Use PowerShell to fetch the latest release data and parse JSON to get the download URL and file name
-for /f "delims=" %%i in ('powershell -Command "try { (Invoke-RestMethod -Uri '%API_URL%' -ErrorAction Stop).assets[0].browser_download_url } catch { Write-Output $_.Exception.Message; exit }"') do set DOWNLOAD_URL=%%i
-for /f "delims=" %%j in ('powershell -Command "try { (Invoke-RestMethod -Uri '%API_URL%' -ErrorAction Stop).assets[0].name } catch { Write-Output $_.Exception.Message; exit }"') do set LATEST_RELEASE=%%j
-
-:: Check if download URL is found
-if not defined DOWNLOAD_URL (
-    echo No download URL found. Exiting.
-    exit /b 1
-)
-
-:: Read the current release file name from the 'release' file
-if exist release (
-    set /p CURRENT_RELEASE=<release
-) else (
-    set CURRENT_RELEASE=NONE
-)
-
-:: Print the current and latest release names
-echo CURRENT_RELEASE: "%CURRENT_RELEASE%"
-echo LATEST_RELEASE: "%LATEST_RELEASE%"
-
-:: Compare the current release with the latest release
-if "!CURRENT_RELEASE!" == "!LATEST_RELEASE!" (
-    echo Current release is up to date.
-) else (
-    :: Delete all files in the folder except install.bat
-    echo Deleting old files except install.bat...
-    for %%f in (*) do (
-        if /I not "%%f"=="install.bat" (
-            del /q "%%f"
-        )
-    )
-    echo Old files deleted.
-
-    :: Delete all folders in the current directory
-    echo Deleting old folders...
-    for /d %%d in (*) do (
-        rd /s /q "%%d"
-    )
-    for /d %%d in (*) do (
-        rd /s /q "%%d"
-    )
-    echo Old files and folders deleted.
-    
-    :: Echo the download URL (for verification)
-    echo Download URL: !DOWNLOAD_URL!
-
-    :: Download the zip file using PowerShell
-    echo Downloading latest release...
-    powershell -Command "Invoke-WebRequest -Uri '!DOWNLOAD_URL!' -OutFile '!LATEST_RELEASE!'"
-    
-    :: Unzip the file into the current directory
-    echo Extracting the archive...
-    powershell -Command "Expand-Archive -Path '!LATEST_RELEASE!' -DestinationPath '.' -Force"
-    
-    :: (Optional) If the archive extracts into a folder, move its contents to the current directory.
-    :: You can add folder detection code here if desired.
-    
-    :: Cleanup - remove downloaded zip file
-    echo Cleanup done. Removing downloaded zip file...
-    del !LATEST_RELEASE!
-    
-    :: Update the 'release' file with the new release name
-    echo !LATEST_RELEASE!>release
-    
-    echo Your folder has been updated.
-    timeout /t 3 /nobreak >nul
-)
-
-cd /d "%~dp0"
-
-%~dp0go/bin/go.exe build main.go
-
-if %errorlevel% neq 0 (
-    echo Go build failed. Exiting...
-    exit /b 1
-)
-
-:: Delete all .go source files now that the build is done
-echo Cleaning up Go source files…
-del /q "%~dp0*.go"
-
-:: Create VBScript to make a desktop shortcut to run "main"
 echo Creating desktop shortcut...
 echo Set objShell = CreateObject("WScript.Shell") > CreateShortcut.vbs
 echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desktop") ^& "\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
@@ -2455,14 +2805,11 @@ echo dirShortcut.Save >> CreateShortcut.vbs
 cscript //nologo CreateShortcut.vbs
 del CreateShortcut.vbs
 
-echo Shortcuts created successfully!
+echo Application updated. Now launch the app from the desktop shortcut!
 pause
+'''
 
-
-
-
-'''     
-                    iss_contents = r'''
+                iss_contents = r'''
 #define AppName "'''+NAME+r'''"
 #define Version "'''+VERSION+r'''"
 #define Icon "'''+ico+r'''"
@@ -2473,7 +2820,7 @@ pause
 AppName={#AppName}
 AppVersion={#Version}
 ; Install under %USERPROFILE%\Downloads\AppFolderName
-DefaultDirName={userlocalappdata}\Programs\{#AppName}
+DefaultDirName={localappdata}\Programs\{#AppName}
 DefaultGroupName={#AppName}
 OutputBaseFilename={#AppName}_Setup
 ; Use a custom icon for the setup EXE
@@ -2503,7 +2850,7 @@ Source: "{#Source}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
 
 ;[Run]
 ; Optionally launch the app after install
-; Filename: "{app}\main.exe"; \
+;Filename: "{app}\main.exe"; \
 ;    WorkingDir: "{app}"; \
 ;    Flags: nowait postinstall skipifsilent
 [Run]
@@ -2513,10 +2860,19 @@ Description: "Finalize installation"; \
 WorkingDir: "{app}"; \
 Flags: shellexec postinstall waituntilterminated skipifsilent
                 '''
-                    with open('install.bat', 'w') as f:
-                        f.write(install_script_content)
-                    with open(NAME+'_'+VERSION+'_Setup.iss', 'w', newline='\n') as f:
-                        f.write(iss_contents)
+                # Write install.sh with LF encoding for Unix-based systems
+                with open('install.sh', 'w', newline='\n') as f:
+                    f.write(bash_install_script_content)
+
+                # Write install.bat with CRLF encoding for Windows
+                with open('install.bat', 'w', newline='\r\n') as f:
+                    f.write(bat_install_script_content)
+                with open('release', 'w') as f:
+                    f.write(f'{NAME}_{VERSION}.zip')
+                with open(NAME+'_'+VERSION+'_Setup.iss', 'w', newline='\n') as f:
+                    f.write(iss_contents)
+
+                print(f'Files created successfully... \nNow compress the folder into a zip file and upload it to github releases (matching the zip filename in the release file; {NAME}_{VERSION}.zip). \nOptionally, you may install Inno Setup to create an installer with the {NAME}_{VERSION}_Setup.iss file.')
 
         except Exception as e:
             print('Error: '+str(e))
