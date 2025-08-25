@@ -10,27 +10,15 @@ import click
 
 class Desktop(base.Base):
     index_content = '''
-
-
-
- <!-- Documentation:
-   https://daisyui.com/
-   https://tailwindcss.com/
-   https://www.highcharts.com/
-   https://vuejs.org/
-   https://pyodide.org/en/stable/
-   https://www.papaparse.com/
-   https://danfo.jsdata.org/
-   https://axios-http.com/docs/intro -->
-
 <!DOCTYPE html>
-<html>
+<html data-theme="light">
 <head>
   <title>Gupy App</title>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
   <script src="https://code.highcharts.com/highcharts.js"></script>
@@ -38,407 +26,267 @@ class Desktop(base.Base):
   <script src="https://code.highcharts.com/modules/exporting.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
-  <link rel="icon" href="{{url_for('static', filename='gupy_logo.png')}}" type="image/png">
+  <link rel="icon" href="{{ url_for('static', path='logo/gupy_logo.png') }}" type="image/png">
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  </head>
+</head>
 <body>
   <div id="app" style="text-align: center;">
     <center>
       <div class="h-full">
-        <img class="mt-4 mask mask-squircle h-96 hover:-translate-y-2 ease-in-out transition" src="{{url_for('static', filename='gupy_logo.png')}}" />
-        <br>
-        <button class="btn bg-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/50 text-base-100">[[ message ]] </button>
+        <img class="mt-4 mask mask-squircle h-96 w-96 max-h-full max-w-full object-contain hover:-translate-y-2 ease-in-out transition"
+             src="{{ url_for('static', path='logo/gupy_logo.png') }}" />
+        <br><br>
+        <button class="btn bg-blue-500 border-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-md hover:shadow-blue-500/50 text-base-100 shadow-none transition-shadow ">[[ message ]] </button>
       </div>
     </center>
 </body>
+
 <script>
   // Disable right-clicking
-document.addEventListener('contextmenu', function(event) {
-    event.preventDefault();
-});
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
 </script>
+
 <script>
-  // Delay connection slightly to ensure the WS server is up
-  setTimeout(() => {
-    const host = location.hostname;
-    const ws = new WebSocket(`ws://${host}:8765/`);
-    ws.onopen = () => console.log("WS connected");
-    ws.onclose = () => console.log("WS closed");
-    ws.onerror = (e) => console.error("WS error", e);
+  (function(){
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${proto}://${location.host}/ws`);
+    ws.onopen = () => console.log('WS open');
+    ws.onclose = () => console.log('WS closed');
+    // Close gracefully on tab close
     window.addEventListener('beforeunload', () => {
       if (ws.readyState === WebSocket.OPEN) ws.close();
     });
-  }, 500); // 500ms delay; adjust as needed
-
+  })();
 </script>
+
+<!-- Optional: remove duplicate shutdown trigger to avoid double-calling -->
+<!--
 <script>
-  // When the user is leaving, use sendBeacon to notify the server to shut down.
   window.addEventListener('beforeunload', () => {
     navigator.sendBeacon('/shutdown');
   });
 </script>
-  <script type="module">
-    const { createApp } = Vue
-     import { loadGoWasm } from '{{url_for('static', filename='go_wasm.js')}}';
-    
-    createApp({
-      delimiters : ['[[', ']]'],
-        data(){
-          return {
-            message: 'Welcome to Gupy!',
-            pyodide_msg: 'This is from Pyodide!',
-            data: {},
-          }
-        },
-        methods: {
+-->
 
-        },
-        watch: {
+<script type="module">
+  const { createApp } = Vue
+  import { loadGoWasm } from "{{ url_for('static', path='go_wasm.js') }}";
 
-        },
-        created(){
-            // Make a request for a user with a given ID
-            axios.get('/api/example_api_endpoint')
-            .then(function (response) {
-                // handle success
-                console.log(response);
-                this.data = JSON.parse(JSON.stringify(response['data']))
-                console.log(this.data)
-            })
-            .catch(function (error) {
-                // handle error
-                console.log(error);
-
-          try {
-            // use pyodide instead of api example
-            async function main(){
-              const pyodide = await loadPyodide();
-              pyodide.registerJsModule("mymodule", {
-                pyodide_msg: this.pyodide_msg,
-              })
-              await pyodide.loadPackage("numpy")
-              const result = await pyodide.runPython(`
-#import variables
-import mymodule
-
-# use variable
-pyodide_msg = mymodule.pyodide_msg
-
-# change variable
-pyodide_msg = 'This is the changed pyodide message!'
-
-# output response
-response = {'new_msg':pyodide_msg}
-`)
-              return JSON.parse(response)
-          }
-            response = main()
-            console.log(response.new_msg)
-          } catch (error) {
-            console.log('An error occurred: ', error);
-          }
-
+  createApp({
+    delimiters : ['[[', ']]'],
+    data(){
+      return {
+        message: 'Welcome to Gupy!',
+        pyodide_msg: 'This is from Pyodide!',
+        data: {},
+      }
+    },
+    created(){
+      // Use arrow functions so 'this' stays bound
+      axios.get('/api/example_api_endpoint')
+        .then((response) => {
+          this.data = response.data;
+          console.log(this.data);
         })
-        .finally(function () {
-          // always executed
+        .catch((error) => {
+          console.log(error);
+          // fallback demo with Pyodide (optional)
         });
-
-      },
-        async mounted() {
-          try {
-            const goExports = await loadGoWasm();
-            console.log("Go WebAssembly ran add(5,7) and returned:" + goExports.add(5, 7));
-          } catch (error) {
-            console.error("Error loading Go WASM:", error);
-          }
-
-          let worker = new Worker("{{url_for('static', filename='worker.js')}}");
-          worker.postMessage({ message: '' });
-          worker.onmessage = function (message) {
-            console.log(message.data)
-          }
-
-        },
-        computed:{
-
-        }
-
-    }).mount('#app')
-  </script>
-</html>      
-  
-
-    
-
-
-
-    
-  
-'''
+    },
+    async mounted() {
+      try {
+        const goExports = await loadGoWasm();
+        console.log("Go WASM add(5,7): " + goExports.add(5, 7));
+      } catch (error) {
+        console.error("Error loading Go WASM:", error);
+      }
+      const worker = new Worker("{{ url_for('static', path='worker.js') }}");
+      worker.postMessage({ message: '' });
+      worker.onmessage = (message) => console.log(message.data);
+    },
+  }).mount('#app')
+</script>
+</html>'''
 
     server_content = r'''
-
-
-# Documentation:
-#   https://flask.palletsprojects.com/en/3.0.x/
-
-import subprocess
-from http.server import HTTPServer, SimpleHTTPRequestHandler
 import os
 import sys
-from flask import Flask, render_template, render_template_string, request, jsonify, send_file, make_response
-from werkzeug.utils import secure_filename
-# import numpy as np
-import json
+import time
 import platform
-import screeninfo  # Install with `pip install screeninfo`
 import threading
-import asyncio
-import websockets    # pip install websockets
+import subprocess
+import ctypes
+from typing import Any
 
-app = Flask(__name__)
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
-# a threading Event that we will set when the browser tab closes
+import screeninfo  # pip install screeninfo
+
+app = FastAPI()
+
+# paths
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+# mount static and templates
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+# shutdown coordination
 shutdown_event = threading.Event()
+_active_lock = threading.Lock()
+_active_conns = 0  # count WS connections
 
-async def _ws_handler(ws, path):
-    try:
-        # just keep this alive until the client closes
-        await ws.recv()
-    except websockets.exceptions.ConnectionClosed:
-        pass
-    shutdown_event.set()
-
-def start_ws_server():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    srv = websockets.serve(_ws_handler, '127.0.0.1', 8765)
-    loop.run_until_complete(srv)
-    loop.run_forever()
-
-@app.route('/shutdown', methods=['POST'])
-def shutdown():
-    func = request.environ.get('werkzeug.server.shutdown')
-    if func:
-        func()
-    return 'ok', 200
+def get_platform_type():
+    return platform.system()
 
 def get_screen_size():
-    """Returns screen width and height."""
     try:
-        screen = screeninfo.get_monitors()[0]  # Get primary monitor
-        return screen.width, screen.height
-    except Exception as e:
-        print("Could not get screen resolution:", e)
-        return 1920, 1080  # Default resolution if detection fails
-    
+        m = screeninfo.get_monitors()[0]
+        return m.width, m.height
+    except Exception:
+        return 1920, 1080
 
-# WORKSAFE=False
-# try:
-#     from gevent.pywsgi import WSGIServer
-# except Exception as e:
-#     print(e)
-#     WORKSAFE=True
-def get_platform_type():
-    system = platform.system()
-    return system
-
-def run_with_switches(system, url):
-    """Opens a Chromium-based browser at the center of the screen in incognito mode, with broad compatibility."""
+def run_with_switches(system: str, url: str):
     import shutil
-
-    screen_width, screen_height = get_screen_size()
-    window_width, window_height = 1024, 768
-    pos_x = (screen_width - window_width) // 2
-    pos_y = (screen_height - window_height) // 2
-
-    common_args = [
+    sw, sh = get_screen_size()
+    ww, wh = 1024, 768
+    x = (sw - ww) // 2
+    y = (sh - wh) // 2
+    args = [
         f"--app={url}",
         "--disable-pinch",
         "--disable-extensions",
         "--guest",
         "--incognito",
-        f"--window-size={window_width},{window_height}",
-        f"--window-position={pos_x},{pos_y}",
+        f"--window-size={ww},{wh}",
+        f"--window-position={x},{y}",
     ]
 
-    # List of possible browser executables for each platform
-    browser_candidates = []
-    if system == 'Darwin':
-        browser_candidates = [
-            '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-            '/Applications/Chromium.app/Contents/MacOS/Chromium',
-            '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-            shutil.which('google-chrome'),
-            shutil.which('chromium'),
-            shutil.which('chromium-browser'),
-            shutil.which('brave-browser'),
+    if system == "Windows":
+        candidates = [
+            "C:/Program Files/Google/Chrome/Application/chrome.exe",
+            "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+            "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
         ]
-    elif system == 'Linux':
-        browser_candidates = [
-            shutil.which('google-chrome'),
-            shutil.which('chromium'),
-            shutil.which('chromium-browser'),
-            shutil.which('brave-browser'),
-            shutil.which('microsoft-edge'),
-        ]
-    else:
-        # Windows handled as before
-        if os.path.exists("C:/Program Files/Google/Chrome/Application/chrome.exe"):
-            chrome_path = "C:/Program Files/Google/Chrome/Application/chrome.exe"
-            command = [chrome_path] + common_args
-            print("Running command:", command)
-            subprocess.Popen(command)
-            return
-        elif os.path.exists("C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"):
-            chrome_path = "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
-            command = [chrome_path] + common_args
-            print("Running command:", command)
-            subprocess.Popen(command)
-            return
-        print("Chromium-based browser not found or default browser not set.")
-
-        # Remove None values from browser_candidates
-        browser_candidates = [b for b in browser_candidates if b]
-    
-    # Try each candidate and run the first one that exists
-    for browser in browser_candidates:
-        if browser and os.path.exists(browser):
-            command = [browser] + common_args
-            print("Running command:", command)
-            subprocess.Popen(command)
-            return
-
-    # Fallback: try to open in default browser (may not support all switches)
-    print("No supported Chromium-based browser found. Falling back to default browser.")
-    import webbrowser
-    try:
-      webbrowser.open(url)
-    except Exception as e:
-      if platform.system() == 'Linux':
-        # For Linux, use xdg-open
-        os.system(f'xdg-open {url}')
-
-
-
-def stop_previous_flask_server():
-    try:
-        # Read the PID from the file
-        with open(f'{os.path.expanduser("~")}/flask_server.pid', 'r') as f:
-          pid = int(f.read().strip())
-
-        # Determine the system type
-        system = platform.system()
-
-        # Terminate the Flask server process based on the system type
-        if system == "Windows":
-          command = f'taskkill /F /PID {pid}'
-        elif system == "Linux" or system == "Darwin":  # Darwin is macOS
-          command = f'kill -9 {pid}'
-        else:
-          raise Exception(f"Unsupported system type: {system}")
-
-        subprocess.run(command, shell=True, check=True)
-        print("Previous Flask server process terminated.")
-    except Exception as e:
-        print(f"Error stopping previous Flask server: {e}")
-
-
-
-# getting the name of the directory
-# where the this file is present.
-path = os.path.dirname(os.path.realpath(__file__))
-
-
-# Routes
-@app.route('/')
-def index():
-    # html = """
-   
-    # """
-
-    # file_path = f'{os.path.dirname(os.path.realpath(__file__))}/templates/index.html'
-
-    # with open(file_path, 'r') as file:
-    #     html = ''
-    #     for line in file:
-    #         html += line
-            
-    #     return render_template_string(html)
-        # return render('index.html')
-        return render_template('index.html')
-
-@app.route('/api/example_api_endpoint', methods=['GET'])
-def example_api_endpoint():
-    # Get the data from the request
-    # data = request.json.get('data') # for POST requests with data
-
-    #read from python/cython module
-    from python_modules import python_modules
-
-    py_message = python_modules.main()
-    
-    #read from go module
-    from ctypes import cdll, c_char_p
-
-    path = os.path.dirname(os.path.realpath(__file__))
-
-    # Load the shared library
-    try:
-        go_modules = cdll.LoadLibrary(path+'/go_modules/go_modules.so')
-    except Exception as e:
-        print(str(e)+'\n Try running `python ./gupy.py gopherize -t <target_platform> -n <app_name>`')
+        for c in candidates:
+            if os.path.exists(c):
+                subprocess.Popen([c] + args)
+                return
+        print("Chromium-based browser not found.")
         return
 
-    # Define the return type of the function
-    go_modules.go_module.restype = c_char_p
-    
-    go_message = go_modules.go_module().decode('utf-8')
+    # macOS/Linux
+    binaries = ["google-chrome", "chromium", "chromium-browser", "brave-browser", "microsoft-edge"]
+    for b in binaries:
+        p = shutil.which(b)
+        if p:
+            subprocess.Popen([p] + args)
+            return
+    import webbrowser
+    webbrowser.open(url)
 
-    data = {'Python Module Message':py_message,'Go Module Message':go_message}
+def start_shutdown_watcher():
+    def watcher():
+        shutdown_event.wait()
+        # Hard-exit the process (ensures console closes)
+        os._exit(0)
+    threading.Thread(target=watcher, daemon=True).start()
 
-    # Perform data processing
+def stop_previous_server():
+    try:
+        pid_path = os.path.join(os.path.expanduser("~"), "app_server.pid")
+        if not os.path.exists(pid_path):
+            return
+        with open(pid_path, "r") as f:
+            pid = int(f.read().strip())
+        system = platform.system()
+        if system == "Windows":
+            cmd = f'taskkill /F /PID {pid}'
+        else:
+            cmd = f'kill -9 {pid}'
+        subprocess.run(cmd, shell=True, check=True)
+    except Exception as e:
+        print(f"Error stopping previous server: {e}")
 
-    # Return the modified data as JSON
-    return jsonify({'result': data})
+# Routes
+@app.get("/")
+async def index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/api/example_api_endpoint")
+async def example_api_endpoint():
+    try:
+        # Python module
+        from python_modules import python_modules
+        py_message = python_modules.main()
+
+        # Go c-shared lib
+        path = BASE_DIR
+        go_path = os.path.join(path, "go_modules", "go_modules.so")
+        go_modules = ctypes.CDLL(go_path)
+        go_modules.go_module.restype = ctypes.c_char_p
+        go_message = go_modules.go_module().decode("utf-8")
+
+        data = {"Python Module Message": py_message, "Go Module Message": go_message}
+        return JSONResponse({"result": data})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# Optional: HTTP shutdown endpoint (manual trigger)
+@app.post("/shutdown")
+async def http_shutdown():
+    shutdown_event.set()
+    return {"ok": True}
+
+# WebSocket: when last tab disconnects, trigger shutdown
+@app.websocket("/ws")
+async def ws_endpoint(ws: WebSocket):
+    global _active_conns
+    await ws.accept()
+    with _active_lock:
+        _active_conns += 1
+    try:
+        # Keep alive until client closes
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        trigger = False
+        with _active_lock:
+            _active_conns -= 1
+            if _active_conns <= 0:
+                trigger = True
+        if trigger:
+            shutdown_event.set()
 
 def main():
-    stop_previous_flask_server()
+    stop_previous_server()
+    with open(os.path.join(os.path.expanduser("~"), "app_server.pid"), "w") as f:
+        f.write(str(os.getpid()))
 
-    pid_file = f'{os.path.expanduser("~")}/flask_server.pid'
-    with open(pid_file, 'w') as f:
-        f.write(str(os.getpid()))  # Write the PID to the file
-
-    # ADD SPLASH SCREEN?
-
-    # Get current system type
     system = get_platform_type()
+    # Start watcher to exit process
+    start_shutdown_watcher()
 
-    threading.Thread(target=start_ws_server, daemon=True).start()
+    # Launch browser shortly after server starts
+    def open_browser():
+        time.sleep(0.3)
+        run_with_switches(system, "http://127.0.0.1:8001")
+    threading.Thread(target=open_browser, daemon=True).start()
 
-    # Run Apped Chrome Window
-    run_with_switches(system)
+    # Run uvicorn
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8001, reload=False, workers=1)
 
-    server_thread = threading.Thread(
-        target=lambda: app.run(debug=True, threaded=True, port=8001, use_reloader=False),
-        daemon=True
-    )
-    server_thread.start()
-
-    # 4) block until WS drops
-    shutdown_event.wait()
-
-    # 5) hit shutdown endpoint
-    try:
-        requests.post('http://127.0.0.1:8001/shutdown')
-    except:
-        pass
-
-    server_thread.join()
-
-if __name__ == '__main__':
-    main()
-        '''
+if __name__ == "__main__":
+    main()                
+'''
 
     python_modules_content = '''
 import os
@@ -1092,7 +940,7 @@ import os
 # Add the parent directory of 'target_platforms' to the sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))'''
 
-    def __init__(self, name, lang=''):
+    def __init__(self, name, lang='go'):
         self.name = name
         self.lang = lang
         self.folders = [
@@ -1101,6 +949,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))'''
           f'desktop/static',
           f'desktop/static/go_wasm',
           # f'{self.name}/desktop/dev/templates/python_wasm',
+          f'desktop/static/logo',
+          f'desktop/static/splashscreen',
+          f'desktop/static/icon',
         ]
         self.go_wasm_js_content = '''
 // go_wasm.js
@@ -1140,7 +991,9 @@ export async function loadGoWasm() {
 }
 
 '''
+        self.go_server_content = r'''
 
+'''
         if self.lang == 'go':
             self.index_content = '''
 
@@ -1155,13 +1008,14 @@ export async function loadGoWasm() {
    https://axios-http.com/docs/intro -->
 
 <!DOCTYPE html>
-<html>
+<html data-theme="light">
 <head>
   <title>Gupy App</title>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
   <script src="https://code.highcharts.com/highcharts.js"></script>
@@ -1169,16 +1023,17 @@ export async function loadGoWasm() {
   <script src="https://code.highcharts.com/modules/exporting.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
-  <link rel="icon" href="/static/gupy_logo.png" type="image/png">
+  <link rel="icon" href="/static/logo/gupy_logo.png" type="image/png">
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   </head>
 <body>
   <div id="app" style="text-align: center;">
     <center>
       <div class="h-full">
-        <img class="mt-4 mask mask-squircle h-96 hover:-translate-y-2 ease-in-out transition" src="/static/gupy_logo.png" />
+        <img class="mt-4 mask mask-squircle  h-96 w-96 max-h-full max-w-full object-contain  hover:-translate-y-2 ease-in-out transition" src="/static/logo/gupy_logo.png" />
         <br>
-        <button class="btn bg-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/50 text-base-100">[[ message ]] </button>
+        <br>
+        <button class="btn bg-blue-500 border-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-md hover:shadow-blue-500/50 text-base-100 shadow-none transition-shadow ">[[ message ]] </button>
       </div>
     </center>
 </body>
@@ -1189,16 +1044,18 @@ document.addEventListener('contextmenu', function(event) {
 });
 </script>
 <script>
-    // Watchdog WS on Go /ws endpoint
-    const ws = new WebSocket(`ws://${location.host}/ws`);
-    window.addEventListener('beforeunload', () => {
+(function(){
+  const ws = new WebSocket('ws://' + location.hostname + ':8765');
+  ws.onopen = () => console.log('WS open');
+  ws.onclose = () => console.log('WS closed');
+  window.addEventListener('beforeunload', () => {
       if (ws.readyState === WebSocket.OPEN) ws.close();
-    });
-</script>
+  });
+})();
+  </script>
 
   <script type="module">
     const { createApp } = Vue
-     import { loadGoWasm } from './static/go_wasm.js';
     
     createApp({
       delimiters : ['[[', ']]'],
@@ -1216,60 +1073,12 @@ document.addEventListener('contextmenu', function(event) {
 
         },
         created(){
-            // Make a request for a user with a given ID
-            axios.get('/api/example_api_endpoint')
-            .then(function (response) {
-                // handle success
-                console.log(response);
-                this.data = JSON.parse(JSON.stringify(response['data']))
-                console.log(this.data)
-            })
-            .catch(function (error) {
-                // handle error
-                console.log(error);
-
-          try {
-            // use pyodide instead of api example
-            async function main(){
-              const pyodide = await loadPyodide();
-              pyodide.registerJsModule("mymodule", {
-                pyodide_msg: this.pyodide_msg,
-              })
-              await pyodide.loadPackage("numpy")
-              const result = await pyodide.runPython(`
-#import variables
-import mymodule
-
-# use variable
-pyodide_msg = mymodule.pyodide_msg
-
-# change variable
-pyodide_msg = 'This is the changed pyodide message!'
-
-# output response
-response = {'new_msg':pyodide_msg}
-`)
-              return JSON.parse(response)
-          }
-            response = main()
-            console.log(response.new_msg)
-          } catch (error) {
-            console.log('An error occurred: ', error);
-          }
-
-        })
-        .finally(function () {
-          // always executed
-        });
+          axios.get('/api/run_py?name=hello&arg=foo&arg=bar')
+            .then(res => console.log('py result:', res.data))
+            .catch(err => console.error(err));
 
       },
         async mounted() {
-          try {
-            const goExports = await loadGoWasm();
-            console.log("Go WebAssembly ran add(5,7) and returned:" + goExports.add(5, 7));
-          } catch (error) {
-            console.error("Error loading Go WASM:", error);
-          }
 
           let worker = new Worker("{{ .worker_script }}");
           worker.postMessage({ message: '' });
@@ -1284,157 +1093,330 @@ response = {'new_msg':pyodide_msg}
 
     }).mount('#app')
   </script>
-</html>      
-  
-   
-  
-    
-            '''
-
-            self.index_content = '''
- <!-- Documentation:
-   https://daisyui.com/
-   https://tailwindcss.com/
-   https://www.highcharts.com/
-   https://vuejs.org/
-   https://pyodide.org/en/stable/
-   https://www.papaparse.com/
-   https://danfo.jsdata.org/
-   https://axios-http.com/docs/intro -->
-
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Gupy App</title>
-  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
-  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
-  <script src="https://code.highcharts.com/highcharts.js"></script>
-  <script src="https://code.highcharts.com/modules/boost.js"></script>
-  <script src="https://code.highcharts.com/modules/exporting.js"></script>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
-  <link rel="icon" href="/static/gupy_logo.png" type="image/png">
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  </head>
-<body>
-  <div id="app" style="text-align: center;">
-    <center>
-      <div class="h-full">
-        <img class="mt-4 mask mask-squircle h-96 hover:-translate-y-2 ease-in-out transition" src="/static/gupy_logo.png" />
-        <br>
-        <button class="btn bg-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/50 text-base-100">[[ message ]] </button>
-      </div>
-    </center>
-</body>
-<script>
-  // Disable right-clicking
-document.addEventListener('contextmenu', function(event) {
-    event.preventDefault();
-});
-</script>
-
-
-  <script type="module">
-    const { createApp } = Vue
-     import { loadGoWasm } from '{{ .go_wasm_js }}';
-    
-    createApp({
-      delimiters : ['[[', ']]'],
-        data(){
-          return {
-            message: 'Welcome to Gupy!',
-            pyodide_msg: 'This is from Pyodide!',
-            data: {},
-          }
-        },
-        methods: {
-
-        },
-        watch: {
-
-        },
-        created(){
-            // Make a request for a user with a given ID
-            axios.get('/api/example_api_endpoint')
-            .then(function (response) {
-                // handle success
-                console.log(response);
-                this.data = JSON.parse(JSON.stringify(response['data']))
-                console.log(this.data)
-            })
-            .catch(function (error) {
-                // handle error
-                console.log(error);
-
-          try {
-            // use pyodide instead of api example
-            async function main(){
-              const pyodide = await loadPyodide();
-              pyodide.registerJsModule("mymodule", {
-                pyodide_msg: this.pyodide_msg,
-              })
-              await pyodide.loadPackage("numpy")
-              const result = await pyodide.runPython(`
-#import variables
-import mymodule
-
-# use variable
-pyodide_msg = mymodule.pyodide_msg
-
-# change variable
-pyodide_msg = 'This is the changed pyodide message!'
-
-# output response
-response = {'new_msg':pyodide_msg}
-`)
-              return JSON.parse(response)
-          }
-            response = main()
-            console.log(response.new_msg)
-          } catch (error) {
-            console.log('An error occurred: ', error);
-          }
-
-        })
-        .finally(function () {
-          // always executed
-        });
-
-      },
-        async mounted() {
-          try {
-            const goExports = await loadGoWasm();
-            console.log("Go WebAssembly ran add(5,7) and returned:" + goExports.add(5, 7));
-          } catch (error) {
-            console.error("Error loading Go WASM:", error);
-          }
-
-          let worker = new Worker("{{ .worker_script }}");
-          worker.postMessage({ message: '' });
-          worker.onmessage = function (message) {
-            console.log(message.data)
-          }
-
-        },
-        computed:{
-
-        }
-
-    }).mount('#app')
-  </script>
-</html>      
-  
-   
+</html>
   
 '''
             self.server_content = r'''
 
+import subprocess, os, sys, platform, threading, asyncio, ctypes, time
+import screeninfo
+import websockets
+
+shutdown_event = threading.Event()
+active_lock = threading.Lock()
+active_conns = 0  # number of open WS connections
+
+def get_screen_size():
+    try:
+        m = screeninfo.get_monitors()[0]
+        return m.width, m.height
+    except Exception:
+        return 1920, 1080
+
+def get_platform_type():
+    return platform.system()
+
+def run_with_switches(system, url):
+    import shutil
+    wW, wH = 1024, 768
+    sW, sH = get_screen_size()
+    x = (sW - wW)//2
+    y = (sH - wH)//2
+    args = [
+        f"--app={url}",
+        "--disable-extensions",
+        "--incognito",
+        f"--window-size={wW},{wH}",
+        f"--window-position={x},{y}",
+    ]
+    # Windows direct
+    if system == "Windows":
+        candidates = [
+            "C:/Program Files/Google/Chrome/Application/chrome.exe",
+            "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+            "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+        ]
+        for c in candidates:
+            if os.path.exists(c):
+                subprocess.Popen([c] + args)
+                return
+    import shutil, webbrowser
+    binaries = ["google-chrome","chromium","chromium-browser","brave-browser","microsoft-edge"]
+    for b in binaries:
+        p = shutil.which(b)
+        if p:
+            subprocess.Popen([p]+args)
+            return
+    webbrowser.open(url)
+
+def start_ws_server():
+    async def handler(ws):
+        global active_conns
+        with active_lock:
+            active_conns += 1
+        try:
+            await ws.wait_closed()
+        finally:
+            trigger = False
+            with active_lock:
+                active_conns -= 1
+                if active_conns == 0:
+                    trigger = True
+            if trigger:
+                shutdown_event.set()
+
+    async def run():
+        async with websockets.serve(handler, "127.0.0.1", 8765):
+            while not shutdown_event.is_set():
+                await asyncio.sleep(0.2)
+
+    asyncio.run(run())
+
+def start_shutdown_watcher(lib):
+    def watcher():
+        shutdown_event.wait()
+        try:
+            lib.StopServer()
+        except:
+            pass
+        # small grace
+        time.sleep(0.2)
+        os._exit(0)
+    threading.Thread(target=watcher, daemon=True).start()
+
+# Go shared lib load (adjust names if needed)
+libname = {
+    "Linux": "server-linux.so",
+    "Darwin": "server-darwin.so",
+    "Windows": "server-windows.so",
+}[platform.system()]
+libpath = os.path.join(os.path.dirname(__file__), libname)
+lib = ctypes.CDLL(libpath)
+lib.StartServer.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
+lib.StartServer.restype = ctypes.c_int
+lib.StopServer.argtypes = []
+lib.StopServer.restype = ctypes.c_int
+
+STATIC_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "static"))
+
+def main():
+    system = get_platform_type()
+    # Start WS sidecar
+    threading.Thread(target=start_ws_server, daemon=True).start()
+    # Start watcher
+    start_shutdown_watcher(lib)
+    # Start Go server
+    lib.StartServer(b":8080", STATIC_DIR.encode())
+    # Launch browser (after slight delay so server starts)
+    threading.Timer(0.3, lambda: run_with_switches(system, "http://127.0.0.1:8080")).start()
+    # Block main thread until exit
+    shutdown_event.wait()
+
+if __name__ == "__main__":
+    main()
+
 '''
+
+            self.go_server_content = r'''
+
+
+
+// Build:
+//   Linux:   go build -buildmode=c-shared -o mylib.so
+//   macOS:   go build -buildmode=c-shared -o mylib.dylib
+//   Windows: go build -buildmode=c-shared -o mylib.dll
+package main
+
+/*
+#include <stdint.h>
+*/
+import "C"
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
+	"path/filepath"
+	"sync"
+	"time"
+    "os/exec"
+    "runtime"
+)
+
+var (
+	srvMu sync.Mutex
+	srv   *http.Server
+)
+
+// buildMux serves:
+//   - "/" -> <staticDir>/index.html
+//   - "/static/*" -> files from <staticDir>
+//   - "/api/echo"
+//   - "/healthz"
+func buildMux(staticDir string) http.Handler {
+	mux := http.NewServeMux()
+
+	// Static directory server
+	fs := http.FileServer(http.Dir(staticDir))
+	mux.Handle("/static/", http.StripPrefix("/static/", fs))
+
+	// Root -> index.html
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+        parent := filepath.Dir(filepath.Clean(staticDir))            // remove last folder
+        idx := filepath.Join(parent, "templates", "index.html")  		
+		http.ServeFile(w, r, idx)
+	})
+
+	// Health
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		_, _ = w.Write([]byte("ok"))
+	})
+
+	// Simple JSON API
+	mux.HandleFunc("/api/echo", func(w http.ResponseWriter, r *http.Request) {
+		type Resp struct {
+			Message string    `json:"message"`
+			Time    time.Time `json:"time"`
+		}
+		q := r.URL.Query().Get("q")
+		if q == "" {
+			q = "hello"
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(Resp{Message: q, Time: time.Now()})
+	})
+
+    // Run a Python script from py_modules and return its JSON stdout
+    mux.HandleFunc("/api/run_py", func(w http.ResponseWriter, r *http.Request) {
+        name := r.URL.Query().Get("name") // script name without .py
+        if name == "" {
+            http.Error(w, "missing 'name' query param", http.StatusBadRequest)
+            return
+        }
+
+        // Resolve py_modules folder next to static/templates
+        root := filepath.Dir(filepath.Clean(staticDir))
+        pyDir := filepath.Join(root, "py_modules")
+        script := filepath.Join(pyDir, name+".py")
+
+        if fi, err := os.Stat(script); err != nil || fi.IsDir() {
+            http.Error(w, "script not found", http.StatusNotFound)
+            return
+        }
+
+        // Optional args: ?arg=foo&arg=bar
+        args := r.URL.Query()["arg"]
+
+        // Choose Python executable (override with PYTHON_BIN)
+        py := os.Getenv("PYTHON_BIN")
+        if py == "" {
+            if runtime.GOOS == "windows" {
+                py = "python"
+            } else {
+                py = "python3"
+            }
+        }
+
+        // Run with timeout
+        ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+        defer cancel()
+        cmd := exec.CommandContext(ctx, py, append([]string{script}, args...)...)
+        cmd.Dir = pyDir
+
+        out, err := cmd.CombinedOutput()
+        if ctx.Err() == context.DeadlineExceeded {
+            http.Error(w, "script timed out", http.StatusGatewayTimeout)
+            return
+        }
+        if err != nil {
+            http.Error(w, fmt.Sprintf("script error: %v\n%s", err, string(out)), http.StatusBadGateway)
+            return
+        }
+
+        // If stdout is valid JSON, return as-is; otherwise wrap it
+        var js any
+        if json.Unmarshal(out, &js) == nil {
+            w.Header().Set("Content-Type", "application/json")
+            w.Write(out)
+            return
+        }
+        w.Header().Set("Content-Type", "application/json")
+        _ = json.NewEncoder(w).Encode(map[string]any{
+            "ok":     true,
+            "output": string(out),
+        })
+    })
+
+    return mux
+}
+
+//export StartServer
+func StartServer(addr *C.char, staticPath *C.char) C.int {
+	a := C.GoString(addr)
+	p := C.GoString(staticPath)
+
+	// Validate static dir exists
+	if fi, err := os.Stat(p); err != nil || !fi.IsDir() {
+		fmt.Println("invalid static dir:", p)
+		return 2
+	}
+
+	srvMu.Lock()
+	defer srvMu.Unlock()
+
+	// If already running, do nothing
+	if srv != nil {
+		return 0
+	}
+
+	srv = &http.Server{
+		Addr:              a,
+		Handler:           buildMux(p),
+		ReadTimeout:       10 * time.Second,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	go func(s *http.Server) {
+		_ = s.ListenAndServe()
+	}(srv)
+
+	return 0
+}
+
+//export StopServer
+func StopServer() C.int {
+	srvMu.Lock()
+	s := srv
+	srv = nil
+	srvMu.Unlock()
+
+	if s == nil {
+		return 0
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := s.Shutdown(ctx); err != nil {
+		fmt.Println("shutdown error:", err)
+		return 1
+	}
+	return 0
+}
+
+func main() {}
+
+'''
+
         elif self.lang == 'py':
+
             self.main_content = f'''
 from {self.name} import server
 
@@ -1462,281 +1444,23 @@ if __name__ == "__main__":
             self.folders.append(f'desktop/go_modules')
             self.files[f'desktop/go_modules/go_modules.go'] = self.go_modules_content
         else:
-            self.files[f'desktop/main.go'] = self.server_content
+            self.folders.append(f'desktop/py_modules')
+            self.files[f'desktop/py_modules/hello.py'] = '''
 
-    def create(self):
-        if 'desktop/main.go' in self.files:
-            print("Please enter Github information for the app where your release package will be uploaded...")
-            REPO_OWNER = input(f'Enter the Github repository owner: ')
-            REPO_NAME = input("Enter the Github repository name: ")
+import json
+import sys
 
-            self.server_content = r'''
-package main
+def main():
+    args = sys.argv[1:]
+    print(json.dumps({"ok": True, "args": args, "msg": "hello from python"}))
 
-import (
-    "context"
-    "fmt"
-    "log"
-    "net/http"
-    "os"
-    "os/exec"
-    "os/signal"
-    "path/filepath"
-    "runtime"
-    "syscall"
-    "time"
-    "unsafe"
-
-    "github.com/gorilla/websocket"
-    "golang.org/x/sys/windows"
-)
-
-var shutdownCh = make(chan struct{})
-
-var upgrader = websocket.Upgrader{
-    ReadBufferSize:  1024,
-    WriteBufferSize: 1024,
-    CheckOrigin:     func(r *http.Request) bool { return true },
-}
-
-func main() {
-    // Check for updates before starting the server
-	repoOwner := "'''+REPO_OWNER+r'''" // Replace with your GitHub repo owner
-    repoName := "'''+REPO_NAME+r'''"   // Replace with your GitHub repo name
-    if !checkForUpdates(repoOwner, repoName) {
-        return
-    }
-
-    srv := &http.Server{
-        Addr:    ":8080",
-        Handler: routes(),
-    }
-
-    // open Chrome in app mode (incognito, centered)
-    go openChrome("http://127.0.0.1:8080")
-
-    // run server
-    go func() {
-        log.Println("Listening on http://127.0.0.1:8080")
-        if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-            log.Fatalf("ListenAndServe(): %v", err)
-        }
-    }()
-
-    // wait for OS signal or WS‐triggered shutdown
-    quit := make(chan os.Signal, 1)
-    signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
-    select {
-    case <-quit:
-    case <-shutdownCh:
-        log.Println("Browser closed, shutting down…")
-    }
-
-    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-    defer cancel()
-    if err := srv.Shutdown(ctx); err != nil {
-        log.Fatalf("Server Shutdown: %v", err)
-    }
-    log.Println("Server stopped gracefully")
-}
-
-func checkForUpdates(repoOwner, repoName string) bool {
-    // Fetch the latest release from GitHub
-    latestRelease, err := fetchLatestRelease(repoOwner, repoName)
-    if err != nil {
-        fmt.Println("Error fetching latest release:", err)
-        return true // Proceed with the current version
-    }
-
-    // Read the current release version from the release file
-    currentRelease, err := readCurrentRelease()
-    if err != nil {
-        fmt.Println("Error reading current release:", err)
-        return true // Proceed with the current version
-    }
-
-    // Compare the versions
-    if latestRelease != currentRelease {
-        fmt.Printf("New release available: %s. Updating...\n", latestRelease)
-
-        // Determine the platform and run the appropriate install script
-        system := runtime.GOOS
-        var installScript string
-        if system == "windows" {
-            installScript = "install.bat"
-        } else {
-            installScript = "install.sh"
-        }
-
-        cmd := exec.Command(installScript)
-        cmd.Stdout = os.Stdout
-        cmd.Stderr = os.Stderr
-        if err := cmd.Run(); err != nil {
-            fmt.Println("Error running install script:", err)
-            return true // Proceed with the current version
-        }
-
-        // Exit after running the installer
-        return false
-    }
-
-    fmt.Println("Current release is up to date.")
-    return true
-}
-
-func fetchLatestRelease(repoOwner, repoName string) (string, error) {
-    apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", repoOwner, repoName)
-    resp, err := http.Get(apiURL)
-    if err != nil {
-        return "", err
-    }
-    defer resp.Body.Close()
-
-    if resp.StatusCode != http.StatusOK {
-        return "", fmt.Errorf("failed to fetch release: %s", resp.Status)
-    }
-
-    var release GitHubRelease
-    if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-        return "", err
-    }
-
-    return release.Name, nil
-}
-
-func readCurrentRelease() (string, error) {
-    releaseFile := filepath.Join(filepath.Dir(os.Args[0]), "release")
-    data, err := ioutil.ReadFile(releaseFile)
-    if err != nil {
-        return "", err
-    }
-    return string(data), nil
-}
-
-func routes() http.Handler {
-    mux := http.NewServeMux()
-    mux.HandleFunc("/", rootHandler)
-    mux.HandleFunc("/ws", wsHandler)
-    return mux
-}
-
-// copy your wsHandler & rootHandler here...
-func rootHandler(w http.ResponseWriter, r *http.Request) {
-    // serve your SPA entrypoint (adjust path as needed)
-    http.ServeFile(w, r, filepath.Join("templates", "index.html"))
-}
-
-func wsHandler(w http.ResponseWriter, r *http.Request) {
-    conn, err := upgrader.Upgrade(w, r, nil)
-    if err != nil {
-        fmt.Println("WS upgrade failed:", err)
-        return
-    }
-    defer conn.Close()
-
-    // block until client disconnects
-    for {
-        if _, _, err := conn.ReadMessage(); err != nil {
-            // signal main to shutdown
-            close(shutdownCh)
-            return
-        }
-    }
-}
-
-// GetScreenSize retrieves the screen dimensions on Windows
-func GetScreenSize() (int, int) {
-    var info windows.Rect
-    user32 := windows.NewLazySystemDLL("user32.dll")
-    getClientRect := user32.NewProc("GetClientRect")
-    getDesktop := user32.NewProc("GetDesktopWindow")
-
-    hwnd, _, _ := getDesktop.Call()
-    getClientRect.Call(hwnd, uintptr(unsafe.Pointer(&info)))
-
-    return int(info.Right - info.Left), int(info.Bottom - info.Top)
-}
-
-// FindBrowserPath locates a Chromium‐based browser on any OS
-func FindBrowserPath() string {
-    var candidates []string
-    switch runtime.GOOS {
-    case "windows":
-        candidates = []string{
-            `C:\Program Files\Google\Chrome\Application\chrome.exe`,
-            `C:\Program Files (x86)\Google\Chrome\Application\chrome.exe`,
-            `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`,
-        }
-    case "darwin":
-        candidates = []string{
-            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-            "/Applications/Chromium.app/Contents/MacOS/Chromium",
-        }
-    default:
-        candidates = []string{
-            "/usr/bin/google-chrome",
-            "/usr/bin/chromium-browser",
-            "/usr/bin/chromium",
-        }
-    }
-    for _, path := range candidates {
-        if _, err := os.Stat(path); err == nil {
-            return path
-        }
-    }
-    return ""
-}
-
-// openChrome launches Chrome in “app” mode, centered & incognito
-func openChrome(url string) {
-    browser := FindBrowserPath()
-    if browser == "" {
-        fmt.Println("No Chromium-based browser found. Falling back to the default browser.")
-        openDefaultBrowser(url)
-        return
-    }
-
-    sw, sh := GetScreenSize()
-    ww, wh := 1024, 768
-    x := (sw - ww) / 2
-    y := (sh - wh) / 2
-
-    args := []string{
-        "--app=" + url,
-        "--disable-pinch",
-        "--disable-extensions",
-        "--guest",
-        "--incognito",
-        fmt.Sprintf("--window-size=%d,%d", ww, wh),
-        fmt.Sprintf("--window-position=%d,%d", x, y),
-    }
-
-    cmd := exec.Command(browser, args...)
-    if err := cmd.Start(); err != nil {
-        fmt.Println("failed to launch browser:", err)
-    }
-}
-
-// openDefaultBrowser opens the URL in the system's default web browser
-func openDefaultBrowser(url string) {
-    var cmd *exec.Cmd
-
-    switch runtime.GOOS {
-    case "windows":
-        cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-    case "darwin":
-        cmd = exec.Command("open", url)
-    default: // Linux and other Unix-like systems
-        cmd = exec.Command("xdg-open", url)
-    }
-
-    if err := cmd.Start(); err != nil {
-        fmt.Println("Failed to open the default browser:", err)
-    }
-}
-
+if __name__ == "__main__":
+    main()
 '''
-            self.files[f'desktop/main.go'] = self.server_content
+            self.files[f'desktop/server.py'] = self.server_content
+            self.files[f'desktop/server.go'] = self.go_server_content
+ 
+    def create(self):
         import shutil
         # check if platform project already exists, if so, prompt the user
         if self.folders[0] in os.listdir('.'):
@@ -1786,8 +1510,11 @@ func openDefaultBrowser(url string) {
             os.chdir(f'../../')
         else:
             os.system(f'go mod init example/{self.name}')
-            os.system(f'go get github.com/gorilla/websocket')
-            os.system(f'go get golang.org/x/sys/windows')
+            # gopherize server.go
+            print(f'Building server.go file...')
+            os.system(f'go build -o server-{platform.system().lower()}.so -buildmode=c-shared server.go ')
+            # os.system(f'go get github.com/gorilla/websocket')
+            # os.system(f'go get golang.org/x/sys/windows')
 
             # os.system(f'go mod tidy')
             os.chdir(f'../')
@@ -1810,24 +1537,49 @@ func openDefaultBrowser(url string) {
             # shutil.copy(requirements_directory, f'desktop/requirements.txt')
             with open('desktop/requirements.txt', 'w') as f:
                 f.write('''
-blinker==1.9.0
-click==8.1.8
+annotated-types==0.7.0
+anyio==4.10.0
+click==8.2.1
 colorama==0.4.6
-Flask==3.1.0
-itsdangerous==2.2.0
+fastapi==0.116.1
+h11==0.16.0
+idna==3.10
 Jinja2==3.1.6
 MarkupSafe==3.0.2
+pydantic==2.11.7
+pydantic_core==2.33.2
 screeninfo==0.8.1
-Werkzeug==3.1.3
+sniffio==1.3.1
+starlette==0.47.2
+typing-inspection==0.4.1
+typing_extensions==4.14.1
+uvicorn==0.35.0
 ''')
+        else:
+            # shutil.copy(requirements_directory, f'desktop/requirements.txt')
+            with open('desktop/requirements.txt', 'w') as f:
+                f.write('''
+certifi==2025.8.3
+charset-normalizer==3.4.3
+idna==3.10
+pillow==11.3.0
+requests==2.32.4
+screeninfo==0.8.1
+urllib3==2.5.0
+websockets==15.0.1
+                        ''')
 
         logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
         
-        shutil.copy(logo_directory, f'desktop/static/gupy_logo.png')
+        shutil.copy(logo_directory, f'desktop/static/logo/gupy_logo.png')
+
+        splashscreen_directory = os.path.join(os.path.dirname(current_directory), 'gupy_splashscreen.png')       
+
+        shutil.copy(splashscreen_directory, f'desktop/static/splashscreen/gupy_splashscreen.png')
 
         ico_directory = os.path.join(os.path.dirname(current_directory), 'gupy.ico')       
         
-        shutil.copy(ico_directory, f'desktop/static/gupy.ico')
+        shutil.copy(ico_directory, f'desktop/static/icon/gupy.ico')
         
         self.cythonize()
         self.gopherize()
@@ -1844,15 +1596,16 @@ Werkzeug==3.1.3
         if os.path.exists(f'server.py'):
             # assign current python executable to use
             cmd = sys.executable.split(delim)[-1]
-
+            os.system(f'{cmd} -m pip install -r requirements.txt')
             os.system(f'{cmd} server.py')
-        elif os.path.exists(f'main.go'):
-            # os.chdir(f'desktop')
-            os.system(f'go mod tidy')
-            os.system(f'go run main.go')
+        # elif os.path.exists(f'main.go'):
+        #     # os.chdir(f'desktop')
+        #     os.system(f'go mod tidy')
+        #     os.system(f'go run main.go')
         else:
-            click.echo(f'{Fore.RED}Server file not found to run. Rename the main entry file to server.py or server.go.{Style.RESET_ALL}')
+            click.echo(f'{Fore.RED}Server file not found to run. Rename the main python entry file to server.py.{Style.RESET_ALL}')
             return
+        
     # convert all py files to pyd extensions other than the __main__.py and __init__.py files
     def cythonize(self):
         if os.path.exists(f"desktop/python_modules") and os.path.exists(f"desktop/__main__.py"):
@@ -1968,100 +1721,145 @@ setup(
             # Get the directory path to the current gupy.py file without the filename
             gupy_file_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-            if os.path.exists('server.py'):
-                # get python location and executable
-                if system == 'linux' or system == 'Linux':
-                    python_loc = gupy_file_path + '/python'
-                    python_folder = 'linux/bin'
-                    python_executable = 'python3.12'
-                elif system == 'darwin':
-                    python_loc = gupy_file_path + '/python'
-                    python_folder = 'macos'
-                    python_executable = 'python3.12'
-                else:
-                    python_loc = gupy_file_path + '\\python'
-                    python_folder = 'windows'
-                    python_executable =  'python.exe'
+            # get python location and executable
+            if system == 'linux' or system == 'Linux':
+                python_loc = gupy_file_path + '/python'
+                python_folder = 'linux/bin'
+                python_executable = 'python3.12'
+            elif system == 'darwin':
+                python_loc = gupy_file_path + '/python'
+                python_folder = 'macos'
+                python_executable = 'python3.12'
+            else:
+                python_loc = gupy_file_path + '\\python'
+                python_folder = 'windows'
+                python_executable =  'python.exe'
 
-                # python_version = "".join(sys.version.split(' ')[0].split('.')[0:2]) 
-                # print(os.getcwd())
-                # moves files and folders - only checks the cythonized files in root directory.
-                files = os.listdir(os.getcwd())
-                for file_name in files:
-                    full_file_name = os.path.join(os.getcwd(), file_name)
-                    if os.path.isfile(full_file_name):
-                        shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
-                    elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv':
-                        shutil.copytree(full_file_name, f"dist/{NAME}_{VERSION}/{file_name}", dirs_exist_ok=True)
-                    print('Copied '+file_name+' to '+f"dist/{NAME}_{VERSION}/{file_name}"+'...')
-                # package latest python if not selected - make python folder with windows/mac/linux
-                os.makedirs(f"dist/{NAME}_{VERSION}/python", exist_ok=True)
-                print('Copying python folder...')
+            # python_version = "".join(sys.version.split(' ')[0].split('.')[0:2]) 
+            # print(os.getcwd())
+            # moves files and folders - only checks the cythonized files in root directory.
+            files = os.listdir(os.getcwd())
+            for file_name in files:
+                full_file_name = os.path.join(os.getcwd(), file_name)
+                if os.path.isfile(full_file_name):
+                    shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
+                elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv' and file_name != 'node_modules':
+                    shutil.copytree(full_file_name, f"dist/{NAME}_{VERSION}/{file_name}", dirs_exist_ok=True)
+                print('Copied '+file_name+' to '+f"dist/{NAME}_{VERSION}/{file_name}"+'...')
+            # package latest python if not selected - make python folder with windows/mac/linux
+            os.makedirs(f"dist/{NAME}_{VERSION}/python", exist_ok=True)
+            print('Copying python folder...')
 
-                # import gupy_framework_windows_deps 
-                # import gupy_framework_linux_deps
-                # import gupy_framework_macos_deps
-                # gupy_framework_windows_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
-                # gupy_framework_linux_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
-                # gupy_framework_macos_deps.add_deps(f"dist/{NAME}_{VERSION}/python/macos")
-                # mac_pkg_file = gupy_framework_macos_deps.get_deps()[0]
-                import py7zr
-                archive_path = gupy_file_path + delim + 'python.7z'
-                with py7zr.SevenZipFile(archive_path, mode='r') as archive:
-                    archive.extractall(path=f"dist/{NAME}_{VERSION}")
-                # shutil.copytree(python_loc, f"dist/{NAME}_{VERSION}/python", dirs_exist_ok=True)
-                
-                print('Copied python folder...')
-                os.chdir(f'dist/{NAME}_{VERSION}')
+            # import gupy_framework_windows_deps 
+            # import gupy_framework_linux_deps
+            # import gupy_framework_macos_deps
+            # gupy_framework_windows_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+            # gupy_framework_linux_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+            # gupy_framework_macos_deps.add_deps(f"dist/{NAME}_{VERSION}/python/macos")
+            # mac_pkg_file = gupy_framework_macos_deps.get_deps()[0]
+            import py7zr
+            archive_path = gupy_file_path + delim + 'python.7z'
+            with py7zr.SevenZipFile(archive_path, mode='r') as archive:
+                archive.extractall(path=f"dist/{NAME}_{VERSION}")
+            # shutil.copytree(python_loc, f"dist/{NAME}_{VERSION}/python", dirs_exist_ok=True)
+            
+            print('Copied python folder...')
+            os.chdir(f'dist/{NAME}_{VERSION}')
 
 
-                # command = f".{delim}python{delim}{python_folder}{delim}{python_executable} python{delim}{python_folder}{delim}get-pip.py"
-                # # Run the command
-                # result = subprocess.run(command, shell=True, check=True)
+            # command = f".{delim}python{delim}{python_folder}{delim}{python_executable} python{delim}{python_folder}{delim}get-pip.py"
+            # # Run the command
+            # result = subprocess.run(command, shell=True, check=True)
 
-                # command = f".{delim}python{delim}{python_folder}{delim}{python_executable} -m pip install --upgrade pip"
-                # # Run the command
-                # result = subprocess.run(command, shell=True, check=True)
+            # command = f".{delim}python{delim}{python_folder}{delim}{python_executable} -m pip install --upgrade pip"
+            # # Run the command
+            # result = subprocess.run(command, shell=True, check=True)
 
-                # # install requirements with new python location if it exists
-                # if os.path.exists('requirements.txt'):
-                #         # Read as binary to detect encoding
-                #     with open('requirements.txt', 'rb') as f:
-                #         raw_data = f.read(10000)  # Read first 10KB
-                #     detected = chardet.detect(raw_data)
-                #     encoding = detected.get('encoding', 'utf-8')
+            # # install requirements with new python location if it exists
+            # if os.path.exists('requirements.txt'):
+            #         # Read as binary to detect encoding
+            #     with open('requirements.txt', 'rb') as f:
+            #         raw_data = f.read(10000)  # Read first 10KB
+            #     detected = chardet.detect(raw_data)
+            #     encoding = detected.get('encoding', 'utf-8')
 
-                #     with open('requirements.txt', 'r', encoding=encoding) as f:
-                #         if len(f.readlines()) > 0:
-                #             command = f".{delim}python{delim}{python_folder}{delim}{python_executable} -m pip install -r requirements.txt"
+            #     with open('requirements.txt', 'r', encoding=encoding) as f:
+            #         if len(f.readlines()) > 0:
+            #             command = f".{delim}python{delim}{python_folder}{delim}{python_executable} -m pip install -r requirements.txt"
 
-                #             # Run the command
-                #             result = subprocess.run(command, shell=True, check=True)
-                #             # Check if the command was successful
-                #             if result.returncode == 0:
-                #                 print("Requirements installed successfully.")
-                #             else:
-                #                 print("Failed to install requirements.txt - ensure it exists.")
+            #             # Run the command
+            #             result = subprocess.run(command, shell=True, check=True)
+            #             # Check if the command was successful
+            #             if result.returncode == 0:
+            #                 print("Requirements installed successfully.")
+            #             else:
+            #                 print("Failed to install requirements.txt - ensure it exists.")
 
-                # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
-                # Use glob to find all .ico files in the folder
-                ico_files = glob.glob(os.path.join('static', '*.ico'))
-                ico = ico_files[0]
+            # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
+            # Use glob to find all .ico files in the folder
+            ico_files = glob.glob(os.path.join('static/icon', '*.ico'))
+            ico = ico_files[0].replace('\\','/') 
 
-                png_files = glob.glob(os.path.join('static', '*.png'))
-                png = png_files[0].replace('\\','/') # changing to forward slashes for mac/linux compatibility
+            png_files = glob.glob(os.path.join('static/logo', '*.png'))
+            png = png_files[0].replace('\\','/') # changing to forward slashes for mac/linux compatibility
 
+            git_selection = input(f'Do you intend to upload this release to Github for automatic updates? (y/n): ')
+            if git_selection.lower() == 'y':
                 print("Please enter Github information for the app where your release package will be uploaded...")
                 REPO_OWNER = input(f'Enter the Github repository owner: ')
                 REPO_NAME = input("Enter the Github repository name: ")
 
-                # create install.bat/sh for compiling run.go
-                run_py_content = r'''
+            # create install.bat/sh for compiling run.go
+            run_py_content = r'''
 import sys
 import os
 import platform
 import subprocess
 import requests
+
+import glob
+
+import tkinter as tk
+from PIL import Image, ImageTk  # pip install pillow
+
+def show_splash(image_path, max_width=600, duration=3000):
+    root = tk.Tk()
+    root.overrideredirect(True)  # no window frame
+
+    # Load image and compute target size
+    img = Image.open(image_path)
+    ow, oh = img.size
+    # Cap width to max_width (dont upscale if smaller)
+    tw = min(ow, max_width)
+    th = int(round(oh * (tw / ow)))  # preserve aspect ratio
+
+    # (Optional) ensure it fits vertically on very small screens
+    sw = root.winfo_screenwidth()
+    sh = root.winfo_screenheight()
+    if th > int(sh * 0.9):           # too tall? scale down to 90% of screen height
+        scale = (sh * 0.9) / th
+        tw = int(round(tw * scale))
+        th = int(round(th * scale))
+
+    # Resize image to target size and create PhotoImage
+    img = img.resize((tw, th), Image.LANCZOS)
+    photo = ImageTk.PhotoImage(img)
+
+    # Center the window
+    x = (sw // 2) - (tw // 2)
+    y = (sh // 2) - (th // 2)
+    root.geometry(f"{tw}x{th}+{x}+{y}")
+
+    # Fill the splash with the image
+    label = tk.Label(root, image=photo, borderwidth=0, highlightthickness=0)
+    label.image = photo  # keep a reference
+    label.pack(fill="both", expand=True)
+
+    root.after(duration, root.destroy)
+    root.mainloop()
+
+
+
 
 def get_latest_release(repo_owner, repo_name):
     """Fetch the latest release information from GitHub."""
@@ -2077,7 +1875,9 @@ def get_latest_release(repo_owner, repo_name):
 def main():
     # Add the current directory to sys.path
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
+'''
+            if git_selection.lower() == 'y':
+                run_py_content += r'''
     # Define the repository owner and name
     REPO_OWNER = "'''+REPO_OWNER+r'''"  # Replace with your GitHub repo owner
     REPO_NAME = "'''+REPO_NAME+r'''"    # Replace with your GitHub repo name
@@ -2110,6 +1910,20 @@ def main():
 
         # Exit the script after running the installer
         sys.exit(0)
+'''
+            run_py_content += r'''
+    # Show the splash screen with the app logo
+    # Define the path to the splashscreen folder
+    splashscreen_folder = os.path.join(os.path.dirname(__file__), "static/splashscreen")
+
+    # Find all .png files in the folder
+    png_files = glob.glob(os.path.join(splashscreen_folder, "*.png"))
+
+    # Check if any .png files exist
+    if png_files:
+        # Assign the first .png file to a variable
+        file_to_use = png_files[0]
+        show_splash(file_to_use, max_width=600, duration=3000)
 
     # If the release is up-to-date, proceed to run the main server
     import server
@@ -2118,9 +1932,11 @@ def main():
 if __name__ == "__main__":
     main()
                         '''
-                bash_install_script_content = r'''
+            bash_install_script_content = r'''
 #!/bin/bash
-
+'''
+            if git_selection.lower() == 'y':
+                bash_install_script_content += r'''
 # Set repository owner and name
 REPO_OWNER="'''+REPO_OWNER+r'''"
 REPO_NAME="'''+REPO_NAME+r'''"
@@ -2193,7 +2009,8 @@ else
     echo "Your folder has been updated."
     sleep 3
 fi
-
+'''
+            bash_install_script_content += r'''
 # Set the working directory to the script's directory
 cd "$(dirname "$0")"
 echo "Current directory is: $(pwd)"
@@ -2325,10 +2142,12 @@ fi
 
 
 
-                bat_install_script_content = r'''
+            bat_install_script_content = r'''
 @echo off
 setlocal enabledelayedexpansion
-
+'''
+            if git_selection.lower() == 'y':
+                bat_install_script_content += r'''
 :: Set repository owner and name
 set REPO_OWNER="'''+REPO_OWNER+r'''"
 set REPO_NAME="'''+REPO_NAME+r'''"
@@ -2387,7 +2206,8 @@ if "!CURRENT_RELEASE!" == "!LATEST_RELEASE!" (
     echo Your folder has been updated.
     timeout /t 3 /nobreak >nul
 )
-
+'''
+            bat_install_script_content += r'''
 
 :: Install requirements if available
 if exist requirements.txt (
@@ -2427,7 +2247,7 @@ echo Application updated. Now launch the app from the desktop shortcut!
 pause
 '''
 
-                iss_contents = r'''
+            iss_contents = r'''
 #define AppName "'''+NAME+r'''"
 #define Version "'''+VERSION+r'''"
 #define Icon "'''+ico+r'''"
@@ -2481,398 +2301,33 @@ Description: "Finalize installation"; \
 WorkingDir: "{app}"; \
 Flags: shellexec postinstall waituntilterminated skipifsilent
                 '''
-                with open('run.py', 'w') as f:
-                    f.write(run_py_content)
-                # Write install.sh with LF encoding for Unix-based systems
-                with open('install.sh', 'w', newline='\n') as f:
-                    f.write(bash_install_script_content)
+            with open('run.py', 'w') as f:
+                f.write(run_py_content)
+            # Write install.sh with LF encoding for Unix-based systems
+            with open('install.sh', 'w', newline='\n') as f:
+                f.write(bash_install_script_content)
 
-                # Write install.bat with CRLF encoding for Windows
-                with open('install.bat', 'w', newline='\r\n') as f:
-                    f.write(bat_install_script_content)
-                with open('release', 'w') as f:
-                    f.write(f'{NAME}_{VERSION}.zip')
-                with open(NAME+'_'+VERSION+'_Setup.iss', 'w', newline='\n') as f:
-                    f.write(iss_contents)
+            # Write install.bat with CRLF encoding for Windows
+            with open('install.bat', 'w', newline='\r\n') as f:
+                f.write(bat_install_script_content)
+            with open('release', 'w') as f:
+                f.write(f'{NAME}_{VERSION}.zip')
+            with open(NAME+'_'+VERSION+'_Setup.iss', 'w', newline='\n') as f:
+                f.write(iss_contents)
 
-                print(f'Files created successfully... \nNow compress the folder into a zip file and upload it to github releases (matching the zip filename in the release file; {NAME}_{VERSION}.zip). \nOptionally, you may install Inno Setup to create an installer with the {NAME}_{VERSION}_Setup.iss file.')
-
-            elif os.path.exists('main.go'):
-                # move files+folders into project folder if just created
-                comp_file_ext = 'so' #go only gopherized file extension - no pyd should be present in go desktop app
-
-                # print(os.getcwd())
-                # moves files and folders - only checks the cythonized files in root directory.
-                files = os.listdir(os.getcwd())
-                for file_name in files:
-                    full_file_name = os.path.join(os.getcwd(), file_name)
-                    if os.path.isfile(full_file_name):
-                        shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
-                    elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv':
-                        shutil.copytree(full_file_name, f"dist/{NAME}_{VERSION}/{file_name}", dirs_exist_ok=True)
-                    print('Copied '+file_name+' to '+f"dist/{NAME}_{VERSION}/{file_name}"+'...')
-
-                def get_goroot():
-                    # Run 'go env GOROOT' command and capture the output
-                    result = subprocess.run(["go", "env", "GOROOT"], capture_output=True, text=True)
-                    if result.returncode == 0:
-                        return result.stdout.strip()  # Remove any surrounding whitespace/newlines
-                    else:
-                        raise Exception("Failed to get GOROOT: " + result.stderr)
-
-                # copy go folder contents into go/ folder
-                def get_golang_install_location():
-                    goroot = get_goroot()
-
-                    if goroot:
-                        return goroot
-                    else:
-                        return "GOROOT environment variable is not set."
-
-                golang_location = get_golang_install_location()
-                print(f"Golang is installed at: {golang_location}")
-
-                os.makedirs(f"dist/{NAME}_{VERSION}/go", exist_ok=True)
-                shutil.copytree(golang_location, f"dist/{NAME}_{VERSION}/go", dirs_exist_ok=True)
-                print('Copied go folder...')
-                # create run.go and go.mod for starting entry script for current os
-                os.chdir(f'dist/{NAME}_{VERSION}')
-                
-
-                # if system == 'win':
-                #     subprocess.run(f'.\\go\\bin\\go.exe mod init example.com/{NAME}', shell=True, check=True)
-                # else:
-                #     subprocess.run(f'./go/bin/go mod init example.com/{NAME}', shell=True, check=True)
-                # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
-                # Use glob to find all .ico files in the folder
-                ico_files = glob.glob(os.path.join('static', '*.ico'))
-                ico = ico_files[0]
-                png_files = glob.glob(os.path.join('static', '*.png'))
-                png = png_files[0].replace('\\','/') # changing to forward slashes for mac/linux compatibility
-
-                print("Please enter Github information for the app where your release package will be uploaded...")
-                REPO_OWNER = input(f'Enter the Github repository owner: ')
-                REPO_NAME = input("Enter the Github repository name: ")
-
-                bash_install_script_content = r'''
-#!/bin/bash
-
-# Set repository owner and name
-REPO_OWNER="'''+REPO_OWNER+r'''"
-REPO_NAME="'''+REPO_NAME+r'''"
-
-# GitHub API URL to fetch the latest release
-API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
-
-# Fetch the JSON from the API
-JSON=$(curl -s "$API_URL")
-
-# Extract the browser_download_url from the first asset
-DOWNLOAD_URL=$(echo "$JSON" | grep -o '"browser_download_url": *"[^"]*"' | head -n 1 | sed 's/"browser_download_url": *"//;s/"//')
-
-# Extract the name from the asset - assuming the second occurrence of "name" is for the asset
-LATEST_RELEASE=$(echo "$JSON" | grep -o '"name": *"[^"]*"' | head -n 2 | tail -n 1 | sed 's/"name": *"//;s/"//')
-
-
-# Check if download URL is found
-if [ -z "$DOWNLOAD_URL" ]; then
-    echo "No download URL found. Exiting."
-    exit 1
-fi
-
-# Read the current release file name from the 'release' file
-if [ -f release ]; then
-    CURRENT_RELEASE=$(cat release)
-else
-    CURRENT_RELEASE="NONE"
-fi
-
-# Print the current and latest release names
-echo "CURRENT_RELEASE: $CURRENT_RELEASE"
-echo "LATEST_RELEASE: $LATEST_RELEASE"
-
-# Compare the current release with the latest release
-if [ "$CURRENT_RELEASE" == "$LATEST_RELEASE" ]; then
-    echo "Current release is up to date."
-else
-
-
-    # Echo the download URL (for verification)
-    echo "Download URL: $DOWNLOAD_URL"
-
-    # Download the zip file using curl
-    echo "Downloading latest release..."
-    curl -L "$DOWNLOAD_URL" -o "$LATEST_RELEASE"
-
-    # Unzip the file into the current directory
-    echo "Extracting the archive..."
-    unzip -o "$LATEST_RELEASE" -d ./
-
-    # Detect if the unzip created a new folder (dynamically)
-    EXTRACTED_FOLDER=$(find . -maxdepth 1 -type d ! -name "." ! -name ".*" | head -n 1)
-    if [ -n "$EXTRACTED_FOLDER" ] && [ "$EXTRACTED_FOLDER" != "." ]; then
-        echo "Detected folder: $EXTRACTED_FOLDER"
-        echo "Moving contents of $EXTRACTED_FOLDER to current directory..."
-        mv "$EXTRACTED_FOLDER"/* ./
-        rm -rf "$EXTRACTED_FOLDER"
-    else
-        echo "No separate directory detected; extraction complete."
-    fi
-
-    # Cleanup - remove downloaded zip file
-    echo "Cleanup done. Removing downloaded zip file..."
-    rm "$LATEST_RELEASE"
-
-    # Update the 'release' file with the new release name
-    echo "$LATEST_RELEASE" > release
-
-    echo "Your folder has been updated."
-    sleep 3
-fi
-
-# Set the working directory to the script's directory
-cd "$(dirname "$0")"
-echo "Current directory is: $(pwd)"
-
-# Determine the OS and current directory
-OS=$(uname)
-CURRENT_DIR=$(pwd)
-
-if [ "$OS" = "Darwin" ]; then
-    # macOS: create a minimal AppleScript-based app that launches run.py
-    APP_PATH="$HOME/Desktop/'''+NAME+r'''.app"
-    echo "Creating macOS desktop shortcut at $APP_PATH"
-    
-    sudo chmod +x go/bin/go
-    echo "Building main.go for macOS..."
-    go/bin/go build main.go 
-    sudo chmod +x main
-    mkdir -p "$APP_PATH/Contents/MacOS"
-    cat <<EOF > "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
-#!/bin/bash
-# Change directory to the folder containing run.py
-cd "$CURRENT_DIR"
-./main
-
-EOF
-    chmod +x "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
-    # Create a minimal Info.plist file
-    mkdir -p "$APP_PATH/Contents"
-    cat <<EOF > "$APP_PATH/Contents/Info.plist"
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>'''+NAME+r'''</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.example.'''+NAME+r'''</string>
-    <key>CFBundleName</key>
-    <string>'''+NAME+r'''</string>
-    <key>CFBundleVersion</key>
-    <string>1.0</string>
-    <key>CFBundleIconFile</key>
-    <string>app_icon.icns</string>
-</dict>
-</plist>
-EOF
-    echo "Application updated. Now launch the app from the desktop shortcut!"
-elif [ "$OS" = "Linux" ]; then
-    echo "Building main.go for Linux..."
-    sudo chmod +x go/bin/go
-    go/bin/go build main.go 
-    sudo chmod +x main
-    DESKTOP_FILE="$HOME/Desktop/'''+NAME+r'''.desktop"
-    echo "Creating Linux desktop shortcut at $DESKTOP_FILE"
-    cat <<EOF > "$DESKTOP_FILE"
-[Desktop Entry]
-Name='''+NAME+r'''
-Comment=Run '''+NAME+r'''
-Exec=$CURRENT_DIR/main
-Icon=$CURRENT_DIR/'''+png+r'''
-Terminal=false
-Type=Application
-Categories=Utility;
-EOF
-    chmod +x "$DESKTOP_FILE"
-    echo "Application updated. Now launch the app from the desktop shortcut!"
-else
-    echo "Unsupported OS: $OS"
-    exit 1
-fi
-        '''
+            # if self.lang == 'go':
+            #     # # cythonize server.py
+            #     # print(f'Building server.py file...')
+            #     # os.system(f'cythonize -i server.py')
+            #     # gopherize server.go
+            #     print(f'Building server.go file...')
+            #     os.system(f'go build -o server-{platform.system().lower()}.so -buildmode=c-shared server.go ')
 
 
 
+            print(f'Files created successfully... \nNow compress the folder into a zip file and upload it to github releases (matching the zip filename in the release file; {NAME}_{VERSION}.zip). \nOptionally, you may install Inno Setup to create an installer with the {NAME}_{VERSION}_Setup.iss file.')
 
 
-                bat_install_script_content = r'''
-@echo off
-setlocal enabledelayedexpansion
-
-:: Set repository owner and name
-set REPO_OWNER="'''+REPO_OWNER+r'''"
-set REPO_NAME="'''+REPO_NAME+r'''"
-
-:: GitHub API URL to fetch the latest release
-set API_URL=https://api.github.com/repos/%REPO_OWNER%/%REPO_NAME%/releases/latest
-
-:: Use PowerShell to fetch the latest release data and parse JSON to get the download URL and file name
-for /f "delims=" %%i in ('powershell -Command "try { (Invoke-RestMethod -Uri '%API_URL%' -ErrorAction Stop).assets[0].browser_download_url } catch { Write-Output $_.Exception.Message; exit }"') do set DOWNLOAD_URL=%%i
-for /f "delims=" %%j in ('powershell -Command "try { (Invoke-RestMethod -Uri '%API_URL%' -ErrorAction Stop).assets[0].name } catch { Write-Output $_.Exception.Message; exit }"') do set LATEST_RELEASE=%%j
-
-:: Check if download URL is found
-if not defined DOWNLOAD_URL (
-    echo No download URL found. Exiting.
-    exit /b 1
-)
-
-:: Read the current release file name from the 'release' file
-if exist release (
-    set /p CURRENT_RELEASE=<release
-) else (
-    set CURRENT_RELEASE=NONE
-)
-
-:: Print the current and latest release names
-echo CURRENT_RELEASE: "%CURRENT_RELEASE%"
-echo LATEST_RELEASE: "%LATEST_RELEASE%"
-
-:: Compare the current release with the latest release
-if "!CURRENT_RELEASE!" == "!LATEST_RELEASE!" (
-    echo Current release is up to date.
-) else (
-    :: Delete all files in the folder except install.bat
-    echo Deleting old files except install.bat...
-    for %%f in (*) do (
-        if /I not "%%f"=="install.bat" (
-            del /q "%%f"
-        )
-    )
-    echo Old files deleted.
-
-    :: Delete all folders in the current directory
-    echo Deleting old folders...
-    for /d %%d in (*) do (
-        rd /s /q "%%d"
-    )
-    for /d %%d in (*) do (
-        rd /s /q "%%d"
-    )
-    echo Old files and folders deleted.
-    
-    :: Echo the download URL (for verification)
-    echo Download URL: !DOWNLOAD_URL!
-
-    :: Download the zip file using PowerShell
-    echo Downloading latest release...
-    powershell -Command "Invoke-WebRequest -Uri '!DOWNLOAD_URL!' -OutFile '!LATEST_RELEASE!'"
-    
-    :: Unzip the file into the current directory
-    echo Extracting the archive...
-    powershell -Command "Expand-Archive -Path '!LATEST_RELEASE!' -DestinationPath '.' -Force"
-    
-    :: (Optional) If the archive extracts into a folder, move its contents to the current directory.
-    :: You can add folder detection code here if desired.
-    
-    :: Cleanup - remove downloaded zip file
-    echo Cleanup done. Removing downloaded zip file...
-    del !LATEST_RELEASE!
-    
-    :: Update the 'release' file with the new release name
-    echo !LATEST_RELEASE!>release
-    
-    echo Your folder has been updated.
-    timeout /t 3 /nobreak >nul
-)
-
-
-:: Create VBScript to make a desktop shortcut to run "python run.py"
-echo Creating desktop shortcut...
-echo Set objShell = CreateObject("WScript.Shell") > CreateShortcut.vbs
-echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desktop") ^& "\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
-echo desktopShortcut.TargetPath = "%~dp0main.exe" >> CreateShortcut.vbs
-echo desktopShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
-echo desktopShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
-echo desktopShortcut.Save >> CreateShortcut.vbs
-echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
-echo dirShortcut.TargetPath = "%~dp0main.exe" >> CreateShortcut.vbs
-echo dirShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
-echo dirShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
-echo dirShortcut.Save >> CreateShortcut.vbs
-
-:: Run the VBScript to create the shortcuts, then clean up
-cscript //nologo CreateShortcut.vbs
-del CreateShortcut.vbs
-
-echo Application updated. Now launch the app from the desktop shortcut!
-pause
-'''
-
-                iss_contents = r'''
-#define AppName "'''+NAME+r'''"
-#define Version "'''+VERSION+r'''"
-#define Icon "'''+ico+r'''"
-#define Source "'''+os.getcwd()+r'''"
-
-[Setup]
-; Basic installer settings
-AppName={#AppName}
-AppVersion={#Version}
-; Install under %USERPROFILE%\Downloads\AppFolderName
-DefaultDirName={localappdata}\Programs\{#AppName}
-DefaultGroupName={#AppName}
-OutputBaseFilename={#AppName}_Setup
-; Use a custom icon for the setup EXE
-SetupIconFile={#Source}\{#Icon}
-Compression=lzma
-SolidCompression=yes
-ArchitecturesAllowed=x86 x64
-ArchitecturesInstallIn64BitMode=x64
-WizardStyle=modern
-
-[Files]
-; Copy all files from your unpacked release folder
-Source: "{#Source}\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs
-
-; [Icons]
-; Desktop shortcut
-; Name: "{userdesktop}\{#AppName}.lnk"; \
-    ; Filename: "{app}\main.exe"; \
-    ; WorkingDir: "{app}"; \
-    ; IconFilename: "{app}\static\{#Icon}"; IconIndex: 0
-
-; Shortcut in the application folder
-; Name: "{app}\{#AppName}.lnk"; \
-    ; Filename: "{app}\main.exe"; \
-    ; WorkingDir: "{app}"; \
-    ; IconFilename: "{app}\static\{#Icon}"; IconIndex: 0
-
-;[Run]
-; Optionally launch the app after install
-;Filename: "{app}\main.exe"; \
-;    WorkingDir: "{app}"; \
-;    Flags: nowait postinstall skipifsilent
-[Run]
-; Run install.bat after copying files
-Filename: "{app}\install.bat"; \
-Description: "Finalize installation"; \
-WorkingDir: "{app}"; \
-Flags: shellexec postinstall waituntilterminated skipifsilent
-                '''
-                # Write install.sh with LF encoding for Unix-based systems
-                with open('install.sh', 'w', newline='\n') as f:
-                    f.write(bash_install_script_content)
-
-                # Write install.bat with CRLF encoding for Windows
-                with open('install.bat', 'w', newline='\r\n') as f:
-                    f.write(bat_install_script_content)
-                with open('release', 'w') as f:
-                    f.write(f'{NAME}_{VERSION}.zip')
-                with open(NAME+'_'+VERSION+'_Setup.iss', 'w', newline='\n') as f:
-                    f.write(iss_contents)
-
-                print(f'Files created successfully... \nNow compress the folder into a zip file and upload it to github releases (matching the zip filename in the release file; {NAME}_{VERSION}.zip). \nOptionally, you may install Inno Setup to create an installer with the {NAME}_{VERSION}_Setup.iss file.')
 
         except Exception as e:
             print('Error: '+str(e))

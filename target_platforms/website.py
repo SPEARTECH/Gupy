@@ -27,13 +27,15 @@ class Website(base.Base):
    https://danfo.jsdata.org/
    https://axios-http.com/docs/intro -->
 
-<html>
+<!DOCTYPE html>
+<html data-theme="light">
 <head>
   <title>Gupy App</title>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
   <script src="https://code.highcharts.com/highcharts.js"></script>
@@ -41,16 +43,17 @@ class Website(base.Base):
   <script src="https://code.highcharts.com/modules/exporting.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
-  <link rel="icon" href="{% static 'gupy_logo.png' %}" type="image/png">
+  <link rel="icon" href="/static/logo/gupy_logo.png" type="image/png">
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   </head>
 <body>
   <div id="app" style="text-align: center;">
     <center>
       <div class="h-full">
-        <img class="mt-4 mask mask-squircle h-96 hover:-translate-y-2 ease-in-out transition" src="{% static 'gupy_logo.png' %}" />
+        <img class="mt-4 mask mask-squircle  h-96 w-96 max-h-full max-w-full object-contain hover:-translate-y-2 ease-in-out transition" src="{% static 'gupy_logo.png' %}" />
         <br>
-        <button class="btn bg-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/50 text-base-100">[[ message ]] </button>
+        <br>
+        <button class="btn bg-blue-500 border-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-md hover:shadow-blue-500/50 text-base-100 shadow-none transition-shadow ">[[ message ]] </button>
         <br>
         <br>
         <!-- This block only appears on https apps for installing as a PWA standalone on your device -->
@@ -64,7 +67,7 @@ class Website(base.Base):
             <span>Install this app on your device!</span>
             <div>
             <button
-                class=" btn btn-sm bg-blue-500  text-white  shadow-lg  hover:bg-blue-500/50 shadow-blue-500/50 hover:shadow-xl hover:shadow-blue-500/50 hover:-translate-y-0.5 no-animation"
+                class=" btn btn-sm bg-blue-500  text-white  shadow-sm  hover:bg-blue-500/50 shadow-blue-500/50 hover:shadow-md hover:shadow-blue-500/50 hover:-translate-y-0.5 no-animation"
                 @Click="prompt" id="install">Install</button>
             </div>
             
@@ -919,7 +922,7 @@ return event.result;
 
         return secret_key_value
 
-    def __init__(self, name, lang):
+    def __init__(self, name, lang='go'):
         self.name = name
         self.lang = lang
         self.admin_urls_content = f'''
@@ -1251,9 +1254,9 @@ func waitForShutdown() {
   <div id="app" style="text-align: center;">
     <center>
       <div class="h-full">
-        <img class="mt-4 mask mask-squircle h-96 hover:-translate-y-2 ease-in-out transition" src="/static/gupy_logo.png" />
+        <img class="mt-4 mask mask-squircle  h-96 w-96 max-h-full max-w-full object-contain hover:-translate-y-2 ease-in-out transition" src="/static/gupy_logo.png" />
         <br>
-        <button class="btn bg-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/50 text-base-100">[[ message ]] </button>
+        <button class="btn bg-blue-500 border-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-md hover:shadow-blue-500/50 text-base-100 shadow-none transition-shadow ">[[ message ]] </button>
       </div>
     </center>
 </body>
@@ -1371,6 +1374,9 @@ response = {'new_msg':pyodide_msg}
               f'website/templates',
               f'website/static',
               f'website/static/go_wasm',
+              f'website/static/logo',
+              f'website/static/splashscreen',
+              f'website/static/icon',
               ]
 
 
@@ -1409,6 +1415,11 @@ response = {'new_msg':pyodide_msg}
               else:
                   click.echo(f'{Fore.RED}Aborting app platform creation.{Style.RESET_ALL}')
                   return
+      # Get the directory of the current script
+      current_directory = os.path.dirname(os.path.abspath(__file__))
+      logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png') 
+      splashscreen_directory = os.path.join(os.path.dirname(current_directory), 'gupy_splashscreen.png')   
+      ico_directory = os.path.join(os.path.dirname(current_directory), 'gupy.ico')       
 
       if self.lang == 'py':
           for folder in self.folders:
@@ -1444,18 +1455,44 @@ response = {'new_msg':pyodide_msg}
           os.mkdir(f'static')
           import shutil
           os.mkdir(f'static/css')
+          os.mkdir(f'static/logo')
+          os.mkdir(f'static/splashscreen')
+          os.mkdir(f'static/icon')
           os.chdir('../../../')
-          # Get the directory of the current script
-          current_directory = os.path.dirname(os.path.abspath(__file__))
 
-          # Construct the path to the target file
-          requirements_directory = os.path.join(os.path.dirname(current_directory), 'requirements.txt')       
-          
-          shutil.copy(requirements_directory, f'website/requirements.txt')
+          # # Construct the path to the target file
+          # requirements_directory = os.path.join(os.path.dirname(current_directory), 'requirements.txt')       
+          with open(f'website/{self.name}/requirements.txt', 'w') as f:
+              f.write('''
+asgiref==3.9.1
+certifi==2025.8.3
+cffi==1.17.1
+charset-normalizer==3.4.3
+cryptography==45.0.6
+defusedxml==0.7.1
+Django==5.2.5
+django-cors-headers==4.7.0
+djangorestframework==3.16.1
+djangorestframework_simplejwt==5.5.1
+djoser==2.3.3
+idna==3.10
+oauthlib==3.3.1
+pycparser==2.22
+PyJWT==2.10.1
+python3-openid==3.2.0
+requests==2.32.5
+requests-oauthlib==2.0.0
+social-auth-app-django==5.5.1
+social-auth-core==4.7.0
+sqlparse==0.5.3
+tzdata==2025.2
+urllib3==2.5.0
 
-          logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
-          
-          shutil.copy(logo_directory, f'website/{self.name}/{self.name}_app/static/gupy_logo.png')
+''')
+          # shutil.copy(requirements_directory, f'website/requirements.txt')
+          shutil.copy(logo_directory, f'website/{self.name}/{self.name}_app/static/logo/gupy_logo.png')
+          shutil.copy(splashscreen_directory, f'website/{self.name}/{self.name}_app/static/splashscreen/gupy_splashscreen.png')
+          shutil.copy(ico_directory, f'website/{self.name}/{self.name}_app/static/icon/gupy.ico')
 
           # add npm install, init, tailwindcss install, init, daisyui install, tailwind config generation (with daisy theme)
           os.mkdir(f'website/{self.name}/{self.name}_app/static/go_wasm')
@@ -1520,31 +1557,43 @@ response = {'new_msg':pyodide_msg}
               with open(file, 'w') as f:
                 f.write(self.files.get(file))
                 print(f'created "{file}" file.')
+          with open('desktop/requirements.txt', 'w') as f:
+              f.write('''
+certifi==2025.8.3
+charset-normalizer==3.4.3
+idna==3.10
+pillow==11.3.0
+requests==2.32.4
+screeninfo==0.8.1
+urllib3==2.5.0
+websockets==15.0.1
+                        ''')
 
-          # Get the directory of the current script
-          current_directory = os.path.dirname(os.path.abspath(__file__))
-          logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
           shutil.copy(logo_directory, f'website/static/gupy_logo.png')
-
+          shutil.copy(splashscreen_directory, f'website/static/splashscreen/gupy_splashscreen.png')
+          shutil.copy(ico_directory, f'website/static/icon/gupy.ico')
           os.chdir(f'website/static/go_wasm/')
           os.system(f'go mod init example/go_wasm')
           os.chdir('../../')
           os.system(f'go mod init {self.name}')
-          os.system('go get github.com/gin-contrib/cors')
+          os.system('go get github.com/gin-contrib/cors') # do the same for gin?
           os.chdir('../')
           self.assemble()
 
     def run(self):
-        if os.path.exists(f'{self.name}/manage.py'):
-            # add check here for platform type and language 
-            system = platform.system()
+        # detect os and make folder
+        system = platform.system()
 
-            if system == 'Darwin':
-                cmd = 'python3'
-            elif system == 'Linux':
-                cmd = 'python'
-            else:
-                cmd = 'python'
+        if system == 'Darwin' or system == 'Linux':
+            delim = '/'
+        else:
+            delim = '\\'
+
+      
+        if os.path.exists(f'{self.name}/manage.py'):
+            # assign current python executable to use
+            cmd = sys.executable.split(delim)[-1]
+            os.system(f'{cmd} -m pip install -r {self.name}/requirements.txt')
             os.system(f'{cmd} {self.name}/manage.py runserver')
         else:
             os.system(f'go mod tidy')

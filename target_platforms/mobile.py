@@ -43,9 +43,9 @@ class Mobile(base.Base):
   <div id="app" style="text-align: center;">
     <center>
       <div class="h-full">
-        <img class="mt-4 mask mask-squircle h-96 hover:-translate-y-2 ease-in-out transition" src="./gupy_logo.png" />
+        <img class="mt-4 mask mask-squircle  h-96 w-96 max-h-full max-w-full object-contain  hover:-translate-y-2 ease-in-out transition" src="./gupy_logo.png" />
         <br>
-        <button class="btn bg-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/50 text-base-100">[[ message ]] </button>
+        <button class="btn bg-blue-500 border-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-md hover:shadow-blue-500/50 text-base-100 shadow-none transition-shadow ">[[ message ]] </button>
         <br>
         <br>
         <!-- This block only appears on https apps for installing as a PWA standalone on your device -->
@@ -960,6 +960,7 @@ export async function loadGoWasm() {
         os.chdir(f'mobile')
         # assign current python executable to use
         cmd = sys.executable.split(delim)[-1]
+        os.system(f'{cmd} -m pip install -r requirements.txt')
         os.system(f'{cmd} -m http.server')
 
       # def cythonize(self, name):

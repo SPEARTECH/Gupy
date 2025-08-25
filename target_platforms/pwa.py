@@ -24,13 +24,14 @@ class Pwa(base.Base):
    https://axios-http.com/docs/intro -->
 
 <!DOCTYPE html>
-<html>
+<html data-theme="light">
 <head>
   <title>Gupy App</title>
   <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.7.2/dist/full.min.css" rel="stylesheet" type="text/css" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@5/themes.css" rel="stylesheet" type="text/css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/danfojs@1.1.2/lib/bundle.min.js"></script>
   <script src="https://code.highcharts.com/highcharts.js"></script>
@@ -38,16 +39,17 @@ class Pwa(base.Base):
   <script src="https://code.highcharts.com/modules/exporting.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
-  <link rel="icon" href="./gupy_logo.png" type="image/png">
+  <link rel="icon" href="/static/logo/gupy_logo.png" type="image/png">
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   </head>
 <body>
   <div id="app" style="text-align: center;">
     <center>
       <div class="h-full">
-        <img class="mt-4 mask mask-squircle h-96 hover:-translate-y-2 ease-in-out transition" src="./gupy_logo.png" />
+        <img class="mt-4 mask mask-squircle  h-96 w-96 max-h-full max-w-full object-contain  hover:-translate-y-2 ease-in-out transition" src="./gupy_logo.png" />
         <br>
-        <button class="btn bg-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-500/50 text-base-100">[[ message ]] </button>
+        <br>
+        <button class="btn bg-blue-500 border-blue-500 stroke-blue-500 hover:bg-blue-500 hover:border-blue-500 hover:shadow-md hover:shadow-blue-500/50 text-base-100 shadow-none transition-shadow ">[[ message ]] </button>
         <br>
         <br>
         <!-- This block only appears on https apps for installing as a PWA standalone on your device -->
@@ -897,6 +899,10 @@ export async function loadGoWasm() {
             f'pwa',
             f'pwa/go_wasm',
             # f'gupy_apps/{self.name}/pwa/python_wasm',
+            f'pwa/static',
+            f'pwa/static/logo',
+            f'pwa/static/splashscreen',
+            f'pwa/static/icon',
 
             ]
         self.files = {
@@ -992,6 +998,18 @@ export async function loadGoWasm() {
         # shutil.copy("$(go env GOROOT)/misc/wasm/wasm_exec.js", '.')
         os.chdir(f'../../')
         self.assemble()
+
+        logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
+        
+        shutil.copy(logo_directory, f'pwa/static/logo/gupy_logo.png')
+
+        splashscreen_directory = os.path.join(os.path.dirname(current_directory), 'gupy_splashscreen.png')       
+        
+        shutil.copy(splashscreen_directory, f'pwa/static/splashscreen/gupy_splashscreen.png')
+
+        ico_directory = os.path.join(os.path.dirname(current_directory), 'gupy.ico')       
+        
+        shutil.copy(ico_directory, f'pwa/static/icon/gupy.ico')
 
     # launch index file in browser
     def run(self):

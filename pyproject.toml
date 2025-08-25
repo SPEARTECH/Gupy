@@ -11,7 +11,6 @@ authors = [
 ]
 description = "Gupy! Simplifying Cross-Platform development with Go, Vue, and Python"
 readme = "README.md"
-requires-python = ">=3.12"
 classifiers = [
 "Programming Language :: Python :: 3",
 "License :: OSI Approved :: MIT License",

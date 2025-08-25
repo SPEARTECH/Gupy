@@ -60,7 +60,11 @@ def cli():
     if float(version) < 3.0:
         raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
     click.echo("Gupy! v0.5.3")
-    go,gcc,cgo = check_status()
+    py_version,go,gcc,cgo = check_status()
+    if py_version == 'True':
+        click.echo(f'Py3.12\t{Fore.GREEN}{py_version}{Style.RESET_ALL}')
+    else:
+        click.echo(f'Py3.12\t{Fore.RED}{py_version}{Style.RESET_ALL}')
     if go == 'True':
         click.echo(f'Go\t{Fore.GREEN}{go}{Style.RESET_ALL}')
     else:
@@ -86,7 +90,7 @@ def cli():
     '--target-platform',
     '-t',
     type=click.Choice(
-        ['desktop', 'pwa', 'website', 'cli', 'api', 'mobile', 'script'], 
+        ['desktop', 'pwa', 'website', 'cli', 'api', 'mobile', 'script', 'etl', 'extension'], 
         case_sensitive=False
         ),
     multiple=True, 
@@ -126,18 +130,23 @@ def create(name,target_platform, language):
     elif '.' in NAME:
         click.echo(f'{Fore.RED}Error: Invalid character of "." in app name. Rename your app to '+ NAME.replace('.','_') +f'.{Style.RESET_ALL}')
         return
-    if not LANG and 'pwa' not in target_platform and 'mobile' not in target_platform:
-        click.echo(f"{Fore.RED}Error: Option '-l/--language' is required for ['desktop', 'website', 'cli', 'api', 'script'] targets.{Style.RESET_ALL}")
-        return
+    # if not LANG and 'pwa' not in target_platform and 'mobile' not in target_platform and 'etl' not in target_platform:
+    #     click.echo(f"{Fore.RED}Error: Option '-l/--language' is required for ['desktop', 'website', 'cli', 'api', 'script', 'etl'] targets.{Style.RESET_ALL}")
+    #     return
     elif LANG and LANG != 'py' and LANG != 'go':
-        click.echo(f'{Fore.RED}Incorrect option for --lang/-l\n Indicate "py" or "go" (Python/Golang){Style.RESET_ALL}')
+        click.echo(f'{Fore.RED}Incorrect option for --lang/-l\n Indicate "{Fore.YELLLOW}py{Style.RESET_ALL}" or "{Fore.BLUE}go{Style.RESET_ALL}" (Python/Golang){Style.RESET_ALL}')
         return
-    elif not LANG and (target_platform == ('pwa',) or target_platform == ('mobile',) or target_platform == ('pwa','mobile',)):
+    elif not LANG and (target_platform == ('pwa',) or target_platform == ('mobile',) or target_platform == ('extension',)): # is this right? 8-16-25 prev: target_platform == ('pwa','mobile',)
         LANG = 'js'
+    elif (LANG == 'py' or LANG == 'go') and (target_platform == ('pwa',) or target_platform == ('mobile',) or target_platform == ('extension',)): # is this right? 8-16-25 prev: target_platform == ('pwa','mobile',)
+        click.echo(f'\nPWA/Mobile/Extension apps use '+f'{Fore.CYAN}js '+f'{Style.RESET_ALL}rather than '+f'{Fore.BLUE if LANG == 'go' else Fore.YELLOW if LANG == 'py' else Fore.CYAN}{LANG}'+f'{Style.RESET_ALL}. Switching programming language to {Fore.CYAN}js{Style.RESET_ALL}...')
+        LANG = 'js'
+    elif not LANG:
+        LANG = 'go'
 
     dir_list = os.getcwd().split(delim)
     if NAME in dir_list or NAME in os.listdir('.'):
-        click.echo(f'{Fore.YELLOW}App named '+NAME+f' already exists in this location{Style.RESET_ALL}')
+        click.echo(f'{Fore.YELLOW}App named '+NAME+f' already exists in this location...{Style.RESET_ALL}')
 
 
     for target in target_platform: #Assigning target platforms
@@ -190,6 +199,17 @@ Confirm?
         # click.echo(f'{Fore.RED}The Mobile feature is not yet available...{Style.RESET_ALL}')
         # return
         mobile.Mobile(NAME).create()
+
+    if 'etl' in TARGETS:
+        # click.echo(f'{Fore.RED}The Mobile feature is not yet available...{Style.RESET_ALL}')
+        # return
+        etl.Etl(NAME,LANG).create()
+
+    if 'ext' in TARGETS:
+        # click.echo(f'{Fore.RED}The Mobile feature is not yet available...{Style.RESET_ALL}')
+        # return
+        # ext.Ext(NAME).create()
+        pass
 
 @click.command(help='Runs the app in current platform directory\n\nSupported target platforms:\n\n.... Desktop\n\n.... PWA\n\n.... Website\n\n.... API\n\n.... CLI\n\n.... ETL Pipeline')
 def run():
@@ -342,6 +362,17 @@ def gopherize(file):
         os.system(f'go build -o {os.path.splitext(item)[0]}.so -buildmode=c-shared {item} ')
 
 def check_status():
+    py_v_1 = sys.version_info.major
+    py_v_2 = sys.version_info.minor
+    python_version = f"{py_v_1}.{py_v_2}"
+    if python_version == '3.12':
+        python_version = 'True'
+    else:
+        python_version = 'False'
+        click.echo(f'{Fore.RED}Current Python version is {py_v_1}.{py_v_2}. Python 3.12 is required for cythonizing and running distributed apps without errors. It is recommended to use Python3.12 from https://www.python.org/downloads/release/python-31210/{Style.RESET_ALL}')
+
+
+
     # Check gupy dependancies when ran
     def is_go_in_path():
         return shutil.which("go") is not None
@@ -349,7 +380,7 @@ def check_status():
     # If go is not found, prompt user
     if not is_go_in_path():
         click.echo(f"{Fore.RED}go not found in PATH. Download Go at https://go.dev/doc/install or add the go/bin folder to PATH.{Style.RESET_ALL}")
-        return 'False','False','False'
+        return python_version,'False','False','False'
 
     #checking if gcc.exe is in path for windows users for gopherize command
     def is_gcc_in_path():
@@ -407,17 +438,17 @@ def check_status():
             #     print(e)
             #     return 'True', 'False', 'False'
             click.echo(f'{Fore.RED}gcc and/or cc is not a valid command; Add their bin folder to PATH and/or follow the instructions at https://www.msys2.org/ and restart the terminal session.{Style.RESET_ALL}')
-            return 'True', 'False', 'False'
+            return python_version,'True', 'False', 'False'
     try:
         subprocess.run(["go", "env", "-w", "CGO_ENABLED=1{Style.RESET_ALL}"], check=True)
         # print("Successfully set CGO_ENABLED=1")
-        return 'True','True','True'
+        return python_version,'True','True','True'
     except subprocess.CalledProcessError as e:
         click.echo(f"{Fore.RED}Error setting CGO_ENABLED:{Style.RESET_ALL} {e}")
-        return 'True','True','False'
+        return python_version,'True','True','False'
     except FileNotFoundError:
         click.echo(f"{Fore.RED}Go is not installed or not in PATH.{Style.RESET_ALL}")
-        return 'True','True','False'
+        return python_version,'True','True','False'
         
 @click.command(help='''Checks dependency commands in PATH\n\n.... Go\t\tRuns go commands\n\n.... Gcc\tCompiles py files to cython binaries\n\n.... Cgo\tCompiles go files to so binaries''')
 def check():
