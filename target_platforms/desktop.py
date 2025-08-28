@@ -1746,6 +1746,24 @@ setup(
                 elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv' and file_name != 'node_modules':
                     shutil.copytree(full_file_name, f"dist/{NAME}_{VERSION}/{file_name}", dirs_exist_ok=True)
                 print('Copied '+file_name+' to '+f"dist/{NAME}_{VERSION}/{file_name}"+'...')
+            if not os.path.exists(f'dist/{NAME}_{VERSION}/static/logo'):
+                print('Creating logo directory...')
+                logo_directory = os.path.join(gupy_file_path, 'gupy_logo.png')       
+                os.makedirs(f'dist/{NAME}_{VERSION}/static', exist_ok=True)
+                os.makedirs(f'dist/{NAME}_{VERSION}/static/logo', exist_ok=True)
+                shutil.copy(logo_directory, f'dist/{NAME}_{VERSION}/static/logo/gupy_logo.png')
+            if not os.path.exists(f'dist/{NAME}_{VERSION}/static/splashscreen'):
+                print('Creating splashscreen directory...')
+                splashscreen_directory = os.path.join(gupy_file_path, 'gupy_splashscreen.png')       
+                os.makedirs(f'dist/{NAME}_{VERSION}/static', exist_ok=True)
+                os.makedirs(f'dist/{NAME}_{VERSION}/static/splashscreen', exist_ok=True)
+                shutil.copy(splashscreen_directory, f'dist/{NAME}_{VERSION}/static/splashscreen/gupy_splashscreen.png')
+            if not os.path.exists(f'dist/{NAME}_{VERSION}/static/icon'):
+                print('Creating icon directory...')
+                ico_directory = os.path.join(gupy_file_path, 'gupy.ico')       
+                os.makedirs(f'dist/{NAME}_{VERSION}/static', exist_ok=True)
+                os.makedirs(f'dist/{NAME}_{VERSION}/static/icon', exist_ok=True)
+                shutil.copy(ico_directory, f'dist/{NAME}_{VERSION}/static/icon/gupy.ico')
             # package latest python if not selected - make python folder with windows/mac/linux
             os.makedirs(f"dist/{NAME}_{VERSION}/python", exist_ok=True)
             print('Copying python folder...')
