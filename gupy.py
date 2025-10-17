@@ -205,10 +205,10 @@ Confirm?
         # return
         etl.Etl(NAME,LANG).create()
 
-    if 'ext' in TARGETS:
+    if 'extension' in TARGETS:
         # click.echo(f'{Fore.RED}The Mobile feature is not yet available...{Style.RESET_ALL}')
         # return
-        # ext.Ext(NAME).create()
+        # extension.Extension(NAME).create()
         pass
 
 @click.command(help='Runs the app in current platform directory\n\nSupported target platforms:\n\n.... Desktop\n\n.... PWA\n\n.... Website\n\n.... API\n\n.... CLI\n\n.... ETL Pipeline')
@@ -286,21 +286,37 @@ def run():
         print('Error: '+str(e))
         print('*NOTE: Be sure to change directory to the desired platform to run (ex. cd <path to target app platform>)*')
 
-@click.command(help='Compiles py and go files into exe binaries')
+@click.command(
+    help='Compiles py and go files into exe binaries',
+    context_settings={"ignore_unknown_options": True, "allow_extra_args": True},
+)
 @click.option(
-    '--file',
-    '-f',
+    '--file', '-f',
     required=True,
+    type=click.Path(exists=True, dir_okay=False),
     help='File name to compile to binary (required).'
-    )
-def compile(file):
+)
+@click.option(
+    '--arg', '-a',
+    multiple=True,
+    help='Extra compiler arg (repeatable). Example: -a --onefile -a --follow-imports'
+)
+@click.pass_context
+def compile(ctx, file, arg):
+    """
+    Pass extra args with -a/--arg or after -- to forward to Nuitka/Go.
+    """
     try:
-        if os.path.exists(file):
-            if file.split('.')[-1] == 'py':
-                os.system(f'nuitka {file}')
-            elif file.split('.')[-1] == 'go':
-                # os.system(f'go mod tidy')
-                os.system(f'go build {file}')
+        extra = list(arg) + list(ctx.args)  # combine -a and passthrough after --
+        ext = os.path.splitext(file)[1].lower()
+        if ext == '.py':
+            cmd = ["nuitka", *extra, file]
+        elif ext == '.go':
+            cmd = ["go", "build", *extra, file]
+        else:
+            click.echo(f"Unsupported file type: {ext}")
+            return
+        subprocess.run(cmd, check=True)
     except Exception as e:
         print(e)
 
@@ -467,7 +483,7 @@ def check():
     #     print(f'Cgo\t{Fore.RED}{cgo}{Style.RESET_ALL}')
     return # code check executes with every command given, this just needs to return it
 
-@click.command(help='Re-compiles all webassembly code in your go_wasm folder\n\nSupported target platforms:\n\n.... Desktop\n\n.... PWA\n\n.... Website')
+@click.command(help='Re-compiles all webassembly code in your go_wasm folder\n\nSupported target platforms:\n\n.... Desktop\n\n.... PWA\n\n.... API\n\n.... Website')
 def assemble():
     # detect os and make folder
     system = platform.system()
@@ -492,12 +508,16 @@ def assemble():
         TARGET='pwa'
         change_dir(dir_list,TARGET)
         NAME=os.path.basename(os.getcwd()).replace(' ','_')
+    elif 'api' in dir_list:
+        TARGET='api'
+        change_dir(dir_list,TARGET)
+        NAME=os.path.basename(os.getcwd()).replace(' ','_')
     elif 'website' in dir_list:
         TARGET='website'
         change_dir(dir_list,TARGET)
         NAME=os.path.basename(os.getcwd()).replace(' ','_')
     elif 'cli' in dir_list or 'api' in dir_list or 'mobile' in dir_list or 'script' in dir_list:
-        print('Error: --assemble is only available for desktop, pwa, and website projects.')
+        print('Error: --assemble is only available for desktop, pwa, api, and website projects.')
         return
     else:
         print(f'Error: No target platform folder found. Change directory to your app and try again (ex. cd <path to app>).')
@@ -511,6 +531,9 @@ def assemble():
         app_obj.assemble()
     elif TARGET == 'pwa':
         app_obj = pwa.Pwa(NAME)
+        app_obj.assemble()
+    elif TARGET == 'api':
+        app_obj = api.Api(NAME)
         app_obj.assemble()
     else:
         print('Platform not enabled for assembly. Change directory to your app root folder with desktop, pwa, or website platforms (ex. cd <path to app>/<platform>).')
@@ -544,13 +567,25 @@ def package():
             TARGET='script'
             change_dir(dir_list,TARGET)
             NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
-        elif 'pwa' in dir_list or 'website' in dir_list or 'mobile' in dir_list or 'etl' in dir_list:
-            click.echo(f'{Fore.RED}Error: --package is only available for desktop, cli, and script python projects.{Style.RESET_ALL}')
+        elif 'website' in dir_list:
+            TARGET='website'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+        elif 'api' in dir_list:
+            TARGET='api'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+        elif 'pwa' in dir_list:
+            TARGET='pwa'
+            change_dir(dir_list,TARGET)
+            NAME=os.path.dirname(os.getcwd()).split(delim)[-1].replace(' ','_')
+        elif 'mobile' in dir_list or 'etl' in dir_list:
+            click.echo(f'{Fore.RED}Error: --package is not available for mobile, etl, and browser extension projects.{Style.RESET_ALL}')
             return
         else:
             click.echo(f'{Fore.RED}Error: No target platform folder found. Change directory to your app folder and use the create command (ex. cd <path to app>).{Style.RESET_ALL}')
             return
-        print("Please enter Github information for the app where your release package will be uploaded...")
+        print("Please enter Github information for the app where your public release package will be uploaded...")
         AUTHOR = input("Enter the developer name (default=Example Author): ")
         if AUTHOR == '':
             AUTHOR = 'Example Author'
@@ -562,6 +597,201 @@ def package():
 
         # creating project folder if doesnt already exist
         os.makedirs(NAME, exist_ok=True)
+
+        if TARGET == 'pwa':
+            pwa_init_content = '''
+import sys
+import os
+# Add the parent directory of 'target_platforms' to the sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+'''
+            pwa_main_content = f'''
+from {NAME} import server
+
+def main():
+    server.main()
+
+if __name__ == "__main__":
+    main()
+
+'''
+            pwa_server_content = r'''
+import os
+import sys
+import time
+import platform
+import threading
+import subprocess
+import ctypes
+from typing import Any
+
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+import screeninfo  # pip install screeninfo
+
+app = FastAPI()
+
+# paths
+BASE_DIR = Path(__file__).parent
+#TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+#STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+# mount static and templates
+#app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+#templates = Jinja2Templates(directory=TEMPLATES_DIR)
+
+# shutdown coordination
+shutdown_event = threading.Event()
+_active_lock = threading.Lock()
+_active_conns = 0  # count WS connections
+
+def get_platform_type():
+    return platform.system()
+
+def get_screen_size():
+    try:
+        m = screeninfo.get_monitors()[0]
+        return m.width, m.height
+    except Exception:
+        return 1920, 1080
+
+def run_with_switches(system: str, url: str):
+    import shutil
+    sw, sh = get_screen_size()
+    ww, wh = 1024, 768
+    x = (sw - ww) // 2
+    y = (sh - wh) // 2
+    args = [
+        f"--app={url}",
+        "--disable-pinch",
+        "--disable-extensions",
+        "--guest",
+        "--incognito",
+        f"--window-size={ww},{wh}",
+        f"--window-position={x},{y}",
+    ]
+
+    if system == "Windows":
+        candidates = [
+            "C:/Program Files/Google/Chrome/Application/chrome.exe",
+            "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+            "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+        ]
+        for c in candidates:
+            if os.path.exists(c):
+                subprocess.Popen([c] + args)
+                return
+        print("Chromium-based browser not found.")
+        return
+
+    # macOS/Linux
+    binaries = ["google-chrome", "chromium", "chromium-browser", "brave-browser", "microsoft-edge"]
+    for b in binaries:
+        p = shutil.which(b)
+        if p:
+            subprocess.Popen([p] + args)
+            return
+    import webbrowser
+    webbrowser.open(url)
+
+def start_shutdown_watcher():
+    def watcher():
+        shutdown_event.wait()
+        # Hard-exit the process (ensures console closes)
+        os._exit(0)
+    threading.Thread(target=watcher, daemon=True).start()
+
+def stop_previous_server():
+    try:
+        pid_path = os.path.join(os.path.expanduser("~"), "app_server.pid")
+        if not os.path.exists(pid_path):
+            return
+        with open(pid_path, "r") as f:
+            pid = int(f.read().strip())
+        system = platform.system()
+        if system == "Windows":
+            cmd = f'taskkill /F /PID {pid}'
+        else:
+            cmd = f'kill -9 {pid}'
+        subprocess.run(cmd, shell=True, check=True)
+    except Exception as e:
+        print(f"Error stopping previous server: {e}")
+
+# Routes
+@app.get("/")
+async def index():
+    file_path = BASE_DIR / "index.html"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="index.html not found")
+    return FileResponse(file_path, media_type="text/html")
+
+
+# Optional: HTTP shutdown endpoint (manual trigger)
+@app.post("/shutdown")
+async def http_shutdown():
+    shutdown_event.set()
+    return {"ok": True}
+
+# WebSocket: when last tab disconnects, trigger shutdown
+@app.websocket("/ws")
+async def ws_endpoint(ws: WebSocket):
+    global _active_conns
+    await ws.accept()
+    with _active_lock:
+        _active_conns += 1
+    try:
+        # Keep alive until client closes
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        trigger = False
+        with _active_lock:
+            _active_conns -= 1
+            if _active_conns <= 0:
+                trigger = True
+        if trigger:
+            shutdown_event.set()
+
+def main():
+    stop_previous_server()
+    with open(os.path.join(os.path.expanduser("~"), "app_server.pid"), "w") as f:
+        f.write(str(os.getpid()))
+
+    system = get_platform_type()
+    # Start watcher to exit process
+    start_shutdown_watcher()
+
+    # Launch browser shortly after server starts
+    def open_browser():
+        time.sleep(0.3)
+        run_with_switches(system, "http://127.0.0.1:8001")
+    threading.Thread(target=open_browser, daemon=True).start()
+
+    # Run uvicorn
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8001, reload=False, workers=1)
+
+if __name__ == "__main__":
+    main()                
+'''
+
+
+            pwa_files = {}
+            pwa_files[f'__init__.py'] = pwa_init_content
+            pwa_files[f'__main__.py'] = pwa_main_content
+            pwa_files[f'server.py'] = pwa_server_content
+
+            for file in pwa_files:
+                f = open(file, 'x', encoding='utf-8')
+                f.write(pwa_files.get(file))
+                print(f'created "{file}" file.')
+                f.close()
+
 
         # copying all files into project folder for packaging
         files = os.listdir(os.getcwd())
@@ -694,6 +924,227 @@ SOFTWARE.
             if requirements_string == '':
                 click.echo(f'*{Fore.YELLOW}Note:{Style.RESET_ALL} No requirements.txt was found. Create this file and delete the pyproject.toml to populate the dependencies for the whl package (ex. python -m pip freeze > requirements.txt)*')
             return
+        if TARGET == 'pwa':
+            print('Preparing pwa package files...')
+            init_content = f'''
+
+import sys
+import os
+# Add the parent directory of 'target_platforms' to the sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+'''
+            main_content = f'''
+
+from {NAME} import server
+
+def main():
+    server.main()
+
+if __name__ == "__main__":
+    main()
+
+'''
+            server_content = r'''
+
+import os
+import sys
+import time
+import platform
+import threading
+import subprocess
+import ctypes
+from typing import Any
+
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+import screeninfo  # pip install screeninfo
+
+app = FastAPI()
+
+# paths
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+# mount static and templates
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+# shutdown coordination
+shutdown_event = threading.Event()
+_active_lock = threading.Lock()
+_active_conns = 0  # count WS connections
+
+def get_platform_type():
+    return platform.system()
+
+def get_screen_size():
+    try:
+        m = screeninfo.get_monitors()[0]
+        return m.width, m.height
+    except Exception:
+        return 1920, 1080
+
+def run_with_switches(system: str, url: str):
+    import shutil
+    sw, sh = get_screen_size()
+    ww, wh = 1024, 768
+    x = (sw - ww) // 2
+    y = (sh - wh) // 2
+    args = [
+        f"--app={url}",
+        "--disable-pinch",
+        "--disable-extensions",
+        "--guest",
+        "--incognito",
+        f"--window-size={ww},{wh}",
+        f"--window-position={x},{y}",
+    ]
+
+    if system == "Windows":
+        candidates = [
+            "C:/Program Files/Google/Chrome/Application/chrome.exe",
+            "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe",
+            "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+        ]
+        for c in candidates:
+            if os.path.exists(c):
+                subprocess.Popen([c] + args)
+                return
+        print("Chromium-based browser not found.")
+        return
+
+    # macOS/Linux
+    binaries = ["google-chrome", "chromium", "chromium-browser", "brave-browser", "microsoft-edge"]
+    for b in binaries:
+        p = shutil.which(b)
+        if p:
+            subprocess.Popen([p] + args)
+            return
+    import webbrowser
+    webbrowser.open(url)
+
+def start_shutdown_watcher():
+    def watcher():
+        shutdown_event.wait()
+        # Hard-exit the process (ensures console closes)
+        os._exit(0)
+    threading.Thread(target=watcher, daemon=True).start()
+
+def stop_previous_server():
+    try:
+        pid_path = os.path.join(os.path.expanduser("~"), "app_server.pid")
+        if not os.path.exists(pid_path):
+            return
+        with open(pid_path, "r") as f:
+            pid = int(f.read().strip())
+        system = platform.system()
+        if system == "Windows":
+            cmd = f'taskkill /F /PID {pid}'
+        else:
+            cmd = f'kill -9 {pid}'
+        subprocess.run(cmd, shell=True, check=True)
+    except Exception as e:
+        print(f"Error stopping previous server: {e}")
+
+# Routes
+@app.get("/")
+async def index():
+    file_path = BASE_DIR / "index.html"
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="index.html not found")
+    return FileResponse(file_path, media_type="text/html")
+
+@app.get("/api/example_api_endpoint")
+async def example_api_endpoint():
+    try:
+        # Python module
+        from python_modules import python_modules
+        py_message = python_modules.main()
+
+        # Go c-shared lib
+        path = BASE_DIR
+        go_path = os.path.join(path, "go_modules", "go_modules.so")
+        go_modules = ctypes.CDLL(go_path)
+        go_modules.go_module.restype = ctypes.c_char_p
+        go_message = go_modules.go_module().decode("utf-8")
+
+        data = {"Python Module Message": py_message, "Go Module Message": go_message}
+        return JSONResponse({"result": data})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+# Optional: HTTP shutdown endpoint (manual trigger)
+@app.post("/shutdown")
+async def http_shutdown():
+    shutdown_event.set()
+    return {"ok": True}
+
+# WebSocket: when last tab disconnects, trigger shutdown
+@app.websocket("/ws")
+async def ws_endpoint(ws: WebSocket):
+    global _active_conns
+    await ws.accept()
+    with _active_lock:
+        _active_conns += 1
+    try:
+        # Keep alive until client closes
+        while True:
+            await ws.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        trigger = False
+        with _active_lock:
+            _active_conns -= 1
+            if _active_conns <= 0:
+                trigger = True
+        if trigger:
+            shutdown_event.set()
+
+def main():
+    stop_previous_server()
+    with open(os.path.join(os.path.expanduser("~"), "app_server.pid"), "w") as f:
+        f.write(str(os.getpid()))
+
+    system = get_platform_type()
+    # Start watcher to exit process
+    start_shutdown_watcher()
+
+    # Launch browser shortly after server starts
+    def open_browser():
+        time.sleep(0.3)
+        run_with_switches(system, "http://127.0.0.1:8001")
+    threading.Thread(target=open_browser, daemon=True).start()
+
+    # Run uvicorn
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8001, reload=False, workers=1)
+
+if __name__ == "__main__":
+    main()                
+
+'''
+            f = open('__init__.py', 'x')
+            f.write(init_content)
+            print(f'created "__init__.py" file.')
+            f.close()
+
+            f = open('main.py', 'x')
+            f.write(main_content)
+            print(f'created "main.py" file.')
+            f.close()
+
+            f = open('server.py', 'x')
+            f.write(server_content)
+            print(f'created "server.py" file.')
+            f.close()
+
+        print(f'Packaging {NAME}...')
+
         os.system(f'{cmd} -m build')
         print(f'Removing temporary project folder: {NAME}')
         shutil.rmtree(NAME)

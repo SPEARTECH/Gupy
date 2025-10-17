@@ -156,7 +156,13 @@ urllib3==2.5.0
             # creating project folder if doesnt already exist
             os.makedirs('dist', exist_ok=True)
             os.chdir('dist')
-
+            if os.path.exists(f"{NAME}_{VERSION}"):
+                prompt = input(f'"{NAME}_{VERSION}" folder already exists. Would you like to overwrite it? (y/n): ')
+                if prompt.lower() == 'y':
+                    shutil.rmtree(f"{NAME}_{VERSION}")
+                else:
+                    print('Aborting distribution...')
+                    return
             # creating version folder is doesnt already exist
             os.makedirs(f"{NAME}_{VERSION}", exist_ok=True)
             # shutil.rmtree(f"{VERSION}{delim}{folder}")
