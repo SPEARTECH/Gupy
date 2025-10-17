@@ -117,13 +117,13 @@ document.addEventListener('contextmenu', function(event) {
   window.addEventListener('beforeunload', () => {
       if (ws.readyState === WebSocket.OPEN) ws.close();
   });</script> -->
-<script>
+<!-- <script>
   // When the user is leaving, use sendBeacon to notify the server to shut down.
   window.addEventListener('beforeunload', () => {
     navigator.sendBeacon('/shutdown');
   });
-</script>
-  <script type="module">
+</script> -->  
+<script type="module">
     const { createApp } = Vue
      import { loadGoWasm } from '{{url_for('static', path='go_wasm.js')}}';
     

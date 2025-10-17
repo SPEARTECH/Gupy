@@ -64,6 +64,7 @@ class Website(base.Base):
   <script src="https://code.highcharts.com/modules/exporting.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <link rel="icon" href="{% static 'logo/gupy_logo.png' %}" type="image/png">
   <script src="{% static 'go_wasm/wasm_exec.js' %}"></script>
 </head>
@@ -465,7 +466,7 @@ def example_api_endpoint(request):
 
     # Perform data processing
 
-    response = {'data':data}
+    response = {'result':data}
 
     return JsonResponse(response, safe=False)
 
@@ -697,6 +698,7 @@ func waitForShutdown() {
   <script src="https://code.highcharts.com/modules/exporting.js"></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   <link rel="icon" href="/static/gupy_logo.png" type="image/png">
   <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
   </head>
@@ -1130,7 +1132,9 @@ setup(
 
     def assemble(self):
         # print(os.getcwd())
-        if self.lang == 'py':
+        # print(self.lang)
+        # print('printed lang/\\')
+        if os.path.exists(f"website/{self.name}/{self.name}_app/static/go_wasm"):
             ensure_wasm_exec(dest_dir=os.path.join("website", f"{self.name}", f"{self.name}_app", "static", "go_wasm"))    
             os.chdir(f'website/{self.name}/{self.name}_app/static/go_wasm')
             os.system(f'go mod tidy')

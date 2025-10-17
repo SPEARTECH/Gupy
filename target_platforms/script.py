@@ -10,7 +10,31 @@ import glob
 
 class Script(base.Base):
     script_content = '''
+import os
+import ctypes
+
+# paths
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+
 def main():
+    try:
+        # Python module
+        from python_modules import python_modules
+        py_message = python_modules.main()
+
+        # Go c-shared lib
+        path = BASE_DIR
+        go_path = os.path.join(path, "go_modules", "go_modules.so")
+        go_modules = ctypes.CDLL(go_path)
+        go_modules.go_module.restype = ctypes.c_char_p
+        go_message = go_modules.go_module().decode("utf-8")
+
+        data = {"Python Module Message": py_message, "Go Module Message": go_message}
+        print('Py module msg: '+py_message)
+        print('Go module msg: '+go_message)
+    except Exception as e:
+        return print(str(e))
+
     print('Script run complete.')
 
 if __name__ == '__main__':
@@ -30,11 +54,47 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from .{self.name} import *
 '''
 
+        self.python_modules_content = '''
+import os
+
+def main():
+    result = 'Welcome to Gupy!'
+
+    return result
+
+if __name__ == "__main__":
+    main() 
+
+
+    
+        '''
+
+        self.go_modules_content = '''
+package main
+
+import (
+    "C"
+)
+
+//export go_module
+func go_module() *C.char {
+    response := "Welcome to Gupy!"
+
+    return C.CString(response)
+}
+
+func main() {
+    // c_module()
+}    
+    
+        '''
 
         self.folders = [
             f'script',
-            #   f'gupy_apps/{self.name}/cli/dev/python_modules',
-            #   f'gupy_apps/{self.name}/cli/dev/cython_modules',
+            f'script/static',
+            f'script/static/logo',
+            f'script/static/splashscreen',
+            f'script/static/icon',
           ]
         if self.lang == 'py':
             self.main_content = f'''
@@ -46,10 +106,14 @@ def main():
 if __name__ == "__main__":
     main()
 '''
+            self.folders.append(f'script/python_modules')
+            self.folders.append(f'script/go_modules')
             self.files = {
                 f'script/__init__.py': self.init_content,
                 f'script/__main__.py': self.main_content,
                 f'script/{self.name}.py': self.script_content,
+                f'script/python_modules/python_modules.py': self.python_modules_content,
+                f'script/go_modules/go_modules.go': self.go_modules_content,
                 }
         else:
             self.script_content = '''
@@ -63,8 +127,10 @@ func main(){
     fmt.Println("Script run complete.")
 }
             '''
+            self.folders.append(f'script/python_modules')
             self.files = {
                 f'script/main.go': self.script_content,
+                f'script/python_modules/python_modules.py': self.python_modules_content,
                 }
     def create(self):
         import shutil
@@ -103,6 +169,10 @@ func main(){
             print(f'created "{file}" file.')
             f.close()
 
+        # Get the directory of the current script
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+
+
         if self.lang == 'py':
             with open('script/requirements.txt', 'w') as f:
                 f.write('''
@@ -117,18 +187,20 @@ urllib3==2.5.0
             os.chdir('script')
             os.system(f'go mod init example/{self.name}')
 
-        # logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
+        logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
         
-        # shutil.copy(logo_directory, f'api/static/logo/gupy_logo.png')
+        shutil.copy(logo_directory, f'script/static/logo/gupy_logo.png')
 
-        # splashscreen_directory = os.path.join(os.path.dirname(current_directory), 'gupy_splashscreen.png')       
+        splashscreen_directory = os.path.join(os.path.dirname(current_directory), 'gupy_splashscreen.png')       
         
-        # shutil.copy(splashscreen_directory, f'api/static/splashscreen/gupy_splashscreen.png')
+        shutil.copy(splashscreen_directory, f'script/static/splashscreen/gupy_splashscreen.png')
 
-        # ico_directory = os.path.join(os.path.dirname(current_directory), 'gupy.ico')       
+        ico_directory = os.path.join(os.path.dirname(current_directory), 'gupy.ico')       
         
-        # shutil.copy(ico_directory, f'api/static/icon/gupy.ico')
+        shutil.copy(ico_directory, f'script/static/icon/gupy.ico')
 
+        self.cythonize()
+        self.gopherize()
 
     def run(self):
         # detect os and make folder
@@ -150,6 +222,77 @@ urllib3==2.5.0
         else:
             click.echo(f'{Fore.RED}No entry file found of "{self.name}.py" or "main.go"{Style.RESET_ALL}')
         
+    # convert all py files to pyd extensions other than the __main__.py and __init__.py files
+    def cythonize(self):
+        if os.path.exists(f"script/python_modules") and os.path.exists(f"script/__main__.py"):
+            os.chdir(f'script/python_modules')
+            # files = [f for f in os.listdir('.') if os.path.isfile(f)]
+            setup_content = '''
+from distutils.core import setup
+from Cython.Build import cythonize
+
+setup(
+    ext_modules = cythonize([
+            '''
+            # for f in files:
+            #     os.system(f'cp{f} {f}x')
+            files = [f for f in glob.glob('*.py')]
+            if 'setup.py' in files:
+                files.remove('setup.py')
+            for file in files:
+                with open(file, 'r') as f:
+                    py_content = ''
+                    for item in f.readlines():
+                        py_content = py_content + item
+                if os.path.exists(file+'x'):
+                    f = open(f'{file}x', 'r+')
+                    f.seek(0)
+                    f.truncate()
+                    f.close()
+                else:
+                    f = open(f'{file}x', 'x')
+                f = open(f'{file}x', 'r+')
+                f.write(py_content)
+                print(f'Updated {file}x file.')
+                f.close()
+
+                setup_content = setup_content + f'"{file}x",\n'
+            setup_content = setup_content + '''     ])
+    )
+            '''
+            if os.path.exists('setup.py'):
+                f = open('setup.py', 'r+')
+                f.seek(0)
+                f.truncate()
+                f.close()
+            else:
+                f = open('setup.py', 'x')
+            f = open('setup.py', 'r+')
+            f.write(setup_content)
+            print(f'Updated setup.py file.')
+            f.close()
+            os.system(f'python ./setup.py build_ext --inplace')
+            os.chdir('../../')
+
+
+    # convert all go files to .c extensions other than ones in the go_wasm folder
+    def gopherize(self):
+        if os.path.exists(f"script/go_modules"): #and os.path.exists(f"script/server.py"):
+            os.chdir(f'script/go_modules')
+            os.system(f'go mod tidy')
+            files = [f for f in glob.glob('*.go')]
+            for file in files:
+                print(f'Building {file} file...')
+                try:
+                  os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
+                except Exception as e:
+                  click.echo(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
+                  print(e)
+            os.chdir('../../')
+
+
+
+
     def distribute(self, system, folder, delim, NAME, VERSION):
         try:
 

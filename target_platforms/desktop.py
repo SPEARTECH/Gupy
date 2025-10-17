@@ -120,7 +120,8 @@ class Desktop(base.Base):
       // Use arrow functions so 'this' stays bound
       axios.get('/api/example_api_endpoint')
         .then((response) => {
-          this.data = response.data;
+          console.log(response);
+          this.data = response.data.result;
           console.log(this.data);
         })
         .catch((error) => {
