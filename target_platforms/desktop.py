@@ -1004,6 +1004,8 @@ if __name__ == "__main__":
                 f.write('''
 annotated-types==0.7.0
 anyio==4.10.0
+certifi==2025.10.5
+charset-normalizer==3.4.4
 click==8.2.1
 colorama==0.4.6
 fastapi==0.116.1
@@ -1011,13 +1013,16 @@ h11==0.16.0
 idna==3.10
 Jinja2==3.1.6
 MarkupSafe==3.0.2
+pillow==12.0.0
 pydantic==2.11.7
 pydantic_core==2.33.2
+requests==2.32.5
 screeninfo==0.8.1
 sniffio==1.3.1
 starlette==0.47.2
 typing-inspection==0.4.1
 typing_extensions==4.14.1
+urllib3==2.5.0
 uvicorn==0.35.0
 ''')
         else:
@@ -1314,6 +1319,8 @@ import glob
 import tkinter as tk
 from PIL import Image, ImageTk  # pip install pillow
 
+import shlex
+
 def show_splash(image_path, max_width=600, duration=3000):
     root = tk.Tk()
     root.overrideredirect(True)  # no window frame
@@ -1364,6 +1371,18 @@ def get_latest_release(repo_owner, repo_name):
         print(f"Error fetching latest release: {e}")
         return None
 
+        # start a process hidden (no console window)
+def start_hidden(cmd, cwd=None, detach=False):
+    if isinstance(cmd, str):
+        cmd = shlex.split(cmd)
+    creation = subprocess.CREATE_NO_WINDOW
+    if detach:
+        creation |= subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+    si = subprocess.STARTUPINFO()
+    si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    return subprocess.Popen(cmd, cwd=cwd, startupinfo=si, creationflags=creation)
+
+    
 def main():
     # Add the current directory to sys.path
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -1418,8 +1437,9 @@ def main():
         show_splash(file_to_use, max_width=600, duration=3000)
 
     # If the release is up-to-date, proceed to run the main server
-    import server
-    server.main()
+    server_cmd = [sys.executable, "-c", "import server; server.main()"]
+    start_hidden(server_cmd, detach=False)
+
 
 if __name__ == "__main__":
     main()
@@ -1734,6 +1754,35 @@ echo dirShortcut.Save >> CreateShortcut.vbs
 :: Run the VBScript to create the shortcuts, then clean up
 cscript //nologo CreateShortcut.vbs
 del CreateShortcut.vbs
+
+---
+:: Create a tiny VBS that runs pythonw.exe run.py with no window
+echo Set fso = CreateObject("Scripting.FileSystemObject") > run.vbs
+echo base = fso.GetParentFolderName(WScript.ScriptFullName) >> run.vbs
+echo cmd = """" ^& base ^& "\python\windows\python.exe"" """ ^& base ^& "\run.py""" >> run.vbs
+echo CreateObject("WScript.Shell").Run cmd, 0, False >> run.vbs
+
+:: Create shortcuts that call the VBS via wscript.exe (no console)
+echo Creating desktop shortcut...
+echo Set objShell = CreateObject("WScript.Shell") > CreateShortcut.vbs
+echo Set desktopShortcut = objShell.CreateShortcut(objShell.SpecialFolders("Desktop") ^& "\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
+echo desktopShortcut.TargetPath = "%SystemRoot%\System32\wscript.exe" >> CreateShortcut.vbs
+echo desktopShortcut.Arguments = """%cd%\run.vbs""" >> CreateShortcut.vbs
+echo desktopShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
+echo desktopShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
+echo desktopShortcut.Save >> CreateShortcut.vbs
+echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+ NAME +r'''.lnk") >> CreateShortcut.vbs
+echo dirShortcut.TargetPath = "%SystemRoot%\System32\wscript.exe" >> CreateShortcut.vbs
+echo dirShortcut.Arguments = """%cd%\run.vbs""" >> CreateShortcut.vbs
+echo dirShortcut.WorkingDirectory = "%cd%" >> CreateShortcut.vbs
+echo dirShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
+echo dirShortcut.Save >> CreateShortcut.vbs
+
+:: Run the VBScript to create the shortcuts, then clean up
+cscript //nologo CreateShortcut.vbs
+del CreateShortcut.vbs
+
+
 
 echo Application updated. Now launch the app from the desktop shortcut!
 pause
