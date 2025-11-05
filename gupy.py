@@ -589,9 +589,9 @@ def package():
         AUTHOR = input("Enter the developer name (default=Example Author): ")
         if AUTHOR == '':
             AUTHOR = 'Example Author'
+        AUTHOR_EMAIL = input("Enter the developer contact email (default=author@example.com): ")
         if AUTHOR_EMAIL == '':
             AUTHOR_EMAIL = 'author@example.com'
-        AUTHOR_EMAIL = input("Enter the developer contact email (default=author@example.com): ")
         REPO_OWNER = input(f'Enter the Github repository owner: ')
         REPO_NAME = input("Enter the Github repository name: ")
 
