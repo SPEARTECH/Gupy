@@ -59,7 +59,7 @@ def cli():
     version = '.'.join(sys.version.split(' ')[0].split('.')[:2])
     if float(version) < 3.0:
         raise Exception('Please use Python3+. Make sure you have created a virtual environment.')
-    click.echo("Gupy! v0.5.3")
+    click.echo("Gupy! v0.5.8")
     py_version,go,gcc,cgo = check_status()
     if py_version == 'True':
         click.echo(f'Py3.12\t{Fore.GREEN}{py_version}{Style.RESET_ALL}')

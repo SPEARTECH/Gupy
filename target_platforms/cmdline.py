@@ -7,6 +7,9 @@ from colorama import Fore, Style
 import click
 import subprocess
 import glob
+import requests
+
+
 
 class CLI(base.Base):
     index_content = '''
@@ -476,14 +479,15 @@ setup(
                 files = os.listdir(os.getcwd())
                 for file_name in files:
                     full_file_name = os.path.join(os.getcwd(), file_name)
-                    if os.path.isfile(full_file_name):
+                    if os.path.isfile(full_file_name) and file_name != 'python.7z':
                         shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
-                    elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv':
+                    elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv' and file_name != 'node_modules':
                         shutil.copytree(full_file_name, f"dist/{NAME}_{VERSION}/{file_name}", dirs_exist_ok=True)
                     print('Copied '+file_name+' to '+f"dist/{NAME}_{VERSION}/{file_name}"+'...')
                 if not os.path.exists(f'dist/{NAME}_{VERSION}/static/logo'):
                     print('Creating logo directory...')
                     logo_directory = os.path.join(gupy_file_path, 'gupy_logo.png')       
+                    print(logo_directory)
                     os.makedirs(f'dist/{NAME}_{VERSION}/static', exist_ok=True)
                     os.makedirs(f'dist/{NAME}_{VERSION}/static/logo', exist_ok=True)
                     shutil.copy(logo_directory, f'dist/{NAME}_{VERSION}/static/logo/gupy_logo.png')
@@ -501,22 +505,21 @@ setup(
                     shutil.copy(ico_directory, f'dist/{NAME}_{VERSION}/static/icon/gupy.ico')
                 # package latest python if not selected - make python folder with windows/mac/linux
                 os.makedirs(f"dist/{NAME}_{VERSION}/python", exist_ok=True)
-                print('Copying python folder...')
+                os.makedirs(f"dist/{NAME}_{VERSION}/python/macos", exist_ok=True)
+                print('Adding python dependencies...')
 
-                # import gupy_framework_windows_deps 
-                # import gupy_framework_linux_deps
+                import gupy_framework_windows_deps 
+                import gupy_framework_linux_deps
                 # import gupy_framework_macos_deps
-                # gupy_framework_windows_deps.add_deps(f"dist/{NAME}{VERSION}/python")
-                # gupy_framework_linux_deps.add_deps(f"dist/{NAME}{VERSION}/python")
-                # gupy_framework_macos_deps.add_deps(f"dist/{NAME}{VERSION}/python/macos")
+                gupy_framework_windows_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+
+                gupy_framework_linux_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+
+                # gupy_framework_macos_deps.add_deps(f"dist/{NAME}_{VERSION}/python/macos")
                 # mac_pkg_file = gupy_framework_macos_deps.get_deps()[0]
-                import py7zr
-                archive_path = gupy_file_path + delim + 'python.7z'
-                with py7zr.SevenZipFile(archive_path, mode='r') as archive:
-                    archive.extractall(path=f"dist/{NAME}_{VERSION}")
-                # shutil.copytree(python_loc, f"dist/{NAME}{VERSION}/python", dirs_exist_ok=True)
+                    
                 
-                print('Copied python folder...')
+                print('Python dependencies added.')
                 os.chdir(f'dist/{NAME}_{VERSION}')
 
 
@@ -551,10 +554,11 @@ setup(
                 # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
                 # Use glob to find all .ico files in the folder
                 ico_files = glob.glob(os.path.join('static/icon', '*.ico'))
-                ico = ico_files[0].replace('\\','/')
+                ico = ico_files[0].replace('\\','/') 
 
                 png_files = glob.glob(os.path.join('static/logo', '*.png'))
                 png = png_files[0].replace('\\','/') # changing to forward slashes for mac/linux compatibility
+
 
 
                 # create install.bat/sh for compiling run.go

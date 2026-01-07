@@ -18,6 +18,7 @@ import shutil
 import sys
 from colorama import Fore, Style
 import click
+import requests
 
 def ensure_wasm_exec(dest_dir: str = ".") -> bool:
     """
@@ -1238,7 +1239,7 @@ setup(
             files = os.listdir(os.getcwd())
             for file_name in files:
                 full_file_name = os.path.join(os.getcwd(), file_name)
-                if os.path.isfile(full_file_name):
+                if os.path.isfile(full_file_name) and file_name != 'python.7z':
                     shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
                 elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv' and file_name != 'node_modules':
                     shutil.copytree(full_file_name, f"dist/{NAME}_{VERSION}/{file_name}", dirs_exist_ok=True)
@@ -1264,22 +1265,21 @@ setup(
                 shutil.copy(ico_directory, f'dist/{NAME}_{VERSION}/static/icon/gupy.ico')
             # package latest python if not selected - make python folder with windows/mac/linux
             os.makedirs(f"dist/{NAME}_{VERSION}/python", exist_ok=True)
-            print('Copying python folder...')
+            os.makedirs(f"dist/{NAME}_{VERSION}/python/macos", exist_ok=True)
+            print('Adding python dependencies...')
 
-            # import gupy_framework_windows_deps 
-            # import gupy_framework_linux_deps
+            import gupy_framework_windows_deps 
+            import gupy_framework_linux_deps
             # import gupy_framework_macos_deps
-            # gupy_framework_windows_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
-            # gupy_framework_linux_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+            gupy_framework_windows_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+
+            gupy_framework_linux_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+
             # gupy_framework_macos_deps.add_deps(f"dist/{NAME}_{VERSION}/python/macos")
             # mac_pkg_file = gupy_framework_macos_deps.get_deps()[0]
-            import py7zr
-            archive_path = gupy_file_path + delim + 'python.7z'
-            with py7zr.SevenZipFile(archive_path, mode='r') as archive:
-                archive.extractall(path=f"dist/{NAME}_{VERSION}")
-            # shutil.copytree(python_loc, f"dist/{NAME}_{VERSION}/python", dirs_exist_ok=True)
+                
             
-            print('Copied python folder...')
+            print('Python dependencies added.')
             os.chdir(f'dist/{NAME}_{VERSION}')
 
 
