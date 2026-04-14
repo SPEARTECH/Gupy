@@ -189,6 +189,7 @@ urllib3==2.5.0
         else:
             os.chdir('script')
             os.system(f'go mod init example/{self.name}')
+            os.chdir('../')
 
         logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
         
@@ -952,14 +953,14 @@ Flags: shellexec postinstall waituntilterminated skipifsilent
                     full_file_name = os.path.join(os.getcwd(), file_name)
                     if os.path.isfile(full_file_name):
                         if comp_file_ext in file_name.split('.')[-1] and system in file_name:
-                            shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
+                            shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
                         elif comp_file_ext in file_name.split('.')[-1] and system in file_name:
-                            shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
+                            shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
                         elif file_name.split('.')[-1] != 'pyd' and file_name.split('.')[-1] != 'so':
-                            shutil.copy(full_file_name, f"{NAME}/{VERSION}/{folder}")
+                            shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
                     elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist':
-                        shutil.copytree(full_file_name, f"{NAME}/{VERSION}/{folder}/{file_name}", dirs_exist_ok=True)
-                    print('Copied '+file_name+' to '+f"{NAME}/{VERSION}/{folder}/{file_name}"+'...')
+                        shutil.copytree(full_file_name, f"dist/{NAME}_{VERSION}/{file_name}", dirs_exist_ok=True)
+                    print('Copied '+file_name+' to '+f"dist/{NAME}_{VERSION}/{file_name}"+'...')
                 if not os.path.exists(f'dist/{NAME}_{VERSION}/static/logo'):
                     print('Creating logo directory...')
                     logo_directory = os.path.join(os.path.dirname(gupy_file_path), 'gupy_logo.png')       
@@ -978,7 +979,7 @@ Flags: shellexec postinstall waituntilterminated skipifsilent
                     os.makedirs(f'dist/{NAME}_{VERSION}/static', exist_ok=True)
                     os.makedirs(f'dist/{NAME}_{VERSION}/static/icon', exist_ok=True)
                     shutil.copy(ico_directory, f'dist/{NAME}_{VERSION}/static/icon/gupy.ico')
-
+  
                 def get_goroot():
                     # Run 'go env GOROOT' command and capture the output
                     result = subprocess.run(["go", "env", "GOROOT"], capture_output=True, text=True)
@@ -999,11 +1000,11 @@ Flags: shellexec postinstall waituntilterminated skipifsilent
                 golang_location = get_golang_install_location()
                 print(f"Golang is installed at: {golang_location}")
 
-                os.makedirs(f"{NAME}/{VERSION}/{folder}/go", exist_ok=True)
-                shutil.copytree(golang_location, f"{NAME}/{VERSION}/{folder}/go", dirs_exist_ok=True)
+                os.makedirs(f"dist/{NAME}_{VERSION}/go", exist_ok=True)
+                shutil.copytree(golang_location, f"dist/{NAME}_{VERSION}/go", dirs_exist_ok=True)
                 print('Copied go folder...')
                 # create run.go and go.mod for starting entry script for current os
-                os.chdir(f"{NAME}/{VERSION}/{folder}")
+                os.chdir(f"dist/{NAME}_{VERSION}")
                 # if system == 'win':
                 #     subprocess.run(f'.\\go\\bin\\go.exe mod init example.com/{NAME}', shell=True, check=True)
                 # else:
@@ -1345,7 +1346,7 @@ echo desktopShortcut.Save >> CreateShortcut.vbs
 REM Create a shortcut in the same directory as main.exe
 echo Set dirShortcut = objShell.CreateShortcut("%cd%\\'''+NAME+r'''.lnk") >> CreateShortcut.vbs
 echo dirShortcut.TargetPath = "%cd%\main.exe" >> CreateShortcut.vbs
-echo dirShortcut.IconLocation = "%~dp0static/icon/'''+ ico +r'''" >> CreateShortcut.vbs
+echo dirShortcut.IconLocation = "%~dp0'''+ ico +r'''" >> CreateShortcut.vbs
 echo dirShortcut.Save >> CreateShortcut.vbs
 
 REM Run the VBScript to create the shortcuts
@@ -1357,7 +1358,7 @@ del CreateShortcut.vbs
 echo Shortcuts created successfully!
 pause
 '''     
-
+ 
                     with open('install.bat', 'w') as f:
                         f.write(install_script_content)
                 iss_contents = r'''
