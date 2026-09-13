@@ -1315,9 +1315,11 @@ def distribute(version):
 
     if system == "Darwin":
         system = "darwin"
+        folder = "macos"
         delim = "/"
     elif system == "Linux":
         system = "linux"
+        folder = "linux"
         delim = "/"
     else:
         system = "win"

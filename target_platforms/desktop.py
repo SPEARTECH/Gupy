@@ -1378,13 +1378,33 @@ def get_latest_release(repo_owner, repo_name):
 def start_hidden(cmd, cwd=None, detach=False):
     if isinstance(cmd, str):
         cmd = shlex.split(cmd)
-    creation = subprocess.CREATE_NO_WINDOW
-    if detach:
-        creation |= subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-    si = subprocess.STARTUPINFO()
-    si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-    return subprocess.Popen(cmd, cwd=cwd, startupinfo=si, creationflags=creation)
 
+    if platform.system() == "Windows":
+        creation = 0
+        if detach:
+            creation |= subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+        creation |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        return subprocess.Popen(
+            cmd,
+            cwd=cwd,
+            startupinfo=si,
+            creationflags=creation,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    # macOS/Linux: CREATE_NO_WINDOW and STARTUPINFO are not available
+    return subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=detach,
+    )
     
 def main():
     # Add the current directory to sys.path
@@ -1527,6 +1547,7 @@ fi
 '''
             bash_install_script_content += r'''
 CURRENT_DIR=$(pwd)
+APP_DIR="$CURRENT_DIR"
 OS=$(uname)
 
 echo "Current directory is: $CURRENT_DIR"
@@ -1574,7 +1595,7 @@ if [ "$OS" = "Darwin" ]; then
 
     DESKTOP_LAUNCHER="$HOME/Desktop/'''+NAME+r'''.command"
     LOCAL_LAUNCHER="$APP_DIR/'''+NAME+r'''.command"
-    ICON_PNG="$APP_DIR'''+png+r'''"
+    ICON_PNG="$APP_DIR/'''+png+r'''"
 
     echo "Creating macOS desktop launcher at $DESKTOP_LAUNCHER"
     echo "Creating local launcher at $LOCAL_LAUNCHER"
