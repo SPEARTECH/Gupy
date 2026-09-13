@@ -1378,42 +1378,12 @@ def get_latest_release(repo_owner, repo_name):
 def start_hidden(cmd, cwd=None, detach=False):
     if isinstance(cmd, str):
         cmd = shlex.split(cmd)
-<<<<<<< HEAD
-
-    if platform.system() == "Windows":
-        creation = 0
-        if detach:
-            creation |= subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
-        creation |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        si = subprocess.STARTUPINFO()
-        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        return subprocess.Popen(
-            cmd,
-            cwd=cwd,
-            startupinfo=si,
-            creationflags=creation,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-
-    # macOS/Linux: CREATE_NO_WINDOW and STARTUPINFO are not available
-    return subprocess.Popen(
-        cmd,
-        cwd=cwd,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=detach,
-    )
-=======
     creation = subprocess.CREATE_NO_WINDOW
     if detach:
         creation |= subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
     si = subprocess.STARTUPINFO()
     si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     return subprocess.Popen(cmd, cwd=cwd, startupinfo=si, creationflags=creation)
->>>>>>> c6438701cc91f84291d1b73eb96e56b24f9d0515
 
     
 def main():
@@ -1470,11 +1440,7 @@ def main():
         show_splash(file_to_use, max_width=600, duration=3000)
 
     # If the release is up-to-date, proceed to run the main server
-<<<<<<< HEAD
-    server_cmd = [sys.executable, "-c", "import start; start.main()"]
-=======
     server_cmd = [sys.executable, "-c", "import server; server.main()"]
->>>>>>> c6438701cc91f84291d1b73eb96e56b24f9d0515
     start_hidden(server_cmd, detach=False)
 
 
@@ -1487,103 +1453,94 @@ if __name__ == "__main__":
 '''
             if git_selection.lower() == 'y':
                 bash_install_script_content += r'''
-# Set repository owner and name
-REPO_OWNER="'''+REPO_OWNER+r'''"
-REPO_NAME="'''+REPO_NAME+r'''"
+set -u
+set -o pipefail
 
-# GitHub API URL to fetch the latest release
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+APP_DIR="$PWD"
+
+REPO_OWNER="speartech"
+REPO_NAME="SCOPS2_Releases"
 API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/releases/latest"
 
-# Fetch the JSON from the API
-JSON=$(curl -s "$API_URL")
+JSON=$(curl -fsSL "$API_URL") || {
+    echo "Failed to fetch release metadata."
+    exit 1
+}
 
-# Extract the browser_download_url from the first asset
-DOWNLOAD_URL=$(echo "$JSON" | grep -o '"browser_download_url": *"[^"]*"' | head -n 1 | sed 's/"browser_download_url": *"//;s/"//')
+DOWNLOAD_URL=$(printf '%s\n' "$JSON" \
+    | grep -oE '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]+"' \
+    | head -n 1 \
+    | sed -E 's/.*"browser_download_url"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
 
-# Extract the name from the asset - assuming the second occurrence of "name" is for the asset
-LATEST_RELEASE=$(echo "$JSON" | grep -o '"name": *"[^"]*"' | head -n 2 | tail -n 1 | sed 's/"name": *"//;s/"//')
-
-
-# Check if download URL is found
 if [ -z "$DOWNLOAD_URL" ]; then
     echo "No download URL found. Exiting."
     exit 1
 fi
 
-# Read the current release file name from the 'release' file
-if [ -f release ]; then
-    CURRENT_RELEASE=$(cat release)
+LATEST_RELEASE=$(basename "$DOWNLOAD_URL")
+
+if [ -f "$APP_DIR/release" ]; then
+    CURRENT_RELEASE=$(tr -d '\r' < "$APP_DIR/release")
+    CURRENT_RELEASE=$(printf '%s' "$CURRENT_RELEASE" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 else
     CURRENT_RELEASE="NONE"
 fi
 
-# Print the current and latest release names
 echo "CURRENT_RELEASE: $CURRENT_RELEASE"
 echo "LATEST_RELEASE: $LATEST_RELEASE"
 
-# Compare the current release with the latest release
-if [ "$CURRENT_RELEASE" == "$LATEST_RELEASE" ]; then
+if [ "$CURRENT_RELEASE" = "$LATEST_RELEASE" ]; then
     echo "Current release is up to date."
 else
-
-
-    # Echo the download URL (for verification)
     echo "Download URL: $DOWNLOAD_URL"
 
-    # Download the zip file using curl
+    TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/scops2_update.XXXXXX")
+    trap 'rm -rf "$TEMP_DIR"' EXIT
+
     echo "Downloading latest release..."
-    curl -L "$DOWNLOAD_URL" -o "$LATEST_RELEASE"
+    curl -L "$DOWNLOAD_URL" -o "$TEMP_DIR/$LATEST_RELEASE"
 
-    # Unzip the file into the current directory
     echo "Extracting the archive..."
-    unzip -o "$LATEST_RELEASE" -d ./
+    unzip -o "$TEMP_DIR/$LATEST_RELEASE" -d "$TEMP_DIR"
 
-    # Detect if the unzip created a new folder (dynamically)
-    EXTRACTED_FOLDER=$(find . -maxdepth 1 -type d ! -name "." ! -name ".*" | head -n 1)
-    if [ -n "$EXTRACTED_FOLDER" ] && [ "$EXTRACTED_FOLDER" != "." ]; then
-        echo "Detected folder: $EXTRACTED_FOLDER"
-        echo "Moving contents of $EXTRACTED_FOLDER to current directory..."
-        mv "$EXTRACTED_FOLDER"/* ./
-        rm -rf "$EXTRACTED_FOLDER"
-    else
-        echo "No separate directory detected; extraction complete."
-    fi
+    echo "Copying extracted release contents into $APP_DIR without creating a nested app folder"
+    for ITEM in "$TEMP_DIR"/*; do
+        [ -e "$ITEM" ] || continue
+        if [ -d "$ITEM" ]; then
+            cp -a "$ITEM"/. "$APP_DIR"/
+        else
+            cp -a "$ITEM" "$APP_DIR"/
+        fi
+    done
 
-    # Cleanup - remove downloaded zip file
     echo "Cleanup done. Removing downloaded zip file..."
-    rm "$LATEST_RELEASE"
+    rm -f "$TEMP_DIR/$LATEST_RELEASE"
+    rm -rf "$TEMP_DIR"
+    trap - EXIT
 
-    # Update the 'release' file with the new release name
-    echo "$LATEST_RELEASE" > release
-
+    printf '%s' "$LATEST_RELEASE" > "$APP_DIR/release"
     echo "Your folder has been updated."
     sleep 3
 fi
-
 '''
             bash_install_script_content += r'''
-# Set the working directory to the script's directory
-cd "$(dirname "$0")"
-echo "Current directory is: $(pwd)"
-
-# Determine the OS and current directory
-OS=$(uname)
 CURRENT_DIR=$(pwd)
+OS=$(uname)
+
+echo "Current directory is: $CURRENT_DIR"
 
 if [ "$OS" = "Darwin" ]; then
-    # Set desired Python version and installer file path
     PYTHON_VERSION="3.12.10"
-    PKG_DIR="python/macos"
+    PKG_DIR="$APP_DIR/python/macos"
     PKG_FILE="python-${PYTHON_VERSION}-macos11.pkg"
     PKG_PATH="$PKG_DIR/$PKG_FILE"
     PKG_URL="https://www.python.org/ftp/python/${PYTHON_VERSION}/$PKG_FILE"
-    
-    # Ensure the pkg directory exists
+
     mkdir -p "$PKG_DIR"
-    
-    # On macOS: Install Python3.12 if not found using the pkg installer from the Python download site
-    if ! command -v python3.12 &> /dev/null; then
-        # Download the installer if it doesn't exist locally
+
+    if ! command -v python3.12 >/dev/null 2>&1; then
         if [ ! -f "$PKG_PATH" ]; then
             echo "Python3.12 not found. Downloading installer from $PKG_URL..."
             curl -L "$PKG_URL" -o "$PKG_PATH"
@@ -1592,8 +1549,7 @@ if [ "$OS" = "Darwin" ]; then
                 exit 1
             fi
         fi
-        
-        # Run the installer
+
         echo "Installing Python3.12 from $PKG_PATH..."
         sudo installer -pkg "$PKG_PATH" -target /
         if [ $? -ne 0 ]; then
@@ -1602,10 +1558,10 @@ if [ "$OS" = "Darwin" ]; then
         fi
         echo "Python3.12 successfully installed."
     fi
-    # -- Install requirements.txt using Python --
-    if [ -f "requirements.txt" ]; then
+
+    if [ -f "$APP_DIR/requirements.txt" ]; then
         echo "Installing requirements from requirements.txt..."
-        python3.12 -m pip install -r requirements.txt
+        python3.12 -m pip install -r "$APP_DIR/requirements.txt"
         if [ $? -ne 0 ]; then
             echo "Failed to install requirements. Aborting."
             exit 1
@@ -1615,50 +1571,52 @@ if [ "$OS" = "Darwin" ]; then
     else
         echo "requirements.txt not found."
     fi
-    # macOS: create a minimal AppleScript-based app that launches run.py
-    APP_PATH="$HOME/Desktop/'''+NAME+r'''.app"
-    echo "Creating macOS desktop shortcut at $APP_PATH"
 
-    mkdir -p "$APP_PATH/Contents/MacOS"
-    cat <<EOF > "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
+    DESKTOP_LAUNCHER="$HOME/Desktop/'''+NAME+r'''.command"
+    LOCAL_LAUNCHER="$APP_DIR/'''+NAME+r'''.command"
+    ICON_PNG="$APP_DIR'''+png+r'''"
+
+    echo "Creating macOS desktop launcher at $DESKTOP_LAUNCHER"
+    echo "Creating local launcher at $LOCAL_LAUNCHER"
+
+    rm -f "$DESKTOP_LAUNCHER" "$LOCAL_LAUNCHER"
+
+    for LAUNCHER_PATH in "$LOCAL_LAUNCHER" "$DESKTOP_LAUNCHER"; do
+        cat > "$LAUNCHER_PATH" <<EOT
 #!/bin/bash
-# Change directory to the folder containing run.py
 cd "$CURRENT_DIR"
-# Run the Python script using the Python 3.12 interpreter
-python3.12 "$CURRENT_DIR/run.py"
+exec python3.12 "$CURRENT_DIR/run.py"
+EOT
+        chmod +x "$LAUNCHER_PATH"
+        xattr -dr com.apple.quarantine "$LAUNCHER_PATH" 2>/dev/null || true
+    done
 
-EOF
-    chmod +x "$APP_PATH/Contents/MacOS/'''+NAME+r'''"
-    # Create a minimal Info.plist file
-    mkdir -p "$APP_PATH/Contents"
-    cat <<EOF > "$APP_PATH/Contents/Info.plist"
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>CFBundleExecutable</key>
-    <string>'''+NAME+r'''</string>
-    <key>CFBundleIdentifier</key>
-    <string>com.example.'''+NAME+r'''</string>
-    <key>CFBundleName</key>
-    <string>'''+NAME+r'''</string>
-    <key>CFBundleVersion</key>
-    <string>1.0</string>
-    <key>CFBundleIconFile</key>
-    <string>app_icon.icns</string>
-</dict>
-</plist>
-EOF
-    echo "Application updated. Now launch the app from the desktop shortcut!"
+    if [ -f "$ICON_PNG" ]; then
+        TMP_ICNS="$(mktemp -t '''+NAME+r'''_icon.XXXXXX).icns"
+        sips -s format icns "$ICON_PNG" --out "$TMP_ICNS" >/dev/null 2>&1 || true
+        if [ -f "$TMP_ICNS" ]; then
+            for LAUNCHER_PATH in "$LOCAL_LAUNCHER" "$DESKTOP_LAUNCHER"; do
+                osascript -e 'on run argv
+                    tell application "Finder"
+                        set filePath to POSIX file (item 1 of argv) as alias
+                        set iconSource to POSIX file (item 2 of argv) as alias
+                        set icon of filePath to iconSource
+                    end tell
+                end run' "$LAUNCHER_PATH" "$TMP_ICNS" 2>/dev/null || true
+            done
+            rm -f "$TMP_ICNS"
+        fi
+    fi
+
+    echo "Launcher script created successfully. Double-click '''+NAME+r'''.command on the Desktop or in the app folder to start the app!"
 elif [ "$OS" = "Linux" ]; then
-    # On Linux: ensure python3.12 is available
-    sudo chmod +x python/linux/bin/python3.12
-    python/linux/bin/python3.12 python/linux/bin/get-pip.py
-    python/linux/python3.12 -m pip install --upgrade pip
-    # -- Install requirements.txt using Python --
-    if [ -f "requirements.txt" ]; then
+    sudo chmod +x "$APP_DIR/python/linux/bin/python3.12"
+    "$APP_DIR/python/linux/bin/python3.12" "$APP_DIR/python/linux/bin/get-pip.py"
+    "$APP_DIR/python/linux/bin/python3.12" -m pip install --upgrade pip
+
+    if [ -f "$APP_DIR/requirements.txt" ]; then
         echo "Installing requirements from requirements.txt..."
-        python/linux/bin/python3.12 -m pip install -r requirements.txt
+        "$APP_DIR/python/linux/bin/python3.12" -m pip install -r "$APP_DIR/requirements.txt"
         if [ $? -ne 0 ]; then
             echo "Failed to install requirements. Aborting."
             exit 1
@@ -1668,26 +1626,26 @@ elif [ "$OS" = "Linux" ]; then
     else
         echo "requirements.txt not found."
     fi
-    PYTHON_CMD="sudo $CURRENT_DIR/python/linux/bin/python3.12"
+
     DESKTOP_FILE="$HOME/Desktop/'''+NAME+r'''.desktop"
     echo "Creating Linux desktop shortcut at $DESKTOP_FILE"
-    cat <<EOF > "$DESKTOP_FILE"
+    cat > "$DESKTOP_FILE" <<EOT
 [Desktop Entry]
 Name='''+NAME+r'''
 Comment=Run '''+NAME+r'''
-Exec=$PYTHON_CMD $CURRENT_DIR/run.py
+Exec=sudo $CURRENT_DIR/python/linux/bin/python3.12 $CURRENT_DIR/run.py
 Icon=$CURRENT_DIR'''+png+r'''
 Terminal=true
 Type=Application
 Categories=Utility;
-EOF
+EOT
     chmod +x "$DESKTOP_FILE"
-    echo "Application updated. Now launch the app from the desktop shortcut!" &
+    echo "Application updated. Now launch the app from the desktop shortcut!"
 else
     echo "Unsupported OS: $OS"
     exit 1
 fi
-
+       
         '''
 
 
