@@ -255,7 +255,7 @@ func main() {
                 f'cli/go_modules/go_modules.go': self.go_modules_content,
                 }
         else:
-            self.folders.append(f'script/python_modules')
+            self.folders.append(f'cli/python_modules')
             self.files = {
                 f'cli/main.go': self.main_content,
                 f'cli/python_modules/python_modules.py': self.python_modules_content,
@@ -319,18 +319,19 @@ urllib3==2.5.0''')
             os.system(f'go mod init {self.name}')
             os.system('go get -u github.com/spf13/cobra@latest')
             os.system('go get -u github.com/spf13/cobra/cobra@latest')
+            
 
         logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
         
-        shutil.copy(logo_directory, f'cli/static/logo/gupy_logo.png')
+        shutil.copy(logo_directory, f'static/logo/gupy_logo.png')
 
         splashscreen_directory = os.path.join(os.path.dirname(current_directory), 'gupy_splashscreen.png')       
         
-        shutil.copy(splashscreen_directory, f'cli/static/splashscreen/gupy_splashscreen.png')
+        shutil.copy(splashscreen_directory, f'static/splashscreen/gupy_splashscreen.png')
 
         ico_directory = os.path.join(os.path.dirname(current_directory), 'gupy.ico')       
         
-        shutil.copy(ico_directory, f'cli/static/icon/gupy.ico')
+        shutil.copy(ico_directory, f'static/icon/gupy.ico')
 
         self.cythonize()
         self.gopherize()
