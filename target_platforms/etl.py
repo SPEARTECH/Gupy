@@ -6,6 +6,9 @@ import sys
 from colorama import Fore, Style
 import click
 import glob
+import requests
+
+
 
 class Etl(base.Base):
     script_content = r'''
@@ -283,7 +286,13 @@ widgetsnbextension==4.0.14
             # creating project folder if doesnt already exist
             os.makedirs('dist', exist_ok=True)
             os.chdir('dist')
-
+            if os.path.exists(f"{NAME}_{VERSION}"):
+                prompt = input(f'"{NAME}_{VERSION}" folder already exists. Would you like to overwrite it? (y/n): ')
+                if prompt.lower() == 'y':
+                    shutil.rmtree(f"{NAME}_{VERSION}")
+                else:
+                    print('Aborting distribution...')
+                    return
             # creating version folder is doesnt already exist
             os.makedirs(f"{NAME}_{VERSION}", exist_ok=True)
             # shutil.rmtree(f"{VERSION}{delim}{folder}")
@@ -325,14 +334,15 @@ widgetsnbextension==4.0.14
                 files = os.listdir(os.getcwd())
                 for file_name in files:
                     full_file_name = os.path.join(os.getcwd(), file_name)
-                    if os.path.isfile(full_file_name):
+                    if os.path.isfile(full_file_name) and file_name != 'python.7z':
                         shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
-                    elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv':
+                    elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv' and file_name != 'node_modules':
                         shutil.copytree(full_file_name, f"dist/{NAME}_{VERSION}/{file_name}", dirs_exist_ok=True)
                     print('Copied '+file_name+' to '+f"dist/{NAME}_{VERSION}/{file_name}"+'...')
                 if not os.path.exists(f'dist/{NAME}_{VERSION}/static/logo'):
                     print('Creating logo directory...')
                     logo_directory = os.path.join(gupy_file_path, 'gupy_logo.png')       
+                    print(logo_directory)
                     os.makedirs(f'dist/{NAME}_{VERSION}/static', exist_ok=True)
                     os.makedirs(f'dist/{NAME}_{VERSION}/static/logo', exist_ok=True)
                     shutil.copy(logo_directory, f'dist/{NAME}_{VERSION}/static/logo/gupy_logo.png')
@@ -350,22 +360,21 @@ widgetsnbextension==4.0.14
                     shutil.copy(ico_directory, f'dist/{NAME}_{VERSION}/static/icon/gupy.ico')
                 # package latest python if not selected - make python folder with windows/mac/linux
                 os.makedirs(f"dist/{NAME}_{VERSION}/python", exist_ok=True)
-                print('Copying python folder...')
+                os.makedirs(f"dist/{NAME}_{VERSION}/python/macos", exist_ok=True)
+                print('Adding python dependencies...')
 
-                # import gupy_framework_windows_deps 
-                # import gupy_framework_linux_deps
+                import gupy_framework_windows_deps 
+                import gupy_framework_linux_deps
                 # import gupy_framework_macos_deps
-                # gupy_framework_windows_deps.add_deps(f"dist/{NAME}{VERSION}/python")
-                # gupy_framework_linux_deps.add_deps(f"dist/{NAME}{VERSION}/python")
-                # gupy_framework_macos_deps.add_deps(f"dist/{NAME}{VERSION}/python/macos")
+                gupy_framework_windows_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+
+                gupy_framework_linux_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+
+                # gupy_framework_macos_deps.add_deps(f"dist/{NAME}_{VERSION}/python/macos")
                 # mac_pkg_file = gupy_framework_macos_deps.get_deps()[0]
-                import py7zr
-                archive_path = gupy_file_path + delim + 'python.7z'
-                with py7zr.SevenZipFile(archive_path, mode='r') as archive:
-                    archive.extractall(path=f"dist/{NAME}_{VERSION}")
-                # shutil.copytree(python_loc, f"dist/{NAME}{VERSION}/python", dirs_exist_ok=True)
+                    
                 
-                print('Copied python folder...')
+                print('Python dependencies added.')
                 os.chdir(f'dist/{NAME}_{VERSION}')
 
 
@@ -404,6 +413,7 @@ widgetsnbextension==4.0.14
 
                 png_files = glob.glob(os.path.join('static/logo', '*.png'))
                 png = png_files[0].replace('\\','/') # changing to forward slashes for mac/linux compatibility
+
 
 
                 # create install.bat/sh for compiling run.go

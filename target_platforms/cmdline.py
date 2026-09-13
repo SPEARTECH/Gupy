@@ -7,9 +7,13 @@ from colorama import Fore, Style
 import click
 import subprocess
 import glob
+import requests
+
+
 
 class CLI(base.Base):
     index_content = '''
+
 # Documentation: 
 # https://click.palletsprojects.com/en/8.1.x/
 
@@ -17,9 +21,15 @@ from logging import exception
 import click
 import sys
 import os
+import os
+import ctypes
 
 STRING = ''
 CHOICE = ''
+
+# paths
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
+
 
 @click.group()
 def cli():
@@ -51,12 +61,29 @@ Example CLI tool
     help="Select numbers you would like to return (ie. -c 1 -c 2 -c 3)"
     )
 def run(string,choice_list):
+    try:
+        # Python module
+        from python_modules import python_modules
+        py_message = python_modules.main()
+
+        # Go c-shared lib
+        path = BASE_DIR
+        go_path = os.path.join(path, "go_modules", "go_modules.so")
+        go_modules = ctypes.CDLL(go_path)
+        go_modules.go_module.restype = ctypes.c_char_p
+        go_message = go_modules.go_module().decode("utf-8")
+
+        data = {"Python Module Message": py_message, "Go Module Message": go_message}
+        print('Py module msg: '+py_message)
+        print('Go module msg: '+go_message)
+    except Exception as e:
+        return print(str(e))
+
+    print('Script run complete.')
     STRING=string
     CHOICE=choice_list
     print('String entered = '+ STRING)
-    print('Choices entered =')
-    for choice in choice_list:
-      print(choice)
+    print('Choices entered =' +str(choice_list))
 
 def main():
     cli.add_command(run) #Add command for cli
@@ -64,6 +91,9 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
 
 
 
@@ -172,20 +202,64 @@ func main() {
 }
 '''
 
+        self.python_modules_content = '''
+import os
+
+def main():
+    result = 'Welcome to Gupy!'
+
+    return result
+
+if __name__ == "__main__":
+    main() 
+
+
+    
+        '''
+
+        self.go_modules_content = '''
+package main
+
+import (
+    "C"
+)
+
+//export go_module
+func go_module() *C.char {
+    response := "Welcome to Gupy!"
+
+    return C.CString(response)
+}
+
+func main() {
+    // c_module()
+}    
+    
+        '''
+
         self.folders = [
           f'cli',
-        #   f'gupy_apps/{self.name}/cli/dev/python_modules',
-        #   f'gupy_apps/{self.name}/cli/dev/cython_modules',
+          f'cli/static',
+          f'cli/static/logo',
+          f'cli/static/splashscreen',
+          f'cli/static/icon',
           ]
         if self.lang == 'py':
+            self.folders.append(f'cli/python_modules')
+            self.folders.append(f'cli/go_modules')
             self.files = {
                 f'cli/__init__.py': self.init_content,
                 f'cli/__main__.py': self.main_content,
                 f'cli/{self.name}.py': self.index_content,
+                f'cli/python_modules/python_modules.py': self.python_modules_content,
+                f'cli/go_modules/go_modules.go': self.go_modules_content,
                 }
         else:
+            self.folders.append(f'script/python_modules')
             self.files = {
                 f'cli/main.go': self.main_content,
+                f'cli/python_modules/python_modules.py': self.python_modules_content,
+
             }
 
     def create(self):
@@ -225,6 +299,10 @@ func main() {
             print(f'created "{file}" file.')
             f.close()
 
+        # Get the directory of the current script
+        current_directory = os.path.dirname(os.path.abspath(__file__))
+
+
         if self.lang == 'py':
             with open('cli/requirements.txt', 'w') as f:
                 f.write('''
@@ -242,17 +320,20 @@ urllib3==2.5.0''')
             os.system('go get -u github.com/spf13/cobra@latest')
             os.system('go get -u github.com/spf13/cobra/cobra@latest')
 
-        # logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
+        logo_directory = os.path.join(os.path.dirname(current_directory), 'gupy_logo.png')       
         
-        # shutil.copy(logo_directory, f'cli/static/logo/gupy_logo.png')
+        shutil.copy(logo_directory, f'cli/static/logo/gupy_logo.png')
 
-        # splashscreen_directory = os.path.join(os.path.dirname(current_directory), 'gupy_splashscreen.png')       
+        splashscreen_directory = os.path.join(os.path.dirname(current_directory), 'gupy_splashscreen.png')       
         
-        # shutil.copy(splashscreen_directory, f'cli/static/splashscreen/gupy_splashscreen.png')
+        shutil.copy(splashscreen_directory, f'cli/static/splashscreen/gupy_splashscreen.png')
 
-        # ico_directory = os.path.join(os.path.dirname(current_directory), 'gupy.ico')       
+        ico_directory = os.path.join(os.path.dirname(current_directory), 'gupy.ico')       
         
-        # shutil.copy(ico_directory, f'cli/static/icon/gupy.ico')
+        shutil.copy(ico_directory, f'cli/static/icon/gupy.ico')
+
+        self.cythonize()
+        self.gopherize()
 
 
     def run(self):
@@ -275,13 +356,87 @@ urllib3==2.5.0''')
         else:
             click.echo(f'{Fore.RED}No entry file found of "{self.name}.py" or "main.go"{Style.RESET_ALL}')
 
+    # convert all py files to pyd extensions other than the __main__.py and __init__.py files
+    def cythonize(self):
+        if os.path.exists(f"cli/python_modules") and os.path.exists(f"script/__main__.py"):
+            os.chdir(f'cli/python_modules')
+            # files = [f for f in os.listdir('.') if os.path.isfile(f)]
+            setup_content = '''
+from distutils.core import setup
+from Cython.Build import cythonize
+
+setup(
+    ext_modules = cythonize([
+            '''
+            # for f in files:
+            #     os.system(f'cp{f} {f}x')
+            files = [f for f in glob.glob('*.py')]
+            if 'setup.py' in files:
+                files.remove('setup.py')
+            for file in files:
+                with open(file, 'r') as f:
+                    py_content = ''
+                    for item in f.readlines():
+                        py_content = py_content + item
+                if os.path.exists(file+'x'):
+                    f = open(f'{file}x', 'r+')
+                    f.seek(0)
+                    f.truncate()
+                    f.close()
+                else:
+                    f = open(f'{file}x', 'x')
+                f = open(f'{file}x', 'r+')
+                f.write(py_content)
+                print(f'Updated {file}x file.')
+                f.close()
+
+                setup_content = setup_content + f'"{file}x",\n'
+            setup_content = setup_content + '''     ])
+    )
+            '''
+            if os.path.exists('setup.py'):
+                f = open('setup.py', 'r+')
+                f.seek(0)
+                f.truncate()
+                f.close()
+            else:
+                f = open('setup.py', 'x')
+            f = open('setup.py', 'r+')
+            f.write(setup_content)
+            print(f'Updated setup.py file.')
+            f.close()
+            os.system(f'python ./setup.py build_ext --inplace')
+            os.chdir('../../')
+
+
+    # convert all go files to .c extensions other than ones in the go_wasm folder
+    def gopherize(self):
+        if os.path.exists(f"cli/go_modules"): #and os.path.exists(f"script/server.py"):
+            os.chdir(f'cli/go_modules')
+            os.system(f'go mod tidy')
+            files = [f for f in glob.glob('*.go')]
+            for file in files:
+                print(f'Building {file} file...')
+                try:
+                  os.system(f'go build -o {os.path.splitext(file)[0]}.so -buildmode=c-shared {file} ')
+                except Exception as e:
+                  click.echo(f"{Fore.RED}Build failed.{Style.RESET_ALL}")
+                  print(e)
+            os.chdir('../../')
+
 
     def distribute(self, system, folder, delim, NAME, VERSION):
         try:
-
             # creating project folder if doesnt already exist
             os.makedirs('dist', exist_ok=True)
             os.chdir('dist')
+            if os.path.exists(f"{NAME}_{VERSION}"):
+                prompt = input(f'"{NAME}_{VERSION}" folder already exists. Would you like to overwrite it? (y/n): ')
+                if prompt.lower() == 'y':
+                    shutil.rmtree(f"{NAME}_{VERSION}")
+                else:
+                    print('Aborting distribution...')
+                    return
 
             # creating version folder is doesnt already exist
             os.makedirs(f"{NAME}_{VERSION}", exist_ok=True)
@@ -324,14 +479,15 @@ urllib3==2.5.0''')
                 files = os.listdir(os.getcwd())
                 for file_name in files:
                     full_file_name = os.path.join(os.getcwd(), file_name)
-                    if os.path.isfile(full_file_name):
+                    if os.path.isfile(full_file_name) and file_name != 'python.7z':
                         shutil.copy(full_file_name, f"dist/{NAME}_{VERSION}")
-                    elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv':
+                    elif os.path.isdir(full_file_name) and file_name != NAME and file_name != 'dist' and file_name != 'venv' and file_name != 'virtualenv' and file_name != 'node_modules':
                         shutil.copytree(full_file_name, f"dist/{NAME}_{VERSION}/{file_name}", dirs_exist_ok=True)
                     print('Copied '+file_name+' to '+f"dist/{NAME}_{VERSION}/{file_name}"+'...')
                 if not os.path.exists(f'dist/{NAME}_{VERSION}/static/logo'):
                     print('Creating logo directory...')
                     logo_directory = os.path.join(gupy_file_path, 'gupy_logo.png')       
+                    print(logo_directory)
                     os.makedirs(f'dist/{NAME}_{VERSION}/static', exist_ok=True)
                     os.makedirs(f'dist/{NAME}_{VERSION}/static/logo', exist_ok=True)
                     shutil.copy(logo_directory, f'dist/{NAME}_{VERSION}/static/logo/gupy_logo.png')
@@ -349,22 +505,21 @@ urllib3==2.5.0''')
                     shutil.copy(ico_directory, f'dist/{NAME}_{VERSION}/static/icon/gupy.ico')
                 # package latest python if not selected - make python folder with windows/mac/linux
                 os.makedirs(f"dist/{NAME}_{VERSION}/python", exist_ok=True)
-                print('Copying python folder...')
+                os.makedirs(f"dist/{NAME}_{VERSION}/python/macos", exist_ok=True)
+                print('Adding python dependencies...')
 
-                # import gupy_framework_windows_deps 
-                # import gupy_framework_linux_deps
+                import gupy_framework_windows_deps 
+                import gupy_framework_linux_deps
                 # import gupy_framework_macos_deps
-                # gupy_framework_windows_deps.add_deps(f"dist/{NAME}{VERSION}/python")
-                # gupy_framework_linux_deps.add_deps(f"dist/{NAME}{VERSION}/python")
-                # gupy_framework_macos_deps.add_deps(f"dist/{NAME}{VERSION}/python/macos")
+                gupy_framework_windows_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+
+                gupy_framework_linux_deps.add_deps(f"dist/{NAME}_{VERSION}/python")
+
+                # gupy_framework_macos_deps.add_deps(f"dist/{NAME}_{VERSION}/python/macos")
                 # mac_pkg_file = gupy_framework_macos_deps.get_deps()[0]
-                import py7zr
-                archive_path = gupy_file_path + delim + 'python.7z'
-                with py7zr.SevenZipFile(archive_path, mode='r') as archive:
-                    archive.extractall(path=f"dist/{NAME}_{VERSION}")
-                # shutil.copytree(python_loc, f"dist/{NAME}{VERSION}/python", dirs_exist_ok=True)
+                    
                 
-                print('Copied python folder...')
+                print('Python dependencies added.')
                 os.chdir(f'dist/{NAME}_{VERSION}')
 
 
@@ -399,10 +554,11 @@ urllib3==2.5.0''')
                 # subprocess.run(f'.\\go\\bin\\go.exe mod tidy', shell=True, check=True)
                 # Use glob to find all .ico files in the folder
                 ico_files = glob.glob(os.path.join('static/icon', '*.ico'))
-                ico = ico_files[0].replace('\\','/')
+                ico = ico_files[0].replace('\\','/') 
 
                 png_files = glob.glob(os.path.join('static/logo', '*.png'))
                 png = png_files[0].replace('\\','/') # changing to forward slashes for mac/linux compatibility
+
 
 
                 # create install.bat/sh for compiling run.go
