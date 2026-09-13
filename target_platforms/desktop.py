@@ -1840,6 +1840,8 @@ import glob
 import tkinter as tk
 from PIL import Image, ImageTk  # pip install pillow
 
+import shlex
+
 def show_splash(image_path, max_width=600, duration=3000):
     root = tk.Tk()
     root.overrideredirect(True)  # no window frame
@@ -1890,6 +1892,39 @@ def get_latest_release(repo_owner, repo_name):
         print(f"Error fetching latest release: {e}")
         return None
 
+        # start a process hidden (no console window)
+def start_hidden(cmd, cwd=None, detach=False):
+    if isinstance(cmd, str):
+        cmd = shlex.split(cmd)
+
+    if platform.system() == "Windows":
+        creation = 0
+        if detach:
+            creation |= subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
+        creation |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        si = subprocess.STARTUPINFO()
+        si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        return subprocess.Popen(
+            cmd,
+            cwd=cwd,
+            startupinfo=si,
+            creationflags=creation,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+
+    # macOS/Linux: CREATE_NO_WINDOW and STARTUPINFO are not available
+    return subprocess.Popen(
+        cmd,
+        cwd=cwd,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=detach,
+    )
+
+    
 def main():
     # Add the current directory to sys.path
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -1944,12 +1979,14 @@ def main():
         show_splash(file_to_use, max_width=600, duration=3000)
 
     # If the release is up-to-date, proceed to run the main server
-    import server
-    server.main()
+    server_cmd = [sys.executable, "-c", "import start; start.main()"]
+    start_hidden(server_cmd, detach=False)
+
 
 if __name__ == "__main__":
     main()
-                        '''
+'''
+
             bash_install_script_content = r'''
 #!/bin/bash
 '''
@@ -2027,6 +2064,7 @@ else
     echo "Your folder has been updated."
     sleep 3
 fi
+
 '''
             bash_install_script_content += r'''
 # Set the working directory to the script's directory
@@ -2135,7 +2173,7 @@ elif [ "$OS" = "Linux" ]; then
     else
         echo "requirements.txt not found."
     fi
-    PYTHON_CMD="$CURRENT_DIR/python/linux/bin/python3.12"
+    PYTHON_CMD="sudo $CURRENT_DIR/python/linux/bin/python3.12"
     DESKTOP_FILE="$HOME/Desktop/'''+NAME+r'''.desktop"
     echo "Creating Linux desktop shortcut at $DESKTOP_FILE"
     cat <<EOF > "$DESKTOP_FILE"
@@ -2143,8 +2181,8 @@ elif [ "$OS" = "Linux" ]; then
 Name='''+NAME+r'''
 Comment=Run '''+NAME+r'''
 Exec=$PYTHON_CMD $CURRENT_DIR/run.py
-Icon=$CURRENT_DIR/'''+png+r'''
-Terminal=false
+Icon=$CURRENT_DIR'''+png+r'''
+Terminal=true
 Type=Application
 Categories=Utility;
 EOF
@@ -2154,6 +2192,7 @@ else
     echo "Unsupported OS: $OS"
     exit 1
 fi
+
         '''
 
 
